@@ -1,6 +1,7 @@
 ok  	github.com/aiyang-zh/zhenyi-ext/zbackoff	(cached)
 ok  	github.com/aiyang-zh/zhenyi-ext/zerrs	(cached)
-ok  	github.com/aiyang-zh/zhenyi-ext/zid	0.477s
+ok  	github.com/aiyang-zh/zhenyi-ext/zid	(cached)
 ok  	github.com/aiyang-zh/zhenyi-ext/zlimiter	(cached)
+ok  	github.com/aiyang-zh/zhenyi-ext/zpub	0.448s
 ok  	github.com/aiyang-zh/zhenyi-ext/zrand	(cached)
 ok  	github.com/aiyang-zh/zhenyi-ext/zsafe	(cached)
