@@ -1,0 +1,10 @@
+ok  	github.com/aiyang-zh/zhenyi-util/zbackoff	(cached)	coverage: 100.0% of statements
+ok  	github.com/aiyang-zh/zhenyi-util/zerrs	(cached)	coverage: 97.8% of statements
+ok  	github.com/aiyang-zh/zhenyi-util/zfile	(cached)	coverage: 94.4% of statements
+ok  	github.com/aiyang-zh/zhenyi-util/zgrace	(cached)	coverage: 100.0% of statements
+ok  	github.com/aiyang-zh/zhenyi-util/zid	(cached)	coverage: 66.7% of statements
+ok  	github.com/aiyang-zh/zhenyi-util/zlimiter	(cached)	coverage: 100.0% of statements
+ok  	github.com/aiyang-zh/zhenyi-util/zpub	(cached)	coverage: 95.5% of statements
+ok  	github.com/aiyang-zh/zhenyi-util/zrand	(cached)	coverage: 89.5% of statements
+ok  	github.com/aiyang-zh/zhenyi-util/zsafe	(cached)	coverage: 100.0% of statements
+ok  	github.com/aiyang-zh/zhenyi-util/ztime	(cached)	coverage: 92.1% of statements

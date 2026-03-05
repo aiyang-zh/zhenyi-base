@@ -1,7 +1,475 @@
-ok  	github.com/aiyang-zh/zhenyi-ext/zbackoff	(cached)
-ok  	github.com/aiyang-zh/zhenyi-ext/zerrs	(cached)
-ok  	github.com/aiyang-zh/zhenyi-ext/zid	(cached)
-ok  	github.com/aiyang-zh/zhenyi-ext/zlimiter	(cached)
-ok  	github.com/aiyang-zh/zhenyi-ext/zpub	0.448s
-ok  	github.com/aiyang-zh/zhenyi-ext/zrand	(cached)
-ok  	github.com/aiyang-zh/zhenyi-ext/zsafe	(cached)
+=== RUN   TestBackoff_SpinPhase
+--- PASS: TestBackoff_SpinPhase (0.00s)
+=== RUN   TestBackoff_GoschedPhase
+--- PASS: TestBackoff_GoschedPhase (0.00s)
+=== RUN   TestBackoff_SleepPhase
+--- PASS: TestBackoff_SleepPhase (0.05s)
+=== RUN   TestBackoff_BoundaryValues
+--- PASS: TestBackoff_BoundaryValues (0.02s)
+=== RUN   TestBackoff_ZeroThresholds
+--- PASS: TestBackoff_ZeroThresholds (0.02s)
+=== RUN   TestBackoff_LargeK
+--- PASS: TestBackoff_LargeK (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-util/zbackoff	(cached)
+=== RUN   TestNew
+--- PASS: TestNew (0.00s)
+=== RUN   TestNewf
+--- PASS: TestNewf (0.00s)
+=== RUN   TestWithStack_HasStack
+--- PASS: TestWithStack_HasStack (0.00s)
+=== RUN   TestWithStackf
+--- PASS: TestWithStackf (0.00s)
+=== RUN   TestWithStackSkip_SkipsHelper
+--- PASS: TestWithStackSkip_SkipsHelper (0.00s)
+=== RUN   TestWithStackSkip_Zero_SameAsWithStack
+--- PASS: TestWithStackSkip_Zero_SameAsWithStack (0.00s)
+=== RUN   TestWithStackSkipf
+--- PASS: TestWithStackSkipf (0.00s)
+=== RUN   TestWrap
+--- PASS: TestWrap (0.00s)
+=== RUN   TestWrap_NilReturnsNil
+--- PASS: TestWrap_NilReturnsNil (0.00s)
+=== RUN   TestWrapf_NilReturnsNil
+--- PASS: TestWrapf_NilReturnsNil (0.00s)
+=== RUN   TestWrapWithStack
+--- PASS: TestWrapWithStack (0.00s)
+=== RUN   TestWrapWithStack_NilReturnsNil
+--- PASS: TestWrapWithStack_NilReturnsNil (0.00s)
+=== RUN   TestWrapWithStackf
+--- PASS: TestWrapWithStackf (0.00s)
+=== RUN   TestWrapWithStackf_NilReturnsNil
+--- PASS: TestWrapWithStackf_NilReturnsNil (0.00s)
+=== RUN   TestUnwrap
+--- PASS: TestUnwrap (0.00s)
+=== RUN   TestUnwrap_NoInner
+--- PASS: TestUnwrap_NoInner (0.00s)
+=== RUN   TestIs_SameType
+--- PASS: TestIs_SameType (0.00s)
+=== RUN   TestIs_DifferentType
+--- PASS: TestIs_DifferentType (0.00s)
+=== RUN   TestIs_NonTypedError
+--- PASS: TestIs_NonTypedError (0.00s)
+=== RUN   TestAs
+--- PASS: TestAs (0.00s)
+=== RUN   TestIs_WrappedChain
+--- PASS: TestIs_WrappedChain (0.00s)
+=== RUN   TestIsType
+--- PASS: TestIsType (0.00s)
+=== RUN   TestIsType_NilError
+--- PASS: TestIsType_NilError (0.00s)
+=== RUN   TestGetType
+--- PASS: TestGetType (0.00s)
+=== RUN   TestGetType_NilError
+--- PASS: TestGetType_NilError (0.00s)
+=== RUN   TestGetType_NonTypedError
+--- PASS: TestGetType_NonTypedError (0.00s)
+=== RUN   TestGetTypedError
+--- PASS: TestGetTypedError (0.00s)
+=== RUN   TestGetTypedError_Nil
+--- PASS: TestGetTypedError_Nil (0.00s)
+=== RUN   TestConvenienceChecks
+=== RUN   TestConvenienceChecks/IsTimeout/true
+=== RUN   TestConvenienceChecks/IsTimeout/false
+=== RUN   TestConvenienceChecks/IsNetwork/true
+=== RUN   TestConvenienceChecks/IsDatabase/true
+=== RUN   TestConvenienceChecks/IsValidation/true
+=== RUN   TestConvenienceChecks/IsNotFound/true
+=== RUN   TestConvenienceChecks/IsAlreadyExists/true
+--- PASS: TestConvenienceChecks (0.00s)
+    --- PASS: TestConvenienceChecks/IsTimeout/true (0.00s)
+    --- PASS: TestConvenienceChecks/IsTimeout/false (0.00s)
+    --- PASS: TestConvenienceChecks/IsNetwork/true (0.00s)
+    --- PASS: TestConvenienceChecks/IsDatabase/true (0.00s)
+    --- PASS: TestConvenienceChecks/IsValidation/true (0.00s)
+    --- PASS: TestConvenienceChecks/IsNotFound/true (0.00s)
+    --- PASS: TestConvenienceChecks/IsAlreadyExists/true (0.00s)
+=== RUN   TestSentinelErrors_IsType
+--- PASS: TestSentinelErrors_IsType (0.00s)
+=== RUN   TestSentinelErrors_ErrorsIs
+--- PASS: TestSentinelErrors_ErrorsIs (0.00s)
+=== RUN   TestConvenienceCreators
+=== RUN   TestConvenienceCreators/InvalidParameterf
+=== RUN   TestConvenienceCreators/Timeoutf
+=== RUN   TestConvenienceCreators/NotFoundf
+=== RUN   TestConvenienceCreators/AlreadyExistsf
+=== RUN   TestConvenienceCreators/Networkf
+=== RUN   TestConvenienceCreators/Databasef
+=== RUN   TestConvenienceCreators/Actorf
+=== RUN   TestConvenienceCreators/RPCf
+=== RUN   TestConvenienceCreators/Configf
+--- PASS: TestConvenienceCreators (0.00s)
+    --- PASS: TestConvenienceCreators/InvalidParameterf (0.00s)
+    --- PASS: TestConvenienceCreators/Timeoutf (0.00s)
+    --- PASS: TestConvenienceCreators/NotFoundf (0.00s)
+    --- PASS: TestConvenienceCreators/AlreadyExistsf (0.00s)
+    --- PASS: TestConvenienceCreators/Networkf (0.00s)
+    --- PASS: TestConvenienceCreators/Databasef (0.00s)
+    --- PASS: TestConvenienceCreators/Actorf (0.00s)
+    --- PASS: TestConvenienceCreators/RPCf (0.00s)
+    --- PASS: TestConvenienceCreators/Configf (0.00s)
+=== RUN   TestInternalf_HasStack
+--- PASS: TestInternalf_HasStack (0.00s)
+=== RUN   TestFormat_V
+--- PASS: TestFormat_V (0.00s)
+=== RUN   TestFormat_S
+--- PASS: TestFormat_S (0.00s)
+=== RUN   TestFormat_Q
+--- PASS: TestFormat_Q (0.00s)
+=== RUN   TestFormat_PlusV_NoStack
+--- PASS: TestFormat_PlusV_NoStack (0.00s)
+=== RUN   TestFormat_PlusV_WithStack
+--- PASS: TestFormat_PlusV_WithStack (0.00s)
+=== RUN   TestFormat_PlusV_WithWrap
+--- PASS: TestFormat_PlusV_WithWrap (0.00s)
+=== RUN   TestStackTrace_Empty
+--- PASS: TestStackTrace_Empty (0.00s)
+=== RUN   TestStackTrace_NonEmpty
+--- PASS: TestStackTrace_NonEmpty (0.00s)
+=== RUN   TestError_WithInnerError
+--- PASS: TestError_WithInnerError (0.00s)
+=== RUN   TestError_WithoutInnerError
+--- PASS: TestError_WithoutInnerError (0.00s)
+=== RUN   TestIs_PackageLevelFunctions
+--- PASS: TestIs_PackageLevelFunctions (0.00s)
+=== RUN   TestAs_PackageLevelFunction
+--- PASS: TestAs_PackageLevelFunction (0.00s)
+=== RUN   ExampleNew
+--- PASS: ExampleNew (0.00s)
+=== RUN   ExampleNewf
+--- PASS: ExampleNewf (0.00s)
+=== RUN   ExampleWithStack
+--- PASS: ExampleWithStack (0.00s)
+=== RUN   ExampleWrap
+--- PASS: ExampleWrap (0.00s)
+=== RUN   ExampleWrapWithStack
+--- PASS: ExampleWrapWithStack (0.00s)
+=== RUN   ExampleWithStackSkip
+--- PASS: ExampleWithStackSkip (0.00s)
+=== RUN   ExampleIsType
+--- PASS: ExampleIsType (0.00s)
+=== RUN   ExampleGetType
+--- PASS: ExampleGetType (0.00s)
+=== RUN   ExampleIsTimeout
+--- PASS: ExampleIsTimeout (0.00s)
+=== RUN   ExampleTypedError_Format
+--- PASS: ExampleTypedError_Format (0.00s)
+=== RUN   ExampleTypedError_Is
+--- PASS: ExampleTypedError_Is (0.00s)
+=== RUN   ExampleInternalf
+--- PASS: ExampleInternalf (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-util/zerrs	(cached)
+=== RUN   TestExists_FileExists
+--- PASS: TestExists_FileExists (0.00s)
+=== RUN   TestExists_FileNotExists
+--- PASS: TestExists_FileNotExists (0.00s)
+=== RUN   TestExists_DirExists
+--- PASS: TestExists_DirExists (0.00s)
+=== RUN   TestMkdir_CreateNew
+--- PASS: TestMkdir_CreateNew (0.00s)
+=== RUN   TestMkdir_Nested
+--- PASS: TestMkdir_Nested (0.00s)
+=== RUN   TestMkdir_AlreadyExists
+--- PASS: TestMkdir_AlreadyExists (0.00s)
+=== RUN   TestCreateFile_Basic
+--- PASS: TestCreateFile_Basic (0.00s)
+=== RUN   TestCreateFile_Overwrite
+--- PASS: TestCreateFile_Overwrite (0.00s)
+=== RUN   TestCreateFile_Empty
+--- PASS: TestCreateFile_Empty (0.00s)
+=== RUN   TestIsDirEmpty_EmptyDir
+--- PASS: TestIsDirEmpty_EmptyDir (0.00s)
+=== RUN   TestIsDirEmpty_NonEmptyDir
+--- PASS: TestIsDirEmpty_NonEmptyDir (0.00s)
+=== RUN   TestIsDirEmpty_NotExist
+--- PASS: TestIsDirEmpty_NotExist (0.00s)
+=== RUN   TestGoFmt_ValidCode
+--- PASS: TestGoFmt_ValidCode (0.00s)
+=== RUN   TestGoFmt_InvalidCode
+--- PASS: TestGoFmt_InvalidCode (0.00s)
+=== RUN   TestGoFmt_NonExistent
+--- PASS: TestGoFmt_NonExistent (0.00s)
+=== RUN   TestGoFmtDir_Basic
+--- PASS: TestGoFmtDir_Basic (0.00s)
+=== RUN   TestGoFmtDir_NonExistent
+--- PASS: TestGoFmtDir_NonExistent (0.00s)
+=== RUN   TestParseFile_Basic
+--- PASS: TestParseFile_Basic (0.00s)
+=== RUN   TestParseFile_NoExt
+--- PASS: TestParseFile_NoExt (0.00s)
+=== RUN   TestParseFile_MultiDot
+--- PASS: TestParseFile_MultiDot (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-util/zfile	(cached)
+=== RUN   TestGrace_New
+--- PASS: TestGrace_New (0.00s)
+=== RUN   TestGrace_Register
+--- PASS: TestGrace_Register (0.00s)
+=== RUN   TestGrace_RegisterMultiple
+--- PASS: TestGrace_RegisterMultiple (0.00s)
+=== RUN   TestGrace_StopTriggersClose
+--- PASS: TestGrace_StopTriggersClose (0.05s)
+=== RUN   TestGrace_ExecutionOrder
+--- PASS: TestGrace_ExecutionOrder (0.05s)
+=== RUN   TestCustomSignal_String
+--- PASS: TestCustomSignal_String (0.00s)
+=== RUN   TestCustomSignal_Signal
+--- PASS: TestCustomSignal_Signal (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-util/zgrace	(cached)
+=== RUN   TestFastId_Init
+--- PASS: TestFastId_Init (0.00s)
+=== RUN   TestFastId_UniqueIds
+--- PASS: TestFastId_UniqueIds (0.00s)
+=== RUN   TestFastId_DifferentNodes
+--- PASS: TestFastId_DifferentNodes (0.00s)
+=== RUN   TestFastId_Concurrent
+--- PASS: TestFastId_Concurrent (0.01s)
+=== RUN   TestFastId_NodeIdOverflow
+--- PASS: TestFastId_NodeIdOverflow (0.00s)
+=== RUN   TestSonyFlake_Next
+--- PASS: TestSonyFlake_Next (0.00s)
+=== RUN   TestSonyFlake_Unique
+--- PASS: TestSonyFlake_Unique (0.03s)
+=== RUN   TestUuid_GenId
+--- PASS: TestUuid_GenId (0.00s)
+=== RUN   TestUuid_Unique
+--- PASS: TestUuid_Unique (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-util/zid	(cached)
+=== RUN   TestLimiter_Basic
+--- PASS: TestLimiter_Basic (0.00s)
+=== RUN   TestLimiter_Allow
+--- PASS: TestLimiter_Allow (0.00s)
+=== RUN   TestLimiter_Refill
+--- PASS: TestLimiter_Refill (0.20s)
+=== RUN   TestLimiter_HighRate
+    limiter_test.go:99: Allowed: 100, Denied: 50
+--- PASS: TestLimiter_HighRate (0.00s)
+=== RUN   TestLimiter_Concurrent
+    limiter_test.go:144: Concurrent test - Allowed: 50, Denied: 50
+--- PASS: TestLimiter_Concurrent (0.00s)
+=== RUN   TestLimiter_ZeroLimit
+--- PASS: TestLimiter_ZeroLimit (0.00s)
+=== RUN   TestLimiter_LowBurst
+--- PASS: TestLimiter_LowBurst (0.00s)
+=== RUN   TestLimiter_SustainedLoad
+    limiter_test.go:205: Sustained load - Allowed: 41, Denied: 59
+--- PASS: TestLimiter_SustainedLoad (1.09s)
+=== RUN   TestLimiter_BurstRecovery
+--- PASS: TestLimiter_BurstRecovery (1.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-util/zlimiter	(cached)
+=== RUN   TestEventBus_BasicFlow
+--- PASS: TestEventBus_BasicFlow (0.00s)
+=== RUN   TestEventBus_DeadlockPrevention
+--- PASS: TestEventBus_DeadlockPrevention (0.00s)
+=== RUN   TestEventBus_PanicRecovery
+Panic: EventBus: observer panic recovered (0x10494df20,0x104981f90) goroutine 10 [running]:
+github.com/aiyang-zh/zhenyi-util/zsafe.Recover({0x104831812, 0x22})
+	/Users/zay/godir/zhenyi-util/zsafe/safe.go:12 +0x58
+panic({0x10494df20?, 0x104981f90?})
+	/Users/zay/go/go1.26.0/src/runtime/panic.go:860 +0x12c
+github.com/aiyang-zh/zhenyi-util/zpub.(*PanicObserver).OnChange(0x4db6ab2a7d88?, 0x10481cc64?)
+	/Users/zay/godir/zhenyi-util/zpub/pub_test.go:26 +0x2c
+github.com/aiyang-zh/zhenyi-util/zpub.(*EventBus).safeCall(0x4db6ab2b2b60?, {0x104982fe0?, 0x1049d1ac0?}, 0x10481c82c?)
+	/Users/zay/godir/zhenyi-util/zpub/pub.go:94 +0x4c
+github.com/aiyang-zh/zhenyi-util/zpub.(*EventBus).Publish(0x4db6ab294320, 0x4db6ab294380)
+	/Users/zay/godir/zhenyi-util/zpub/pub.go:68 +0x2e4
+github.com/aiyang-zh/zhenyi-util/zpub.TestEventBus_PanicRecovery(0x4db6ab2dc6c8)
+	/Users/zay/godir/zhenyi-util/zpub/pub_test.go:108 +0x118
+testing.tRunner(0x4db6ab2dc6c8, 0x1049813f0)
+	/Users/zay/go/go1.26.0/src/testing/testing.go:2036 +0xc4
+created by testing.(*T).Run in goroutine 1
+	/Users/zay/go/go1.26.0/src/testing/testing.go:2101 +0x3a8
+
+--- PASS: TestEventBus_PanicRecovery (0.00s)
+=== RUN   TestEventBus_PointerEnforcement
+    pub_test.go:134: 成功捕获预期的 panic: EventBus: Subscribe observer must be a pointer, got zpub.BadStruct
+--- PASS: TestEventBus_PointerEnforcement (0.00s)
+=== RUN   TestEventBus_AsyncPublish
+    pub_test.go:197: 所有异步任务完成，总耗时: 10.514708ms
+--- PASS: TestEventBus_AsyncPublish (0.01s)
+=== RUN   TestEventBus_MultipleTopics
+--- PASS: TestEventBus_MultipleTopics (0.00s)
+=== RUN   TestEventBus_PublishNoSubscribers
+--- PASS: TestEventBus_PublishNoSubscribers (0.00s)
+=== RUN   TestEventBus_UnSubscribeNonExistent
+--- PASS: TestEventBus_UnSubscribeNonExistent (0.00s)
+=== RUN   TestEventBus_SubscribeSameObserverTwice
+--- PASS: TestEventBus_SubscribeSameObserverTwice (0.00s)
+=== RUN   TestEventBus_MultipleObserversSameTopic
+--- PASS: TestEventBus_MultipleObserversSameTopic (0.00s)
+=== RUN   TestEventBus_UnSubscribeMiddle
+--- PASS: TestEventBus_UnSubscribeMiddle (0.00s)
+=== RUN   TestEventBus_ConcurrentPublish
+--- PASS: TestEventBus_ConcurrentPublish (0.00s)
+=== RUN   TestEventBus_EventData
+--- PASS: TestEventBus_EventData (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-util/zpub	(cached)
+=== RUN   TestRandomList_Int
+--- PASS: TestRandomList_Int (0.00s)
+=== RUN   TestRandomList_String
+--- PASS: TestRandomList_String (0.00s)
+=== RUN   TestRandomList_SingleElement
+--- PASS: TestRandomList_SingleElement (0.00s)
+=== RUN   TestRange_Int
+--- PASS: TestRange_Int (0.00s)
+=== RUN   TestRange_Int_Reversed
+--- PASS: TestRange_Int_Reversed (0.00s)
+=== RUN   TestRange_Int_Equal
+--- PASS: TestRange_Int_Equal (0.00s)
+=== RUN   TestRange_Int32
+--- PASS: TestRange_Int32 (0.00s)
+=== RUN   TestRange_Uint32
+--- PASS: TestRange_Uint32 (0.00s)
+=== RUN   TestRange_Float64
+--- PASS: TestRange_Float64 (0.00s)
+=== RUN   TestRange_Float64_Reversed
+--- PASS: TestRange_Float64_Reversed (0.00s)
+=== RUN   TestRange_Float64_Equal
+--- PASS: TestRange_Float64_Equal (0.00s)
+=== RUN   TestRange_Float32
+--- PASS: TestRange_Float32 (0.00s)
+=== RUN   TestRange_Int_Distribution
+--- PASS: TestRange_Int_Distribution (0.00s)
+=== RUN   TestRange_Float64_Distribution
+--- PASS: TestRange_Float64_Distribution (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-util/zrand	(cached)
+=== RUN   TestRecover_CatchesPanic
+Panic: test_catch (0x1010d5a40,0x101108a00) goroutine 7 [running]:
+github.com/aiyang-zh/zhenyi-util/zsafe.Recover({0x100fb38da, 0xa})
+	/Users/zay/godir/zhenyi-util/zsafe/safe.go:12 +0x58
+panic({0x1010d5a40?, 0x101108a00?})
+	/Users/zay/go/go1.26.0/src/runtime/panic.go:860 +0x12c
+github.com/aiyang-zh/zhenyi-util/zsafe.TestRecover_CatchesPanic.func1()
+	/Users/zay/godir/zhenyi-util/zsafe/safe_test.go:16 +0x48
+github.com/aiyang-zh/zhenyi-util/zsafe.TestRecover_CatchesPanic(0x2703c7d86248?)
+	/Users/zay/godir/zhenyi-util/zsafe/safe_test.go:17 +0x1c
+testing.tRunner(0x2703c7d86248, 0x101107e08)
+	/Users/zay/go/go1.26.0/src/testing/testing.go:2036 +0xc4
+created by testing.(*T).Run in goroutine 1
+	/Users/zay/go/go1.26.0/src/testing/testing.go:2101 +0x3a8
+
+--- PASS: TestRecover_CatchesPanic (0.00s)
+=== RUN   TestRecover_NoPanic
+--- PASS: TestRecover_NoPanic (0.00s)
+=== RUN   TestRecover_StringPanic
+Panic: string_panic (0x1010d5a40,0x1011089f0) goroutine 9 [running]:
+github.com/aiyang-zh/zhenyi-util/zsafe.Recover({0x100fb411b, 0xc})
+	/Users/zay/godir/zhenyi-util/zsafe/safe.go:12 +0x58
+panic({0x1010d5a40?, 0x1011089f0?})
+	/Users/zay/go/go1.26.0/src/runtime/panic.go:860 +0x12c
+github.com/aiyang-zh/zhenyi-util/zsafe.TestRecover_StringPanic.func1()
+	/Users/zay/godir/zhenyi-util/zsafe/safe_test.go:37 +0x48
+github.com/aiyang-zh/zhenyi-util/zsafe.TestRecover_StringPanic(0x2703c7d866c8?)
+	/Users/zay/godir/zhenyi-util/zsafe/safe_test.go:38 +0x1c
+testing.tRunner(0x2703c7d866c8, 0x101107e30)
+	/Users/zay/go/go1.26.0/src/testing/testing.go:2036 +0xc4
+created by testing.(*T).Run in goroutine 1
+	/Users/zay/go/go1.26.0/src/testing/testing.go:2101 +0x3a8
+
+--- PASS: TestRecover_StringPanic (0.00s)
+=== RUN   TestRecover_ErrorPanic
+Panic: error_panic (0x1010d5c80,0x100fbfed0) goroutine 10 [running]:
+github.com/aiyang-zh/zhenyi-util/zsafe.Recover({0x100fb3ce9, 0xb})
+	/Users/zay/godir/zhenyi-util/zsafe/safe.go:12 +0x58
+panic({0x1010d5c80?, 0x100fbfed0?})
+	/Users/zay/go/go1.26.0/src/runtime/panic.go:860 +0x12c
+github.com/aiyang-zh/zhenyi-util/zsafe.TestRecover_ErrorPanic.func1()
+	/Users/zay/godir/zhenyi-util/zsafe/safe_test.go:44 +0x48
+github.com/aiyang-zh/zhenyi-util/zsafe.TestRecover_ErrorPanic(0x2703c7d86908?)
+	/Users/zay/godir/zhenyi-util/zsafe/safe_test.go:45 +0x1c
+testing.tRunner(0x2703c7d86908, 0x101107e10)
+	/Users/zay/go/go1.26.0/src/testing/testing.go:2036 +0xc4
+created by testing.(*T).Run in goroutine 1
+	/Users/zay/go/go1.26.0/src/testing/testing.go:2101 +0x3a8
+
+--- PASS: TestRecover_ErrorPanic (0.00s)
+=== RUN   TestRecover_NilPanic
+Panic: nil_panic (0x1010e01a0,0x1011599a0) goroutine 11 [running]:
+github.com/aiyang-zh/zhenyi-util/zsafe.Recover({0x100fb34bd, 0x9})
+	/Users/zay/godir/zhenyi-util/zsafe/safe.go:12 +0x58
+panic({0x0?, 0x0?})
+	/Users/zay/go/go1.26.0/src/runtime/panic.go:860 +0x12c
+github.com/aiyang-zh/zhenyi-util/zsafe.TestRecover_NilPanic.func1()
+	/Users/zay/godir/zhenyi-util/zsafe/safe_test.go:52 +0x40
+github.com/aiyang-zh/zhenyi-util/zsafe.TestRecover_NilPanic(0x2703c7d86b48?)
+	/Users/zay/godir/zhenyi-util/zsafe/safe_test.go:53 +0x1c
+testing.tRunner(0x2703c7d86b48, 0x101107e20)
+	/Users/zay/go/go1.26.0/src/testing/testing.go:2036 +0xc4
+created by testing.(*T).Run in goroutine 1
+	/Users/zay/go/go1.26.0/src/testing/testing.go:2101 +0x3a8
+
+--- PASS: TestRecover_NilPanic (0.00s)
+=== RUN   TestRecover_NestedPanic
+Panic: inner (0x1010d5a40,0x1011089e0) goroutine 12 [running]:
+github.com/aiyang-zh/zhenyi-util/zsafe.Recover({0x100fb28e7, 0x5})
+	/Users/zay/godir/zhenyi-util/zsafe/safe.go:12 +0x58
+panic({0x1010d5a40?, 0x1011089e0?})
+	/Users/zay/go/go1.26.0/src/runtime/panic.go:860 +0x12c
+github.com/aiyang-zh/zhenyi-util/zsafe.TestRecover_NestedPanic.func1.1()
+	/Users/zay/godir/zhenyi-util/zsafe/safe_test.go:62 +0x48
+github.com/aiyang-zh/zhenyi-util/zsafe.TestRecover_NestedPanic.func1()
+	/Users/zay/godir/zhenyi-util/zsafe/safe_test.go:63 +0x38
+github.com/aiyang-zh/zhenyi-util/zsafe.TestRecover_NestedPanic(0x2703c7d86d88?)
+	/Users/zay/godir/zhenyi-util/zsafe/safe_test.go:65 +0x1c
+testing.tRunner(0x2703c7d86d88, 0x101107e18)
+	/Users/zay/go/go1.26.0/src/testing/testing.go:2036 +0xc4
+created by testing.(*T).Run in goroutine 1
+	/Users/zay/go/go1.26.0/src/testing/testing.go:2101 +0x3a8
+
+--- PASS: TestRecover_NestedPanic (0.00s)
+=== RUN   TestRecover_SubsequentCodeRuns
+Panic: test_subsequent (0x1010d5a40,0x1011089d0) goroutine 13 [running]:
+github.com/aiyang-zh/zhenyi-util/zsafe.Recover({0x100fb4e7c, 0xf})
+	/Users/zay/godir/zhenyi-util/zsafe/safe.go:12 +0x58
+panic({0x1010d5a40?, 0x1011089d0?})
+	/Users/zay/go/go1.26.0/src/runtime/panic.go:860 +0x12c
+github.com/aiyang-zh/zhenyi-util/zsafe.TestRecover_SubsequentCodeRuns.func1()
+	/Users/zay/godir/zhenyi-util/zsafe/safe_test.go:74 +0x48
+github.com/aiyang-zh/zhenyi-util/zsafe.TestRecover_SubsequentCodeRuns(0x2703c7d86fc8?)
+	/Users/zay/godir/zhenyi-util/zsafe/safe_test.go:76 +0x1c
+testing.tRunner(0x2703c7d86fc8, 0x101107e38)
+	/Users/zay/go/go1.26.0/src/testing/testing.go:2036 +0xc4
+created by testing.(*T).Run in goroutine 1
+	/Users/zay/go/go1.26.0/src/testing/testing.go:2101 +0x3a8
+
+--- PASS: TestRecover_SubsequentCodeRuns (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-util/zsafe	(cached)
+=== RUN   TestTime_Now_NoOffset
+--- PASS: TestTime_Now_NoOffset (0.00s)
+=== RUN   TestTime_AddOffset
+--- PASS: TestTime_AddOffset (0.00s)
+=== RUN   TestTime_ResetOffset
+--- PASS: TestTime_ResetOffset (0.00s)
+=== RUN   TestServerNowMilli
+--- PASS: TestServerNowMilli (0.00s)
+=== RUN   TestTimeStampToStr
+--- PASS: TestTimeStampToStr (0.00s)
+=== RUN   TestTimeStampToStr_CustomFormat
+--- PASS: TestTimeStampToStr_CustomFormat (0.00s)
+=== RUN   TestTimeNowToStr
+--- PASS: TestTimeNowToStr (0.00s)
+=== RUN   TestCurrentHour
+--- PASS: TestCurrentHour (0.00s)
+=== RUN   TestNextHour
+--- PASS: TestNextHour (0.00s)
+=== RUN   TestCurrentDay
+--- PASS: TestCurrentDay (0.00s)
+=== RUN   TestNextDay
+--- PASS: TestNextDay (0.00s)
+=== RUN   TestCurrentWeek
+--- PASS: TestCurrentWeek (0.00s)
+=== RUN   TestNextWeek
+--- PASS: TestNextWeek (0.00s)
+=== RUN   TestCurrentMonth
+--- PASS: TestCurrentMonth (0.00s)
+=== RUN   TestNextMonth
+--- PASS: TestNextMonth (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-util/ztime	(cached)
