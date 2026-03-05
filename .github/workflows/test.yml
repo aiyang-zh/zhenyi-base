@@ -1,0 +1,32 @@
+name: Run Tests
+
+on:
+  push:
+    branches: [ "main" ]        # 推送到 main 时触发
+  pull_request:
+    branches: [ "main" ]        # 向 main 提 PR 时触发
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.0'   # 使用最新稳定版 Go
+
+      - name: Make script executable
+        run: chmod +x ./run_tests.sh
+
+      - name: Run tests
+        run: ./run_tests.sh
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()              # 即使失败也上传结果
+        with:
+          name: test-results-${{ github.sha }}
+          path: test_results/
