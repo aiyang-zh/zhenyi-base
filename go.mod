@@ -1,4 +1,4 @@
-module github.com/aiyang-zh/zhenyi-ext
+module github.com/aiyang-zh/zhenyi-util
 
 go 1.26.0
 

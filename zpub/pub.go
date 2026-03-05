@@ -2,7 +2,7 @@ package zpub
 
 import (
 	"fmt"
-	"github.com/aiyang-zh/zhenyi-ext/zsafe"
+	"github.com/aiyang-zh/zhenyi-util/zsafe"
 	"reflect"
 	"sync"
 )
