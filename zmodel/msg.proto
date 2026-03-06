@@ -1,0 +1,36 @@
+syntax = "proto3";
+package proto;
+option go_package = "zhenyi-core/zmodel";
+
+// ✅ 字段顺序优化（按内存对齐 + Cache Line 友好）:
+// 
+// 内存布局优化原则：
+// 1. 8字节字段组（int64/uint64）- 前 32 字节
+// 2. 切片字段（24字节）- 48 字节起
+// 3. 4字节字段组（int32/uint32）- 96 字节起
+// 4. 1字节字段组（bool）- 最后
+message Message{
+  // ========== 8字节字段组 ==========
+  int64 AuthId = 1;
+  int64 SessionId = 2;
+  uint64 RpcId = 3;
+  uint64 TraceIdHi = 4;      // W3C Trace ID 高 64 位
+  uint64 TraceIdLo = 16;     // W3C Trace ID 低 64 位
+  uint64 SpanId = 17;        // W3C Span ID (64-bit)
+  
+  // ========== 切片字段 ==========
+  bytes Data = 5;
+  repeated int64 AuthIds = 6;
+  
+  // ========== 4字节字段组 ==========
+  int32 MsgId = 7;
+  int32 SrcActor = 8;
+  int32 TarActor = 9;
+  int32 refCount = 11;
+  uint32 SeqId = 12;
+  
+  // ========== 1字节字段组（偏移 104-106）==========
+  bool ToClient = 13;
+  bool FromClient = 14;
+  bool IsResponse = 15;
+}
