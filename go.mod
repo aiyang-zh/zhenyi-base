@@ -1,5 +1,7 @@
 module github.com/aiyang-zh/zhenyi-core
 
+module github.com/aiyang-zh/zhenyi-util
+
 go 1.26.0
 
 require (
@@ -39,4 +41,7 @@ require (
 	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	github.com/google/uuid v1.6.0
+	github.com/sony/sonyflake v1.3.0
+	golang.org/x/time v0.14.0
 )
