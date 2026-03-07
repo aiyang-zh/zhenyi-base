@@ -3,12 +3,12 @@ package zserver
 import (
 	"context"
 	"fmt"
-	"github.com/aiyang-zh/zhenyi-core/ziface"
-	"github.com/aiyang-zh/zhenyi-core/zkcp"
-	"github.com/aiyang-zh/zhenyi-core/znet"
-	"github.com/aiyang-zh/zhenyi-core/ztcp"
-	"github.com/aiyang-zh/zhenyi-core/zws"
-	"github.com/aiyang-zh/zhenyi-util/zgrace"
+	"github.com/aiyang-zh/zhenyi-base/zgrace"
+	"github.com/aiyang-zh/zhenyi-base/ziface"
+	"github.com/aiyang-zh/zhenyi-base/zkcp"
+	"github.com/aiyang-zh/zhenyi-base/znet"
+	"github.com/aiyang-zh/zhenyi-base/ztcp"
+	"github.com/aiyang-zh/zhenyi-base/zws"
 	"runtime"
 	"sync"
 

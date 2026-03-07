@@ -1,7 +1,7 @@
 package zqueue
 
 import (
-	"github.com/aiyang-zh/zhenyi-util/zbackoff"
+	"github.com/aiyang-zh/zhenyi-base/zbackoff"
 	"sync/atomic"
 	"time"
 )

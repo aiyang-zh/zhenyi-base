@@ -26,7 +26,7 @@ package znet
 import (
 	"crypto/tls"
 	"errors"
-	"github.com/aiyang-zh/zhenyi-core/ziface"
+	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"net"
 
 	"github.com/tjfoc/gmsm/gmtls"

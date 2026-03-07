@@ -1,7 +1,7 @@
 package ztcp
 
 import (
-	"github.com/aiyang-zh/zhenyi-core/znet"
+	"github.com/aiyang-zh/zhenyi-base/znet"
 	"net"
 )
 

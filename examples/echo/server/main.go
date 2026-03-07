@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/aiyang-zh/zhenyi-core/znet"
-	"github.com/aiyang-zh/zhenyi-core/zserver"
+	"github.com/aiyang-zh/zhenyi-base/znet"
+	"github.com/aiyang-zh/zhenyi-base/zserver"
 )
 
 func main() {

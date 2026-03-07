@@ -2,8 +2,8 @@ package zkcp
 
 import (
 	"context"
-	"github.com/aiyang-zh/zhenyi-core/ziface"
-	"github.com/aiyang-zh/zhenyi-core/znet"
+	"github.com/aiyang-zh/zhenyi-base/ziface"
+	"github.com/aiyang-zh/zhenyi-base/znet"
 	"net"
 	"sync"
 	"testing"

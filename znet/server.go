@@ -1,8 +1,8 @@
 package znet
 
 import (
-	"github.com/aiyang-zh/zhenyi-core/zencrypt"
-	"github.com/aiyang-zh/zhenyi-core/ziface"
+	"github.com/aiyang-zh/zhenyi-base/zencrypt"
+	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -10,7 +10,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/aiyang-zh/zhenyi-core/zlog"
+	"github.com/aiyang-zh/zhenyi-base/zlog"
 )
 
 // heartbeatConfigurable 内部接口，用于设置 channel 的心跳超时

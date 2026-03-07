@@ -1,6 +1,6 @@
 package zserver
 
-import "github.com/aiyang-zh/zhenyi-core/zpool"
+import "github.com/aiyang-zh/zhenyi-base/zpool"
 
 // Request 封装一次客户端请求的上下文。
 type Request struct {

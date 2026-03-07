@@ -1,7 +1,7 @@
 package zws
 
 import (
-	"github.com/aiyang-zh/zhenyi-core/znet"
+	"github.com/aiyang-zh/zhenyi-base/znet"
 	"github.com/gorilla/websocket"
 )
 

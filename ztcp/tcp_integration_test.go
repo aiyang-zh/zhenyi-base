@@ -11,7 +11,7 @@ import (
 	"encoding/binary"
 	"encoding/pem"
 	"errors"
-	"github.com/aiyang-zh/zhenyi-core/zencrypt"
+	"github.com/aiyang-zh/zhenyi-base/zencrypt"
 	"math/big"
 	"net"
 	"sync"
@@ -19,8 +19,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aiyang-zh/zhenyi-core/ziface"
-	"github.com/aiyang-zh/zhenyi-core/znet"
+	"github.com/aiyang-zh/zhenyi-base/ziface"
+	"github.com/aiyang-zh/zhenyi-base/znet"
 )
 
 // makeTestPacket 构建协议包 (msgId(4) + seqId(4) + dataLen(4) + data)

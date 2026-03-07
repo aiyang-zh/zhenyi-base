@@ -2,14 +2,14 @@ package zws
 
 import (
 	"fmt"
-	"github.com/aiyang-zh/zhenyi-core/ziface"
-	"github.com/aiyang-zh/zhenyi-core/zlog"
-	"github.com/aiyang-zh/zhenyi-core/znet"
+	"github.com/aiyang-zh/zhenyi-base/ziface"
+	"github.com/aiyang-zh/zhenyi-base/zlog"
+	"github.com/aiyang-zh/zhenyi-base/znet"
 
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 
-	"github.com/aiyang-zh/zhenyi-util/zerrs"
+	"github.com/aiyang-zh/zhenyi-base/zerrs"
 )
 
 type Client struct {

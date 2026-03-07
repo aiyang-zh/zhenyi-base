@@ -2,10 +2,10 @@ package znet
 
 import (
 	"errors"
-	"github.com/aiyang-zh/zhenyi-core/ziface"
-	"github.com/aiyang-zh/zhenyi-core/zlog"
-	"github.com/aiyang-zh/zhenyi-core/zpool"
-	"github.com/aiyang-zh/zhenyi-util/zsafe"
+	"github.com/aiyang-zh/zhenyi-base/ziface"
+	"github.com/aiyang-zh/zhenyi-base/zlog"
+	"github.com/aiyang-zh/zhenyi-base/zpool"
+	"github.com/aiyang-zh/zhenyi-base/zsafe"
 	"io"
 	"net"
 	"strings"

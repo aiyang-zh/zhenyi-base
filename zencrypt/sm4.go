@@ -43,7 +43,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/aiyang-zh/zhenyi-core/zpool"
+	"github.com/aiyang-zh/zhenyi-base/zpool"
 	"github.com/tjfoc/gmsm/sm4"
 )
 

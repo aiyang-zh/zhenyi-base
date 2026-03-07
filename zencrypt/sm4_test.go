@@ -2,7 +2,7 @@ package zencrypt
 
 import (
 	"bytes"
-	"github.com/aiyang-zh/zhenyi-core/ziface"
+	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"testing"
 )
 

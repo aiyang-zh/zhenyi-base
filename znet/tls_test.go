@@ -8,7 +8,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"github.com/aiyang-zh/zhenyi-core/ziface"
+	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"math/big"
 	"net"
 	"os"

@@ -3,15 +3,15 @@ package znet
 import (
 	"bytes"
 	"errors"
-	"github.com/aiyang-zh/zhenyi-core/ziface"
+	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"io"
 	"net"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/aiyang-zh/zhenyi-core/zencrypt"
-	"github.com/aiyang-zh/zhenyi-core/zpool"
+	"github.com/aiyang-zh/zhenyi-base/zencrypt"
+	"github.com/aiyang-zh/zhenyi-base/zpool"
 )
 
 // ================================================================

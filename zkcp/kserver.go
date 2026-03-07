@@ -2,10 +2,10 @@ package zkcp
 
 import (
 	"context"
-	"github.com/aiyang-zh/zhenyi-core/zlog"
-	"github.com/aiyang-zh/zhenyi-core/znet"
-	"github.com/aiyang-zh/zhenyi-util/zerrs"
-	"github.com/aiyang-zh/zhenyi-util/zsafe"
+	"github.com/aiyang-zh/zhenyi-base/zerrs"
+	"github.com/aiyang-zh/zhenyi-base/zlog"
+	"github.com/aiyang-zh/zhenyi-base/znet"
+	"github.com/aiyang-zh/zhenyi-base/zsafe"
 	"github.com/xtaci/kcp-go/v5"
 	"net"
 

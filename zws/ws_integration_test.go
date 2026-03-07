@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aiyang-zh/zhenyi-core/ziface"
-	"github.com/aiyang-zh/zhenyi-core/znet"
+	"github.com/aiyang-zh/zhenyi-base/ziface"
+	"github.com/aiyang-zh/zhenyi-base/znet"
 )
 
 func wsFreePort(t *testing.T) string {

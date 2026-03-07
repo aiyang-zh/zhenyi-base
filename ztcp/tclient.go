@@ -1,14 +1,14 @@
 package ztcp
 
 import (
-	"github.com/aiyang-zh/zhenyi-core/ziface"
-	"github.com/aiyang-zh/zhenyi-core/zlog"
-	"github.com/aiyang-zh/zhenyi-core/znet"
+	"github.com/aiyang-zh/zhenyi-base/ziface"
+	"github.com/aiyang-zh/zhenyi-base/zlog"
+	"github.com/aiyang-zh/zhenyi-base/znet"
 	"net"
 
 	"go.uber.org/zap"
 
-	"github.com/aiyang-zh/zhenyi-util/zerrs"
+	"github.com/aiyang-zh/zhenyi-base/zerrs"
 )
 
 type TClient struct {

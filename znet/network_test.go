@@ -3,8 +3,8 @@ package znet
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/aiyang-zh/zhenyi-core/zencrypt"
-	"github.com/aiyang-zh/zhenyi-core/ziface"
+	"github.com/aiyang-zh/zhenyi-base/zencrypt"
+	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"io"
 	"sync"
 	"testing"

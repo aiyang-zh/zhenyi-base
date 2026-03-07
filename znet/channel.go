@@ -2,9 +2,9 @@ package znet
 
 import (
 	"context"
-	"github.com/aiyang-zh/zhenyi-core/ziface"
-	"github.com/aiyang-zh/zhenyi-core/zlog"
-	"github.com/aiyang-zh/zhenyi-core/zqueue"
+	"github.com/aiyang-zh/zhenyi-base/ziface"
+	"github.com/aiyang-zh/zhenyi-base/zlog"
+	"github.com/aiyang-zh/zhenyi-base/zqueue"
 	"io"
 	"net"
 	"strings"
@@ -14,11 +14,11 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/aiyang-zh/zhenyi-core/zbatch"
-	"github.com/aiyang-zh/zhenyi-core/zpool"
-	"github.com/aiyang-zh/zhenyi-util/zbackoff"
-	"github.com/aiyang-zh/zhenyi-util/zerrs"
-	"github.com/aiyang-zh/zhenyi-util/ztime"
+	"github.com/aiyang-zh/zhenyi-base/zbackoff"
+	"github.com/aiyang-zh/zhenyi-base/zbatch"
+	"github.com/aiyang-zh/zhenyi-base/zerrs"
+	"github.com/aiyang-zh/zhenyi-base/zpool"
+	"github.com/aiyang-zh/zhenyi-base/ztime"
 )
 
 // 接口断言：确保 BaseChannel 实现 IChannel

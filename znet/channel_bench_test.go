@@ -3,7 +3,7 @@ package znet
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/aiyang-zh/zhenyi-core/zpool"
+	"github.com/aiyang-zh/zhenyi-base/zpool"
 	"io"
 	"testing"
 )

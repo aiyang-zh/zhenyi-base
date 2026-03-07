@@ -1,6 +1,6 @@
 package znet
 
-import "github.com/aiyang-zh/zhenyi-core/zpool"
+import "github.com/aiyang-zh/zhenyi-base/zpool"
 
 // ================================================================
 // ParseData — 协议解析结果容器

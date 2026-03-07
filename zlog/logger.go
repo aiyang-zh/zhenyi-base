@@ -3,7 +3,7 @@ package zlog
 import (
 	"bufio"
 	"fmt"
-	"github.com/aiyang-zh/zhenyi-core/zpool"
+	"github.com/aiyang-zh/zhenyi-base/zpool"
 	zaprotatelogs "github.com/lestrrat-go/file-rotatelogs"
 	"github.com/petermattis/goid"
 	"go.uber.org/zap"

@@ -2,8 +2,8 @@ package zcoll
 
 import (
 	"fmt"
-	"github.com/aiyang-zh/zhenyi-core/zpool"
-	"github.com/aiyang-zh/zhenyi-util/ztime"
+	"github.com/aiyang-zh/zhenyi-base/zpool"
+	"github.com/aiyang-zh/zhenyi-base/ztime"
 	"hash/maphash"
 	"sync"
 	"time"

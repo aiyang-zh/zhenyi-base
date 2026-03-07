@@ -2,7 +2,7 @@ package zencrypt
 
 import (
 	"fmt"
-	"github.com/aiyang-zh/zhenyi-core/zpool"
+	"github.com/aiyang-zh/zhenyi-base/zpool"
 	"testing"
 )
 

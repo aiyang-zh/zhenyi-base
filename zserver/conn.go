@@ -1,8 +1,8 @@
 package zserver
 
 import (
-	"github.com/aiyang-zh/zhenyi-core/ziface"
-	"github.com/aiyang-zh/zhenyi-core/znet"
+	"github.com/aiyang-zh/zhenyi-base/ziface"
+	"github.com/aiyang-zh/zhenyi-base/znet"
 )
 
 // Conn 是 network.IChannel 的轻量封装，只暴露安全的 API。

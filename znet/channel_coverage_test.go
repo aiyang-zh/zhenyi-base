@@ -3,7 +3,7 @@ package znet
 import (
 	"context"
 	"encoding/binary"
-	"github.com/aiyang-zh/zhenyi-core/ziface"
+	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"net"
 	"strings"
 	"sync"
