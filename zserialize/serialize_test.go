@@ -2,8 +2,6 @@ package zserialize
 
 import (
 	"testing"
-
-	"github.com/aiyang-zh/zhenyi-core/zmodel"
 )
 
 // ============================================================
@@ -228,98 +226,6 @@ func TestJson_Concurrent(t *testing.T) {
 	}
 }
 
-// ============================================================
-// Protobuf
-// ============================================================
-
-func TestMarshalProto_DeSerialize(t *testing.T) {
-	msg := &zmodel.Message{
-		AuthId:    12345,
-		SessionId: 67890,
-		MsgId:     100,
-		SrcActor:  1,
-		TarActor:  2,
-		Data:      []byte("hello protobuf"),
-	}
-
-	buf, err := MarshalProto(msg)
-	if err != nil {
-		t.Fatalf("MarshalProto: %v", err)
-	}
-	if len(buf) == 0 {
-		t.Fatal("MarshalProto: empty output")
-	}
-
-	var result zmodel.Message
-	if err := UnmarshalProto(buf, &result); err != nil {
-		t.Fatalf("UnmarshalProto: %v", err)
-	}
-
-	if result.AuthId != msg.AuthId {
-		t.Errorf("AuthId: got %d, want %d", result.AuthId, msg.AuthId)
-	}
-	if result.SessionId != msg.SessionId {
-		t.Errorf("SessionId: got %d, want %d", result.SessionId, msg.SessionId)
-	}
-	if result.MsgId != msg.MsgId {
-		t.Errorf("MsgId: got %d, want %d", result.MsgId, msg.MsgId)
-	}
-	if string(result.Data) != string(msg.Data) {
-		t.Errorf("Data: got %q, want %q", result.Data, msg.Data)
-	}
-}
-
-func TestMarshalProto_EmptyMessage(t *testing.T) {
-	msg := &zmodel.Message{}
-	buf, err := MarshalProto(msg)
-	if err != nil {
-		t.Fatalf("MarshalProto empty: %v", err)
-	}
-
-	var result zmodel.Message
-	if err := UnmarshalProto(buf, &result); err != nil {
-		t.Fatalf("UnmarshalProto empty: %v", err)
-	}
-	if result.AuthId != 0 || result.MsgId != 0 {
-		t.Error("empty message should have zero values")
-	}
-}
-
-func TestUnmarshalProto_InvalidData(t *testing.T) {
-	err := UnmarshalProto([]byte{0xFF, 0xFF, 0xFF}, &zmodel.Message{})
-	if err == nil {
-		t.Fatal("expected error for invalid protobuf data")
-	}
-}
-
-func TestMarshalProto_WithAuthIds(t *testing.T) {
-	msg := &zmodel.Message{
-		AuthId:  1,
-		MsgId:   200,
-		AuthIds: []int64{100, 200, 300, 400, 500},
-		Data:    []byte("broadcast"),
-	}
-
-	buf, err := MarshalProto(msg)
-	if err != nil {
-		t.Fatalf("MarshalProto: %v", err)
-	}
-
-	var result zmodel.Message
-	if err := UnmarshalProto(buf, &result); err != nil {
-		t.Fatalf("UnmarshalProto: %v", err)
-	}
-
-	if len(result.AuthIds) != 5 {
-		t.Fatalf("AuthIds len: got %d, want 5", len(result.AuthIds))
-	}
-	for i, id := range result.AuthIds {
-		if id != msg.AuthIds[i] {
-			t.Errorf("AuthIds[%d]: got %d, want %d", i, id, msg.AuthIds[i])
-		}
-	}
-}
-
 // 测试数据结构
 type BenchmarkData struct {
 	Id       int64             `json:"id" msgpack:"id"`
@@ -460,66 +366,6 @@ func BenchmarkMsgPack_RoundTrip(b *testing.B) {
 	}
 }
 
-// ==================== Protobuf 性能测试 ====================
-
-func createProtoTestMessage() *zmodel.Message {
-	return &zmodel.Message{
-		AuthId:    123456789,
-		SessionId: 987654321,
-		RpcId:     1111222233334444,
-		MsgId:     500,
-		SrcActor:  10,
-		TarActor:  20,
-		Data:      []byte("benchmark protobuf data payload"),
-		AuthIds:   []int64{100, 200, 300, 400, 500},
-	}
-}
-
-func BenchmarkProto_Serialize(b *testing.B) {
-	msg := createProtoTestMessage()
-	b.ResetTimer()
-	b.ReportAllocs()
-
-	for i := 0; i < b.N; i++ {
-		_, err := MarshalProto(msg)
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func BenchmarkProto_Deserialize(b *testing.B) {
-	msg := createProtoTestMessage()
-	serialized, _ := MarshalProto(msg)
-
-	b.ResetTimer()
-	b.ReportAllocs()
-
-	for i := 0; i < b.N; i++ {
-		result := &zmodel.Message{}
-		if err := UnmarshalProto(serialized, result); err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func BenchmarkProto_RoundTrip(b *testing.B) {
-	msg := createProtoTestMessage()
-	b.ResetTimer()
-	b.ReportAllocs()
-
-	for i := 0; i < b.N; i++ {
-		buf, err := MarshalProto(msg)
-		if err != nil {
-			b.Fatal(err)
-		}
-		result := &zmodel.Message{}
-		if err := UnmarshalProto(buf, result); err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
 // ==================== 数据大小对比测试 ====================
 
 func TestSerializationSize(t *testing.T) {
@@ -531,10 +377,4 @@ func TestSerializationSize(t *testing.T) {
 	t.Logf("JSON 大小:    %d bytes", len(jsonData))
 	t.Logf("MsgPack 大小: %d bytes", len(msgpackData))
 	t.Logf("压缩率: %.2f%%", float64(len(msgpackData))/float64(len(jsonData))*100)
-
-	// Protobuf 大小对比
-	protoMsg := createProtoTestMessage()
-	protoData, _ := MarshalProto(protoMsg)
-
-	t.Logf("Protobuf 标准序列化大小: %d bytes", len(protoData))
 }

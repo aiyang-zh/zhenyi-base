@@ -2,14 +2,10 @@
 
 package zserialize
 
-import (
-	gojson "github.com/goccy/go-json"
-)
-
 func UnmarshalJson(body []byte, data interface{}) error {
-	return gojson.Unmarshal(body, data)
+	return json.Unmarshal(body, data)
 }
 
 func MarshalJson(v interface{}) ([]byte, error) {
-	return gojson.Marshal(v)
+	return json.Marshal(v)
 }
