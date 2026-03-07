@@ -1,0 +1,16 @@
+	github.com/aiyang-zh/zhenyi-core/examples/echo/client		coverage: 0.0% of statements
+	github.com/aiyang-zh/zhenyi-core/examples/echo/server		coverage: 0.0% of statements
+ok  	github.com/aiyang-zh/zhenyi-core/zbatch	(cached)	coverage: 96.1% of statements
+ok  	github.com/aiyang-zh/zhenyi-core/zcoll	(cached)	coverage: 72.8% of statements
+ok  	github.com/aiyang-zh/zhenyi-core/zencrypt	(cached)	coverage: 90.9% of statements
+	github.com/aiyang-zh/zhenyi-core/ziface		coverage: 0.0% of statements
+ok  	github.com/aiyang-zh/zhenyi-core/zkcp	1.843s	coverage: 87.5% of statements
+ok  	github.com/aiyang-zh/zhenyi-core/zlog	(cached)	coverage: 63.2% of statements
+ok  	github.com/aiyang-zh/zhenyi-core/znet	(cached)	coverage: 78.0% of statements
+ok  	github.com/aiyang-zh/zhenyi-core/zpool	(cached)	coverage: 100.0% of statements
+ok  	github.com/aiyang-zh/zhenyi-core/zqueue	(cached)	coverage: 95.1% of statements
+ok  	github.com/aiyang-zh/zhenyi-core/zserialize	(cached)	coverage: 76.0% of statements
+ok  	github.com/aiyang-zh/zhenyi-core/zserver	3.751s	coverage: 59.7% of statements
+ok  	github.com/aiyang-zh/zhenyi-core/ztcp	3.803s	coverage: 91.2% of statements
+ok  	github.com/aiyang-zh/zhenyi-core/ztimer	(cached)	coverage: 92.9% of statements
+ok  	github.com/aiyang-zh/zhenyi-core/zws	2.568s	coverage: 87.1% of statements

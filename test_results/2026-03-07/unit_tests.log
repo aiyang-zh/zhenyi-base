@@ -1,0 +1,1585 @@
+?   	github.com/aiyang-zh/zhenyi-core/examples/echo/client	[no test files]
+?   	github.com/aiyang-zh/zhenyi-core/examples/echo/server	[no test files]
+=== RUN   TestAdaptiveBatcher_Basic
+--- PASS: TestAdaptiveBatcher_Basic (0.00s)
+=== RUN   TestAdaptiveBatcher_EmptyQueue
+--- PASS: TestAdaptiveBatcher_EmptyQueue (0.00s)
+=== RUN   TestAdaptiveBatcher_Overload
+--- PASS: TestAdaptiveBatcher_Overload (0.00s)
+=== RUN   TestAdaptiveBatcher_LatencyFeedback
+--- PASS: TestAdaptiveBatcher_LatencyFeedback (0.00s)
+=== RUN   TestAdaptiveBatcher_LowLatency
+--- PASS: TestAdaptiveBatcher_LowLatency (0.00s)
+=== RUN   TestAdaptiveBatcher_AvgLatency
+--- PASS: TestAdaptiveBatcher_AvgLatency (0.00s)
+=== RUN   TestAdaptiveBatcher_Reset
+--- PASS: TestAdaptiveBatcher_Reset (0.00s)
+=== RUN   TestAdaptiveBatcher_RollingSum
+--- PASS: TestAdaptiveBatcher_RollingSum (0.00s)
+=== RUN   TestNewAdaptiveBatcher_ZeroConfig
+--- PASS: TestNewAdaptiveBatcher_ZeroConfig (0.00s)
+=== RUN   TestAdaptiveBatcher_OverloadExactBoundary
+--- PASS: TestAdaptiveBatcher_OverloadExactBoundary (0.00s)
+=== RUN   TestAdaptiveBatcher_EmptyExactBoundary
+--- PASS: TestAdaptiveBatcher_EmptyExactBoundary (0.00s)
+=== RUN   TestAdaptiveBatcher_EmptyPath_CurrentBatchAtMin
+--- PASS: TestAdaptiveBatcher_EmptyPath_CurrentBatchAtMin (0.00s)
+=== RUN   TestAdaptiveBatcher_StepLessThanOne
+--- PASS: TestAdaptiveBatcher_StepLessThanOne (0.00s)
+=== RUN   TestAdaptiveBatcher_GetAvgLatency_ZeroCount
+--- PASS: TestAdaptiveBatcher_GetAvgLatency_ZeroCount (0.00s)
+=== RUN   TestAdaptiveBatcher_QueueLen50_NotEmpty
+--- PASS: TestAdaptiveBatcher_QueueLen50_NotEmpty (0.00s)
+=== RUN   TestAdaptiveBatcher_QueueLen5000_NotOverload
+--- PASS: TestAdaptiveBatcher_QueueLen5000_NotOverload (0.00s)
+=== RUN   TestFastAdaptiveBatcher_Basic
+--- PASS: TestFastAdaptiveBatcher_Basic (0.00s)
+=== RUN   TestFastAdaptiveBatcher_EmptyQueue
+--- PASS: TestFastAdaptiveBatcher_EmptyQueue (0.00s)
+=== RUN   TestFastAdaptiveBatcher_Overload
+--- PASS: TestFastAdaptiveBatcher_Overload (0.00s)
+=== RUN   TestFastAdaptiveBatcher_HighLatency
+--- PASS: TestFastAdaptiveBatcher_HighLatency (0.00s)
+=== RUN   TestFastAdaptiveBatcher_LowLatency
+--- PASS: TestFastAdaptiveBatcher_LowLatency (0.00s)
+=== RUN   TestFastAdaptiveBatcher_SamplingStrategy
+--- PASS: TestFastAdaptiveBatcher_SamplingStrategy (0.00s)
+=== RUN   TestFastAdaptiveBatcher_RollingSum
+--- PASS: TestFastAdaptiveBatcher_RollingSum (0.00s)
+=== RUN   TestFastAdaptiveBatcher_GetAvgLatency
+--- PASS: TestFastAdaptiveBatcher_GetAvgLatency (0.00s)
+=== RUN   TestFastAdaptiveBatcher_Reset
+--- PASS: TestFastAdaptiveBatcher_Reset (0.00s)
+=== RUN   TestNewFastAdaptiveBatcher_ZeroDefaults
+--- PASS: TestNewFastAdaptiveBatcher_ZeroDefaults (0.00s)
+=== RUN   TestFastAdaptiveBatcher_IdleBoundary
+--- PASS: TestFastAdaptiveBatcher_IdleBoundary (0.00s)
+=== RUN   TestFastAdaptiveBatcher_GetAvgLatency_ZeroTotal
+--- PASS: TestFastAdaptiveBatcher_GetAvgLatency_ZeroTotal (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-core/zbatch	(cached)
+=== RUN   TestSet_NewSet
+--- PASS: TestSet_NewSet (0.00s)
+=== RUN   TestSet_NewSetByList
+--- PASS: TestSet_NewSetByList (0.00s)
+=== RUN   TestSet_Add
+--- PASS: TestSet_Add (0.00s)
+=== RUN   TestSet_Remove
+--- PASS: TestSet_Remove (0.00s)
+=== RUN   TestSet_RemoveMany
+--- PASS: TestSet_RemoveMany (0.00s)
+=== RUN   TestSet_Clear
+--- PASS: TestSet_Clear (0.00s)
+=== RUN   TestSet_Contains
+--- PASS: TestSet_Contains (0.00s)
+=== RUN   TestSet_List
+--- PASS: TestSet_List (0.00s)
+=== RUN   TestSet_Merge
+--- PASS: TestSet_Merge (0.00s)
+=== RUN   TestSet_MergeByList
+--- PASS: TestSet_MergeByList (0.00s)
+=== RUN   TestSet_Subtract
+--- PASS: TestSet_Subtract (0.00s)
+=== RUN   TestSet_Union
+--- PASS: TestSet_Union (0.00s)
+=== RUN   TestSet_Intersect
+--- PASS: TestSet_Intersect (0.00s)
+=== RUN   TestSet_Difference
+--- PASS: TestSet_Difference (0.00s)
+=== RUN   TestSet_SymmetricDifference
+--- PASS: TestSet_SymmetricDifference (0.00s)
+=== RUN   TestSet_String
+--- PASS: TestSet_String (0.00s)
+=== RUN   TestSet_ConcurrentAccess
+--- PASS: TestSet_ConcurrentAccess (0.00s)
+=== RUN   TestSet_GenericTypes
+--- PASS: TestSet_GenericTypes (0.00s)
+=== RUN   TestShardMap_Basic
+--- PASS: TestShardMap_Basic (0.00s)
+=== RUN   TestShardMap_Delete
+--- PASS: TestShardMap_Delete (0.00s)
+=== RUN   TestShardMap_SetWithExpire
+--- PASS: TestShardMap_SetWithExpire (0.15s)
+=== RUN   TestShardMap_Range
+--- PASS: TestShardMap_Range (0.00s)
+=== RUN   TestShardMap_RangeWithExpired
+--- PASS: TestShardMap_RangeWithExpired (0.10s)
+=== RUN   TestShardMap_RangeBreak
+    shardmap_test.go:171: Iterated 3 items across 16 shards
+--- PASS: TestShardMap_RangeBreak (0.00s)
+=== RUN   TestShardMap_ClearTimer
+--- PASS: TestShardMap_ClearTimer (0.10s)
+=== RUN   TestShardMap_Concurrent
+    shardmap_test.go:252: Concurrent test completed successfully
+--- PASS: TestShardMap_Concurrent (0.00s)
+=== RUN   TestShardMap_ConcurrentRange
+    shardmap_test.go:280: Concurrent range test completed successfully
+--- PASS: TestShardMap_ConcurrentRange (0.00s)
+=== RUN   TestShardMap_ConcurrentSetDelete
+    shardmap_test.go:317: Concurrent set/delete test completed successfully
+--- PASS: TestShardMap_ConcurrentSetDelete (0.00s)
+=== RUN   TestShardMap_ExpireRace
+    shardmap_test.go:350: Expire race test completed successfully
+--- PASS: TestShardMap_ExpireRace (0.11s)
+=== RUN   TestShardMap_ShardDistribution
+--- PASS: TestShardMap_ShardDistribution (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-core/zcoll	(cached)
+=== RUN   TestAesEncrypt_BasicEncryptDecrypt
+--- PASS: TestAesEncrypt_BasicEncryptDecrypt (0.00s)
+=== RUN   TestAesEncrypt_RandomIV
+--- PASS: TestAesEncrypt_RandomIV (0.00s)
+=== RUN   TestAesEncrypt_InvalidPadding
+=== RUN   TestAesEncrypt_InvalidPadding/padding_length_invalid
+    aes_test.go:68: Got expected error for invalid length: invalid padding
+=== RUN   TestAesEncrypt_InvalidPadding/padding_content_inconsistent
+    aes_test.go:85: Got expected error for inconsistent content: invalid padding
+--- PASS: TestAesEncrypt_InvalidPadding (0.00s)
+    --- PASS: TestAesEncrypt_InvalidPadding/padding_length_invalid (0.00s)
+    --- PASS: TestAesEncrypt_InvalidPadding/padding_content_inconsistent (0.00s)
+=== RUN   TestAesEncrypt_EmptyData
+    aes_test.go:97: Got expected error: empty data
+--- PASS: TestAesEncrypt_EmptyData (0.00s)
+=== RUN   TestAesEncrypt_ShortCiphertext
+    aes_test.go:111: Got expected error: ciphertext too short
+--- PASS: TestAesEncrypt_ShortCiphertext (0.00s)
+=== RUN   TestAesEncrypt_InvalidBlockSize
+    aes_test.go:125: Got expected error: ciphertext is not a multiple of block size
+--- PASS: TestAesEncrypt_InvalidBlockSize (0.00s)
+=== RUN   TestAesEncrypt_LongMessage
+--- PASS: TestAesEncrypt_LongMessage (0.00s)
+=== RUN   TestAesEncrypt_DifferentKeys
+--- PASS: TestAesEncrypt_DifferentKeys (0.00s)
+=== RUN   TestAesEncrypt_UnicodeData
+--- PASS: TestAesEncrypt_UnicodeData (0.00s)
+=== RUN   TestAesEncrypt_BinaryData
+--- PASS: TestAesEncrypt_BinaryData (0.00s)
+=== RUN   TestPKCS7Padding
+=== RUN   TestPKCS7Padding/empty
+=== RUN   TestPKCS7Padding/one_byte
+=== RUN   TestPKCS7Padding/15_bytes
+=== RUN   TestPKCS7Padding/16_bytes
+=== RUN   TestPKCS7Padding/17_bytes
+--- PASS: TestPKCS7Padding (0.00s)
+    --- PASS: TestPKCS7Padding/empty (0.00s)
+    --- PASS: TestPKCS7Padding/one_byte (0.00s)
+    --- PASS: TestPKCS7Padding/15_bytes (0.00s)
+    --- PASS: TestPKCS7Padding/16_bytes (0.00s)
+    --- PASS: TestPKCS7Padding/17_bytes (0.00s)
+=== RUN   TestPKCS7UnPaddingWithValidation
+=== RUN   TestPKCS7UnPaddingWithValidation/valid_1_byte_padding
+=== RUN   TestPKCS7UnPaddingWithValidation/valid_2_byte_padding
+=== RUN   TestPKCS7UnPaddingWithValidation/valid_16_byte_padding
+=== RUN   TestPKCS7UnPaddingWithValidation/invalid_padding_value
+=== RUN   TestPKCS7UnPaddingWithValidation/inconsistent_padding
+=== RUN   TestPKCS7UnPaddingWithValidation/zero_padding
+=== RUN   TestPKCS7UnPaddingWithValidation/empty_data
+--- PASS: TestPKCS7UnPaddingWithValidation (0.00s)
+    --- PASS: TestPKCS7UnPaddingWithValidation/valid_1_byte_padding (0.00s)
+    --- PASS: TestPKCS7UnPaddingWithValidation/valid_2_byte_padding (0.00s)
+    --- PASS: TestPKCS7UnPaddingWithValidation/valid_16_byte_padding (0.00s)
+    --- PASS: TestPKCS7UnPaddingWithValidation/invalid_padding_value (0.00s)
+    --- PASS: TestPKCS7UnPaddingWithValidation/inconsistent_padding (0.00s)
+    --- PASS: TestPKCS7UnPaddingWithValidation/zero_padding (0.00s)
+    --- PASS: TestPKCS7UnPaddingWithValidation/empty_data (0.00s)
+=== RUN   TestAesGcmEncrypt_BasicEncryptDecrypt
+--- PASS: TestAesGcmEncrypt_BasicEncryptDecrypt (0.00s)
+=== RUN   TestAesGcmEncrypt_RandomNonce
+--- PASS: TestAesGcmEncrypt_RandomNonce (0.00s)
+=== RUN   TestAesGcmEncrypt_TamperDetection
+    aes_test.go:384: Successfully detected tampering: decryption failed: data may be corrupted or tampered
+--- PASS: TestAesGcmEncrypt_TamperDetection (0.00s)
+=== RUN   TestAesGcmEncrypt_EmptyData
+--- PASS: TestAesGcmEncrypt_EmptyData (0.00s)
+=== RUN   TestAesGcmEncrypt_ShortCiphertext
+--- PASS: TestAesGcmEncrypt_ShortCiphertext (0.00s)
+=== RUN   TestAesGcmEncrypt_LongMessage
+--- PASS: TestAesGcmEncrypt_LongMessage (0.00s)
+=== RUN   TestAesGcmEncrypt_DifferentKeys
+    aes_test.go:450: Correctly rejected wrong key: decryption failed: data may be corrupted or tampered
+--- PASS: TestAesGcmEncrypt_DifferentKeys (0.00s)
+=== RUN   TestAesGcmEncrypt_UnicodeData
+--- PASS: TestAesGcmEncrypt_UnicodeData (0.00s)
+=== RUN   TestCompare_CBC_vs_GCM
+    aes_test.go:486: Plaintext length: 25 bytes
+    aes_test.go:487: CBC ciphertext length: 48 bytes (IV + padded data)
+    aes_test.go:488: GCM ciphertext length: 53 bytes (Nonce + data + tag)
+--- PASS: TestCompare_CBC_vs_GCM (0.00s)
+=== RUN   TestCheckAESNI
+    aesni_check_test.go:13: 当前架构: arm64
+    aesni_check_test.go:14: AES-NI 支持: true
+--- PASS: TestCheckAESNI (0.00s)
+=== RUN   TestGetCryptoInfo
+    aesni_check_test.go:34: 当前架构: arm64
+    aesni_check_test.go:35: 加密实现: ARM Crypto Extensions (auto-detected)
+--- PASS: TestGetCryptoInfo (0.00s)
+=== RUN   TestArgon2_Encrypt
+--- PASS: TestArgon2_Encrypt (0.03s)
+=== RUN   TestArgon2_RandomSalt
+--- PASS: TestArgon2_RandomSalt (0.04s)
+=== RUN   TestArgon2_DifferentPasswords
+--- PASS: TestArgon2_DifferentPasswords (0.03s)
+=== RUN   TestArgon2_CompareHashAndPassword_Match
+--- PASS: TestArgon2_CompareHashAndPassword_Match (0.03s)
+=== RUN   TestArgon2_CompareHashAndPassword_Mismatch
+--- PASS: TestArgon2_CompareHashAndPassword_Mismatch (0.03s)
+=== RUN   TestArgon2_CompareHashAndPassword_InvalidHash
+--- PASS: TestArgon2_CompareHashAndPassword_InvalidHash (0.00s)
+=== RUN   TestArgon2_CompareHashAndPassword_TooShort
+--- PASS: TestArgon2_CompareHashAndPassword_TooShort (0.00s)
+=== RUN   TestBase64_RoundTrip
+--- PASS: TestBase64_RoundTrip (0.00s)
+=== RUN   TestBase64_EmptyData
+--- PASS: TestBase64_EmptyData (0.00s)
+=== RUN   TestBase64_BinaryData
+--- PASS: TestBase64_BinaryData (0.00s)
+=== RUN   TestBase64_InvalidInput
+--- PASS: TestBase64_InvalidInput (0.00s)
+=== RUN   TestBatchEncrypt_Empty
+--- PASS: TestBatchEncrypt_Empty (0.00s)
+=== RUN   TestBatchEncrypt_Single
+--- PASS: TestBatchEncrypt_Single (0.00s)
+=== RUN   TestBatchEncrypt_Multiple
+--- PASS: TestBatchEncrypt_Multiple (0.00s)
+=== RUN   TestBatchDecrypt
+--- PASS: TestBatchDecrypt (0.00s)
+=== RUN   TestBatchEncryptPooled_Empty
+--- PASS: TestBatchEncryptPooled_Empty (0.00s)
+=== RUN   TestBatchEncryptPooled_Multiple
+--- PASS: TestBatchEncryptPooled_Multiple (0.00s)
+=== RUN   TestBatchEncryptPooled_DefaultPoolSize
+--- PASS: TestBatchEncryptPooled_DefaultPoolSize (0.00s)
+=== RUN   TestBatchEncrypt_Concurrent
+--- PASS: TestBatchEncrypt_Concurrent (0.00s)
+=== RUN   TestBatchEncrypt_LargeData
+    batch_encrypt_test.go:260: 批量加密 1000 个 1KB 包，耗时: 683.958µs
+--- PASS: TestBatchEncrypt_LargeData (0.00s)
+=== RUN   TestBcrypt_Encrypt
+--- PASS: TestBcrypt_Encrypt (0.05s)
+=== RUN   TestBcrypt_NonDeterministic
+--- PASS: TestBcrypt_NonDeterministic (0.10s)
+=== RUN   TestBcrypt_CompareHashAndPassword_Match
+--- PASS: TestBcrypt_CompareHashAndPassword_Match (0.11s)
+=== RUN   TestBcrypt_CompareHashAndPassword_Mismatch
+--- PASS: TestBcrypt_CompareHashAndPassword_Mismatch (0.10s)
+=== RUN   TestBcrypt_CompareHashAndPassword_InvalidHash
+--- PASS: TestBcrypt_CompareHashAndPassword_InvalidHash (0.00s)
+=== RUN   TestBaseEncrypt_EncryptPassthrough
+--- PASS: TestBaseEncrypt_EncryptPassthrough (0.00s)
+=== RUN   TestBaseEncrypt_DecryptPassthrough
+--- PASS: TestBaseEncrypt_DecryptPassthrough (0.00s)
+=== RUN   TestBaseEncrypt_RoundTrip
+--- PASS: TestBaseEncrypt_RoundTrip (0.00s)
+=== RUN   TestBaseEncrypt_NilData
+--- PASS: TestBaseEncrypt_NilData (0.00s)
+=== RUN   TestFnvHash_Basic
+--- PASS: TestFnvHash_Basic (0.00s)
+=== RUN   TestFnvHash_Deterministic
+--- PASS: TestFnvHash_Deterministic (0.00s)
+=== RUN   TestFnvHash_Different
+--- PASS: TestFnvHash_Different (0.00s)
+=== RUN   TestFnvHash_EmptyString
+--- PASS: TestFnvHash_EmptyString (0.00s)
+=== RUN   TestLinear_EncryptDecrypt
+--- PASS: TestLinear_EncryptDecrypt (0.00s)
+=== RUN   TestLinear_EncryptDifferent
+--- PASS: TestLinear_EncryptDifferent (0.00s)
+=== RUN   TestLinear_EncryptRange
+--- PASS: TestLinear_EncryptRange (0.00s)
+=== RUN   TestLinear_CalculateA
+--- PASS: TestLinear_CalculateA (0.00s)
+=== RUN   TestLinear_Bijection
+--- PASS: TestLinear_Bijection (0.00s)
+=== RUN   TestPoolStats
+    pool_stats_test.go:30: 
+        === 对象池统计信息 ===
+    pool_stats_test.go:31: 直接分配（超大）: 0 次
+    pool_stats_test.go:35: 桶 0 (大小=64字节):
+    pool_stats_test.go:36:   获取次数: 1309
+    pool_stats_test.go:37:   归还次数: 1309
+    pool_stats_test.go:38:   复用率: 100.00%
+    pool_stats_test.go:35: 桶 1 (大小=128字节):
+    pool_stats_test.go:36:   获取次数: 1
+    pool_stats_test.go:37:   归还次数: 1
+    pool_stats_test.go:38:   复用率: 100.00%
+    pool_stats_test.go:35: 桶 3 (大小=512字节):
+    pool_stats_test.go:36:   获取次数: 2
+    pool_stats_test.go:37:   归还次数: 2
+    pool_stats_test.go:38:   复用率: 100.00%
+    pool_stats_test.go:35: 桶 5 (大小=2048字节):
+    pool_stats_test.go:36:   获取次数: 3002
+    pool_stats_test.go:37:   归还次数: 3002
+    pool_stats_test.go:38:   复用率: 100.00%
+    pool_stats_test.go:35: 桶 8 (大小=16384字节):
+    pool_stats_test.go:36:   获取次数: 1
+    pool_stats_test.go:37:   归还次数: 1
+    pool_stats_test.go:38:   复用率: 100.00%
+    pool_stats_test.go:58: ✅ 对象池工作正常
+--- PASS: TestPoolStats (0.00s)
+=== RUN   TestAESGCM_PoolStats
+    pool_stats_test.go:83: 
+        === AES-GCM 对象池统计 ===
+    pool_stats_test.go:86: 桶 0 (大小=64): Get=2309, Put=2309, 复用率=100.00%
+    pool_stats_test.go:86: 桶 1 (大小=128): Get=1, Put=1, 复用率=100.00%
+    pool_stats_test.go:86: 桶 3 (大小=512): Get=2, Put=2, 复用率=100.00%
+    pool_stats_test.go:86: 桶 5 (大小=2048): Get=4002, Put=4002, 复用率=100.00%
+    pool_stats_test.go:86: 桶 8 (大小=16384): Get=1, Put=1, 复用率=100.00%
+--- PASS: TestAESGCM_PoolStats (0.00s)
+=== RUN   TestRSA_KeyGeneration
+=== RUN   TestRSA_KeyGeneration/Default2048Bits
+    rsa_test.go:25: ✓ Generated 2048-bit RSA key successfully
+=== RUN   TestRSA_KeyGeneration/Custom3072Bits
+    rsa_test.go:38: ✓ Generated 3072-bit RSA key successfully
+=== RUN   TestRSA_KeyGeneration/RejectWeakKey
+    rsa_test.go:47: ✓ Weak key rejected as expected
+--- PASS: TestRSA_KeyGeneration (0.06s)
+    --- PASS: TestRSA_KeyGeneration/Default2048Bits (0.02s)
+    --- PASS: TestRSA_KeyGeneration/Custom3072Bits (0.03s)
+    --- PASS: TestRSA_KeyGeneration/RejectWeakKey (0.00s)
+=== RUN   TestRSA_OAEP_BasicEncryptDecrypt
+    rsa_test.go:80: ✓ Basic OAEP encrypt/decrypt works correctly
+--- PASS: TestRSA_OAEP_BasicEncryptDecrypt (0.03s)
+=== RUN   TestRSA_OAEP_RandomCiphertexts
+    rsa_test.go:108: ✓ OAEP produces random ciphertexts (secure)
+--- PASS: TestRSA_OAEP_RandomCiphertexts (0.05s)
+=== RUN   TestRSA_OAEP_MaximumPlaintextSize
+=== RUN   TestRSA_OAEP_MaximumPlaintextSize/MaximumSize
+    rsa_test.go:147: ✓ Maximum plaintext size (190 bytes) works
+=== RUN   TestRSA_OAEP_MaximumPlaintextSize/ExceedMaximumSize
+    rsa_test.go:156: ✓ Correctly rejects oversized plaintext: crypto/rsa: message too long for RSA key size
+--- PASS: TestRSA_OAEP_MaximumPlaintextSize (0.03s)
+    --- PASS: TestRSA_OAEP_MaximumPlaintextSize/MaximumSize (0.00s)
+    --- PASS: TestRSA_OAEP_MaximumPlaintextSize/ExceedMaximumSize (0.00s)
+=== RUN   TestRSA_OAEP_CustomHash
+    rsa_test.go:187: ✓ OAEP with custom hash (SHA-512) works correctly
+--- PASS: TestRSA_OAEP_CustomHash (0.32s)
+=== RUN   TestRSA_OAEP_WrongKey
+    rsa_test.go:209: ✓ Correctly rejects wrong key: crypto/rsa: decryption error
+--- PASS: TestRSA_OAEP_WrongKey (0.10s)
+=== RUN   TestRSA_OAEP_EmptyData
+    rsa_test.go:234: ✓ Empty data encryption/decryption works
+--- PASS: TestRSA_OAEP_EmptyData (0.19s)
+=== RUN   TestRSA_Sign_BasicSignVerify
+    rsa_test.go:259: ✓ Basic signing and verification works
+--- PASS: TestRSA_Sign_BasicSignVerify (0.05s)
+=== RUN   TestRSA_Sign_TamperedData
+    rsa_test.go:281: ✓ Correctly detected tampered data: crypto/rsa: verification error
+--- PASS: TestRSA_Sign_TamperedData (0.03s)
+=== RUN   TestRSA_Sign_TamperedSignature
+    rsa_test.go:301: ✓ Correctly detected tampered signature: crypto/rsa: verification error
+--- PASS: TestRSA_Sign_TamperedSignature (0.02s)
+=== RUN   TestRSA_Sign_DeterministicSignature
+    rsa_test.go:317: ✓ Signatures are deterministic (same for identical data)
+--- PASS: TestRSA_Sign_DeterministicSignature (0.06s)
+=== RUN   TestRSA_Rsa2_LoadPKCS1
+    rsa_test.go:360: ✓ PKCS#1格式加载和签名成功
+--- PASS: TestRSA_Rsa2_LoadPKCS1 (0.04s)
+=== RUN   TestRSA_Rsa2_LoadPKCS8
+    rsa_test.go:404: ✓ PKCS#8格式加载和签名成功
+--- PASS: TestRSA_Rsa2_LoadPKCS8 (0.03s)
+=== RUN   TestRSA_Rsa2_DefensiveParsing
+=== RUN   TestRSA_Rsa2_DefensiveParsing/标准PKCS#1
+    rsa_test.go:513: ✓ 标准PKCS#1: 标准格式，应立即成功
+=== RUN   TestRSA_Rsa2_DefensiveParsing/标准PKCS#8
+    rsa_test.go:513: ✓ 标准PKCS#8: 标准格式，应立即成功
+=== RUN   TestRSA_Rsa2_DefensiveParsing/错误Type但内容是PKCS#1
+    rsa_test.go:513: ✓ 错误Type但内容是PKCS#1: 防御性解析应该成功（尝试PKCS#1）
+=== RUN   TestRSA_Rsa2_DefensiveParsing/错误Type但内容是PKCS#8
+    rsa_test.go:513: ✓ 错误Type但内容是PKCS#8: 防御性解析应该成功（尝试PKCS#8）
+=== RUN   TestRSA_Rsa2_DefensiveParsing/自定义Type但内容是PKCS#1
+    rsa_test.go:513: ✓ 自定义Type但内容是PKCS#1: 防御性解析应该成功
+=== NAME  TestRSA_Rsa2_DefensiveParsing
+    rsa_test.go:518: ✓ 防御性解析测试全部通过
+    rsa_test.go:519: 💡 即使PEM Type不标准，也能正确解析密钥内容
+--- PASS: TestRSA_Rsa2_DefensiveParsing (0.17s)
+    --- PASS: TestRSA_Rsa2_DefensiveParsing/标准PKCS#1 (0.00s)
+    --- PASS: TestRSA_Rsa2_DefensiveParsing/标准PKCS#8 (0.00s)
+    --- PASS: TestRSA_Rsa2_DefensiveParsing/错误Type但内容是PKCS#1 (0.00s)
+    --- PASS: TestRSA_Rsa2_DefensiveParsing/错误Type但内容是PKCS#8 (0.00s)
+    --- PASS: TestRSA_Rsa2_DefensiveParsing/自定义Type但内容是PKCS#1 (0.00s)
+=== RUN   TestRSA_Rsa2_InvalidPEM_Enhanced
+=== RUN   TestRSA_Rsa2_InvalidPEM_Enhanced/完全无效的数据
+    rsa_test.go:568: ✓ 正确检测到错误: 解码PEM块失败：无效的PEM格式
+=== RUN   TestRSA_Rsa2_InvalidPEM_Enhanced/有PEM头但内容无效
+    rsa_test.go:568: ✓ 正确检测到错误: 解码PEM块失败：无效的PEM格式
+    rsa_test.go:570: 注意：错误信息中未包含 "无法解析"
+=== RUN   TestRSA_Rsa2_InvalidPEM_Enhanced/空PEM
+    rsa_test.go:568: ✓ 正确检测到错误: 解码PEM块失败：无效的PEM格式
+--- PASS: TestRSA_Rsa2_InvalidPEM_Enhanced (0.00s)
+    --- PASS: TestRSA_Rsa2_InvalidPEM_Enhanced/完全无效的数据 (0.00s)
+    --- PASS: TestRSA_Rsa2_InvalidPEM_Enhanced/有PEM头但内容无效 (0.00s)
+    --- PASS: TestRSA_Rsa2_InvalidPEM_Enhanced/空PEM (0.00s)
+=== RUN   TestRSA_Rsa2_NoKeyLoaded
+    rsa_test.go:585: ✓ Correctly returns error: 未加载私钥
+--- PASS: TestRSA_Rsa2_NoKeyLoaded (0.00s)
+=== RUN   TestRSA_Rsa2_InvalidPEM
+    rsa_test.go:602: ✓ Correctly rejects invalid PEM: 解码PEM块失败：无效的PEM格式
+--- PASS: TestRSA_Rsa2_InvalidPEM (0.00s)
+=== RUN   TestRSA_OAEP_WithLabel
+    rsa_test.go:636: ✓ 正确检测到Label不匹配: crypto/rsa: decryption error
+    rsa_test.go:639: ✓ OAEP Label功能正常工作
+--- PASS: TestRSA_OAEP_WithLabel (0.01s)
+=== RUN   TestRSA_OAEP_LabelPreventsReplay
+    rsa_test.go:660: ✓ Label成功防止跨上下文重放
+--- PASS: TestRSA_OAEP_LabelPreventsReplay (0.06s)
+=== RUN   TestRSA_OAEP_HashConcurrency
+    rsa_test.go:666: ⚠️  测试Hash并发使用（验证文档警告的必要性）
+=== RUN   TestRSA_OAEP_HashConcurrency/正确用法
+    rsa_test.go:690: ✓ 正确用法：每次创建新Hash实例
+=== RUN   TestRSA_OAEP_HashConcurrency/错误用法演示
+    rsa_test.go:695: ⚠️  文档警告：不要复用Hash实例
+    rsa_test.go:696: ❌ 错误：h := sha512.New(); EncryptOAEPWithHash(..., h, ...); EncryptOAEPWithHash(..., h, ...)
+    rsa_test.go:697: ✅ 正确：EncryptOAEPWithHash(..., sha512.New(), ...)
+--- PASS: TestRSA_OAEP_HashConcurrency (0.12s)
+    --- PASS: TestRSA_OAEP_HashConcurrency/正确用法 (0.00s)
+    --- PASS: TestRSA_OAEP_HashConcurrency/错误用法演示 (0.00s)
+=== RUN   TestRSA_LongMessage
+    rsa_test.go:713: ✓ Correctly rejects oversized message: crypto/rsa: message too long for RSA key size
+    rsa_test.go:714: 💡 For long messages, use hybrid encryption (RSA + AES)
+--- PASS: TestRSA_LongMessage (0.02s)
+=== RUN   TestSha256_Basic
+--- PASS: TestSha256_Basic (0.00s)
+=== RUN   TestSha256_Deterministic
+--- PASS: TestSha256_Deterministic (0.00s)
+=== RUN   TestSha256_Different
+--- PASS: TestSha256_Different (0.00s)
+=== RUN   TestSha256_Empty
+--- PASS: TestSha256_Empty (0.00s)
+=== RUN   TestSM2_GenerateKey
+--- PASS: TestSM2_GenerateKey (0.00s)
+=== RUN   TestSM2_EncryptDecrypt
+--- PASS: TestSM2_EncryptDecrypt (0.00s)
+=== RUN   TestSM2_EncryptDecrypt_VariousSizes
+--- PASS: TestSM2_EncryptDecrypt_VariousSizes (0.01s)
+=== RUN   TestSM2_EncryptNilKey
+--- PASS: TestSM2_EncryptNilKey (0.00s)
+=== RUN   TestSM2_EncryptEmptyData
+--- PASS: TestSM2_EncryptEmptyData (0.00s)
+=== RUN   TestSM2_DecryptNilKey
+--- PASS: TestSM2_DecryptNilKey (0.00s)
+=== RUN   TestSM2_SignVerify
+--- PASS: TestSM2_SignVerify (0.00s)
+=== RUN   TestSM2_VerifyTampered
+--- PASS: TestSM2_VerifyTampered (0.00s)
+=== RUN   TestSM2_VerifyWrongKey
+--- PASS: TestSM2_VerifyWrongKey (0.00s)
+=== RUN   TestSM2_SignNilKey
+--- PASS: TestSM2_SignNilKey (0.00s)
+=== RUN   TestSM2_VerifyNilKey
+--- PASS: TestSM2_VerifyNilKey (0.00s)
+=== RUN   TestSM2_MarshalUnmarshalPrivateKey
+--- PASS: TestSM2_MarshalUnmarshalPrivateKey (0.00s)
+=== RUN   TestSM2_MarshalUnmarshalPublicKey
+--- PASS: TestSM2_MarshalUnmarshalPublicKey (0.00s)
+=== RUN   TestSM2_MarshalNilKey
+--- PASS: TestSM2_MarshalNilKey (0.00s)
+=== RUN   TestSM3Password_Encrypt
+--- PASS: TestSM3Password_Encrypt (0.01s)
+=== RUN   TestSM3Password_RandomSalt
+--- PASS: TestSM3Password_RandomSalt (0.02s)
+=== RUN   TestSM3Password_DifferentPasswords
+--- PASS: TestSM3Password_DifferentPasswords (0.02s)
+=== RUN   TestSM3Password_CompareHashAndPassword_Match
+--- PASS: TestSM3Password_CompareHashAndPassword_Match (0.02s)
+=== RUN   TestSM3Password_CompareHashAndPassword_Mismatch
+--- PASS: TestSM3Password_CompareHashAndPassword_Mismatch (0.02s)
+=== RUN   TestSM3Password_CompareHashAndPassword_InvalidHash
+--- PASS: TestSM3Password_CompareHashAndPassword_InvalidHash (0.00s)
+=== RUN   TestSM3Password_CompareHashAndPassword_TooShort
+--- PASS: TestSM3Password_CompareHashAndPassword_TooShort (0.00s)
+=== RUN   TestSM3_Basic
+--- PASS: TestSM3_Basic (0.00s)
+=== RUN   TestSM3_Empty
+--- PASS: TestSM3_Empty (0.00s)
+=== RUN   TestSM3_Deterministic
+--- PASS: TestSM3_Deterministic (0.00s)
+=== RUN   TestSM3_DifferentInputs
+--- PASS: TestSM3_DifferentInputs (0.00s)
+=== RUN   TestSM3Bytes
+--- PASS: TestSM3Bytes (0.00s)
+=== RUN   TestSM3Hex
+--- PASS: TestSM3Hex (0.00s)
+=== RUN   TestSM4CBC_EncryptDecrypt
+--- PASS: TestSM4CBC_EncryptDecrypt (0.00s)
+=== RUN   TestSM4CBC_DifferentIV
+--- PASS: TestSM4CBC_DifferentIV (0.00s)
+=== RUN   TestSM4CBC_EmptyData
+--- PASS: TestSM4CBC_EmptyData (0.00s)
+=== RUN   TestSM4CBC_ShortCiphertext
+--- PASS: TestSM4CBC_ShortCiphertext (0.00s)
+=== RUN   TestSM4CBC_TamperedData
+--- PASS: TestSM4CBC_TamperedData (0.00s)
+=== RUN   TestSM4GCM_EncryptDecrypt
+--- PASS: TestSM4GCM_EncryptDecrypt (0.00s)
+=== RUN   TestSM4GCM_DifferentNonce
+--- PASS: TestSM4GCM_DifferentNonce (0.00s)
+=== RUN   TestSM4GCM_EmptyData
+--- PASS: TestSM4GCM_EmptyData (0.00s)
+=== RUN   TestSM4GCM_TamperedData
+--- PASS: TestSM4GCM_TamperedData (0.00s)
+=== RUN   TestSM4GCM_ShortCiphertext
+--- PASS: TestSM4GCM_ShortCiphertext (0.00s)
+=== RUN   TestSM4_IEncryptInterface
+--- PASS: TestSM4_IEncryptInterface (0.00s)
+=== RUN   TestSM4CBC_VariousDataSizes
+--- PASS: TestSM4CBC_VariousDataSizes (0.00s)
+=== RUN   TestSM4GCM_VariousDataSizes
+--- PASS: TestSM4GCM_VariousDataSizes (0.00s)
+=== RUN   TestZeroCopyEncrypt_Basic
+--- PASS: TestZeroCopyEncrypt_Basic (0.00s)
+=== RUN   TestZeroCopyEncrypt_Empty
+--- PASS: TestZeroCopyEncrypt_Empty (0.00s)
+=== RUN   TestZeroCopyDecrypt_Invalid
+--- PASS: TestZeroCopyDecrypt_Invalid (0.00s)
+=== RUN   TestZeroCopyEncrypt_DifferentSizes
+=== RUN   TestZeroCopyEncrypt_DifferentSizes/Size-1
+=== RUN   TestZeroCopyEncrypt_DifferentSizes/Size-10
+=== RUN   TestZeroCopyEncrypt_DifferentSizes/Size-100
+=== RUN   TestZeroCopyEncrypt_DifferentSizes/Size-1024
+=== RUN   TestZeroCopyEncrypt_DifferentSizes/Size-4096
+=== RUN   TestZeroCopyEncrypt_DifferentSizes/Size-8192
+--- PASS: TestZeroCopyEncrypt_DifferentSizes (0.00s)
+    --- PASS: TestZeroCopyEncrypt_DifferentSizes/Size-1 (0.00s)
+    --- PASS: TestZeroCopyEncrypt_DifferentSizes/Size-10 (0.00s)
+    --- PASS: TestZeroCopyEncrypt_DifferentSizes/Size-100 (0.00s)
+    --- PASS: TestZeroCopyEncrypt_DifferentSizes/Size-1024 (0.00s)
+    --- PASS: TestZeroCopyEncrypt_DifferentSizes/Size-4096 (0.00s)
+    --- PASS: TestZeroCopyEncrypt_DifferentSizes/Size-8192 (0.00s)
+=== RUN   TestZeroCopyEncrypt_PoolUsage
+    zerocopy_test.go:140: 对象池使用统计:
+    zerocopy_test.go:141:   Get 次数: 300
+    zerocopy_test.go:142:   Put 次数: 300
+    zerocopy_test.go:144:   复用率: 100.00%
+--- PASS: TestZeroCopyEncrypt_PoolUsage (0.00s)
+=== RUN   TestZeroCopyEncrypt_Concurrent
+--- PASS: TestZeroCopyEncrypt_Concurrent (0.00s)
+=== RUN   TestEncryptInPlace_Basic
+--- PASS: TestEncryptInPlace_Basic (0.00s)
+=== RUN   TestEncryptInPlace_Empty
+--- PASS: TestEncryptInPlace_Empty (0.00s)
+=== RUN   TestEncryptInPlace_SmallBuffer
+--- PASS: TestEncryptInPlace_SmallBuffer (0.00s)
+=== RUN   TestZeroCopyEncrypt_vs_Standard
+    zerocopy_test.go:278: 标准版: 0 ns/op
+    zerocopy_test.go:279: 零拷贝: 0 ns/op
+--- PASS: TestZeroCopyEncrypt_vs_Standard (0.06s)
+=== RUN   Example_poolUsage
+--- PASS: Example_poolUsage (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-core/zencrypt	(cached)
+?   	github.com/aiyang-zh/zhenyi-core/ziface	[no test files]
+=== RUN   TestKServer_KClient_FullIntegration
+--- PASS: TestKServer_KClient_FullIntegration (0.52s)
+=== RUN   TestKClient_ConnectInvalidAddr
+--- PASS: TestKClient_ConnectInvalidAddr (0.00s)
+=== RUN   TestKServer_Close
+--- PASS: TestKServer_Close (0.12s)
+=== RUN   TestKCPServer_StartAndClose
+--- PASS: TestKCPServer_StartAndClose (0.12s)
+=== RUN   TestKCPServer_Client_SendReceive
+--- PASS: TestKCPServer_Client_SendReceive (0.52s)
+=== RUN   TestKCPServer_OnAcceptReject
+--- PASS: TestKCPServer_OnAcceptReject (0.17s)
+=== RUN   TestKCPServer_Close_Idempotent
+--- PASS: TestKCPServer_Close_Idempotent (0.04s)
+=== RUN   TestKCPClient_InvalidAddress
+--- PASS: TestKCPClient_InvalidAddress (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-core/zkcp	(cached)
+=== RUN   TestAsyncWriter_PoolUsage
+    asyncwriter_test.go:56: 对象池使用统计:
+    asyncwriter_test.go:57:   Get 次数: 50
+    asyncwriter_test.go:58:   Put 次数: 50
+    asyncwriter_test.go:68:   复用率: 100.00%
+--- PASS: TestAsyncWriter_PoolUsage (0.20s)
+=== RUN   TestAsyncWriter_ChannelFull
+    asyncwriter_test.go:112: 成功写入: 10/10
+    asyncwriter_test.go:113: 丢弃日志: 8
+    asyncwriter_test.go:114: 对象池统计: {BucketStats:[{BucketSize:64 GetRequests:60 PutReturns:58 ReuseRate:96.66666666666667} {BucketSize:128 GetRequests:0 PutReturns:0 ReuseRate:0} {BucketSize:256 GetRequests:0 PutReturns:0 ReuseRate:0} {BucketSize:512 GetRequests:0 PutReturns:0 ReuseRate:0} {BucketSize:1024 GetRequests:0 PutReturns:0 ReuseRate:0} {BucketSize:2048 GetRequests:0 PutReturns:0 ReuseRate:0} {BucketSize:4096 GetRequests:0 PutReturns:0 ReuseRate:0} {BucketSize:8192 GetRequests:0 PutReturns:0 ReuseRate:0} {BucketSize:16384 GetRequests:0 PutReturns:0 ReuseRate:0} {BucketSize:32768 GetRequests:0 PutReturns:0 ReuseRate:0} {BucketSize:65536 GetRequests:0 PutReturns:0 ReuseRate:0}] DirectAllocs:0}
+--- PASS: TestAsyncWriter_ChannelFull (0.00s)
+=== RUN   TestAsyncWriter_Stats
+    asyncwriter_test.go:146: 统计信息:
+    asyncwriter_test.go:147:   已写入: 10
+    asyncwriter_test.go:148:   已丢弃: 0
+    asyncwriter_test.go:149:   错误数: 0
+    asyncwriter_test.go:150:   队列长度: 0
+--- PASS: TestAsyncWriter_Stats (0.10s)
+=== RUN   TestAsyncWriter_GracefulClose
+    asyncwriter_test.go:182: 写入了 100 行
+--- PASS: TestAsyncWriter_GracefulClose (0.00s)
+=== RUN   TestTraceFields_RoundTrip
+--- PASS: TestTraceFields_RoundTrip (0.00s)
+=== RUN   TestTraceFieldsFromContext_Missing
+--- PASS: TestTraceFieldsFromContext_Missing (0.00s)
+=== RUN   TestTraceFieldsFromContext_ZeroValues
+--- PASS: TestTraceFieldsFromContext_ZeroValues (0.00s)
+=== RUN   TestAppendTraceFields_WithTrace
+--- PASS: TestAppendTraceFields_WithTrace (0.00s)
+=== RUN   TestAppendTraceFields_WithoutTrace
+--- PASS: TestAppendTraceFields_WithoutTrace (0.00s)
+=== RUN   TestAppendTraceFields_PreservesExisting
+--- PASS: TestAppendTraceFields_PreservesExisting (0.00s)
+=== RUN   TestTraceZapFields_WithTrace
+--- PASS: TestTraceZapFields_WithTrace (0.00s)
+=== RUN   TestTraceZapFields_WithoutTrace
+--- PASS: TestTraceZapFields_WithoutTrace (0.00s)
+=== RUN   TestFastFields
+=== RUN   TestFastFields/Int64
+=== RUN   TestFastFields/Int
+=== RUN   TestFastFields/String
+=== RUN   TestFastFields/Bool-true
+=== RUN   TestFastFields/Bool-false
+=== RUN   TestFastFields/Duration
+--- PASS: TestFastFields (0.00s)
+    --- PASS: TestFastFields/Int64 (0.00s)
+    --- PASS: TestFastFields/Int (0.00s)
+    --- PASS: TestFastFields/String (0.00s)
+    --- PASS: TestFastFields/Bool-true (0.00s)
+    --- PASS: TestFastFields/Bool-false (0.00s)
+    --- PASS: TestFastFields/Duration (0.00s)
+=== RUN   TestAppendCommonFields
+--- PASS: TestAppendCommonFields (0.00s)
+=== RUN   TestAppendSessionFields
+--- PASS: TestAppendSessionFields (0.00s)
+=== RUN   TestAppendErrorFields
+--- PASS: TestAppendErrorFields (0.00s)
+=== RUN   TestFieldArray
+--- PASS: TestFieldArray (0.00s)
+=== RUN   TestFieldsHelper
+=== RUN   TestFieldsHelper/Fields2
+=== RUN   TestFieldsHelper/Fields3
+=== RUN   TestFieldsHelper/Fields4
+=== RUN   TestFieldsHelper/Fields5
+=== RUN   TestFieldsHelper/Fields6
+--- PASS: TestFieldsHelper (0.00s)
+    --- PASS: TestFieldsHelper/Fields2 (0.00s)
+    --- PASS: TestFieldsHelper/Fields3 (0.00s)
+    --- PASS: TestFieldsHelper/Fields4 (0.00s)
+    --- PASS: TestFieldsHelper/Fields5 (0.00s)
+    --- PASS: TestFieldsHelper/Fields6 (0.00s)
+=== RUN   TestLogger_BasicLogging
+--- PASS: TestLogger_BasicLogging (0.16s)
+=== RUN   TestLogger_DynamicLevel
+--- PASS: TestLogger_DynamicLevel (0.10s)
+=== RUN   TestLogger_DynamicLevel_ErrorFileIsolation
+--- PASS: TestLogger_DynamicLevel_ErrorFileIsolation (0.10s)
+=== RUN   TestLogger_SetLevelByString
+=== RUN   TestLogger_SetLevelByString/debug
+=== RUN   TestLogger_SetLevelByString/info
+=== RUN   TestLogger_SetLevelByString/warn
+=== RUN   TestLogger_SetLevelByString/error
+--- PASS: TestLogger_SetLevelByString (0.72s)
+    --- PASS: TestLogger_SetLevelByString/debug (0.16s)
+    --- PASS: TestLogger_SetLevelByString/info (0.15s)
+    --- PASS: TestLogger_SetLevelByString/warn (0.15s)
+    --- PASS: TestLogger_SetLevelByString/error (0.15s)
+=== RUN   TestLogger_Sampling
+    logger_test.go:313: 采样结果：输出了 8/20 条日志
+--- PASS: TestLogger_Sampling (0.15s)
+=== RUN   TestLogger_CircuitBreaker
+    logger_test.go:356: 熔断结果：Info=15/100, Error=5/5
+--- PASS: TestLogger_CircuitBreaker (0.16s)
+=== RUN   TestLogger_CircuitBreaker_Concurrent
+    logger_test.go:402: 并发熔断结果：100/1000 条日志通过
+--- PASS: TestLogger_CircuitBreaker_Concurrent (0.11s)
+=== RUN   TestLogger_WriteInterface
+--- PASS: TestLogger_WriteInterface (0.16s)
+=== RUN   TestLogger_Concurrent
+    logger_test.go:513: 并发测试：Debug=70, Info=60, Warn=60, Error=60 (总计: 250/250)
+--- PASS: TestLogger_Concurrent (0.16s)
+=== RUN   TestLogger_DynamicLevel_Concurrent
+    logger_test.go:584: 并发动态级别测试通过，输出了 3452 行日志
+--- PASS: TestLogger_DynamicLevel_Concurrent (0.60s)
+=== RUN   TestLogger_AutoSync
+--- PASS: TestLogger_AutoSync (0.31s)
+=== RUN   TestLogger_FormattedLogging
+--- PASS: TestLogger_FormattedLogging (0.10s)
+=== RUN   TestLogger_BufferedWrite
+    logger_test.go:673: 缓冲生效：日志在 Sync 前未落盘
+--- PASS: TestLogger_BufferedWrite (0.10s)
+=== RUN   TestDefaultLogger
+--- PASS: TestDefaultLogger (0.10s)
+=== RUN   TestLogger_ConcurrentClose
+    logger_test.go:749: 并发 Close 测试通过：没有 panic
+--- PASS: TestLogger_ConcurrentClose (0.10s)
+=== RUN   TestLogger_FieldsAndStructured
+--- PASS: TestLogger_FieldsAndStructured (0.10s)
+=== RUN   TestRecover_CatchesPanic
+--- PASS: TestRecover_CatchesPanic (0.10s)
+=== RUN   TestRecover_NoPanic
+--- PASS: TestRecover_NoPanic (0.10s)
+=== RUN   TestRecover_StringPanic
+--- PASS: TestRecover_StringPanic (0.10s)
+=== RUN   TestRecover_ErrorPanic
+--- PASS: TestRecover_ErrorPanic (0.10s)
+=== RUN   TestRecover_NilPanic
+--- PASS: TestRecover_NilPanic (0.10s)
+=== RUN   TestRecover_WithExtraFields
+--- PASS: TestRecover_WithExtraFields (0.10s)
+=== RUN   TestRecover_IndirectCallFails
+--- PASS: TestRecover_IndirectCallFails (0.10s)
+=== RUN   TestRecoverWith_CatchesPanic
+--- PASS: TestRecoverWith_CatchesPanic (0.10s)
+=== RUN   TestRecoverWith_NoPanic_CleanupStillRuns
+--- PASS: TestRecoverWith_NoPanic_CleanupStillRuns (0.10s)
+=== RUN   TestRecoverWith_NilCleanup
+--- PASS: TestRecoverWith_NilCleanup (0.10s)
+=== RUN   TestRecoverWith_CleanupRunsBeforePanicLog
+--- PASS: TestRecoverWith_CleanupRunsBeforePanicLog (0.10s)
+=== RUN   TestRecoverWith_WithExtraFields
+--- PASS: TestRecoverWith_WithExtraFields (0.10s)
+=== RUN   TestRecoverWith_CleanupPanicDoesNotCrash
+--- PASS: TestRecoverWith_CleanupPanicDoesNotCrash (0.10s)
+=== RUN   TestRecoverWith_InAnonymousDefer
+--- PASS: TestRecoverWith_InAnonymousDefer (0.10s)
+=== RUN   TestRecoverWith_Concurrent
+--- PASS: TestRecoverWith_Concurrent (0.11s)
+=== RUN   TestRecover_PanicHookCalled
+--- PASS: TestRecover_PanicHookCalled (0.10s)
+=== RUN   TestRecoverWith_PanicHookCalled
+--- PASS: TestRecoverWith_PanicHookCalled (0.10s)
+=== RUN   TestWithLevel
+--- PASS: TestWithLevel (0.00s)
+=== RUN   TestWithLevelString
+--- PASS: TestWithLevelString (0.00s)
+=== RUN   TestWithConsole
+--- PASS: TestWithConsole (0.00s)
+=== RUN   TestWithBufferOptions
+=== RUN   TestWithBufferOptions/WithBuffer
+=== RUN   TestWithBufferOptions/WithoutBuffer
+=== RUN   TestWithBufferOptions/WithBufferSize
+--- PASS: TestWithBufferOptions (0.00s)
+    --- PASS: TestWithBufferOptions/WithBuffer (0.00s)
+    --- PASS: TestWithBufferOptions/WithoutBuffer (0.00s)
+    --- PASS: TestWithBufferOptions/WithBufferSize (0.00s)
+=== RUN   TestWithSamplingOptions
+=== RUN   TestWithSamplingOptions/WithSampling
+=== RUN   TestWithSamplingOptions/WithDefaultSampling
+=== RUN   TestWithSamplingOptions/WithAggressiveSampling
+=== RUN   TestWithSamplingOptions/WithoutSampling
+--- PASS: TestWithSamplingOptions (0.00s)
+    --- PASS: TestWithSamplingOptions/WithSampling (0.00s)
+    --- PASS: TestWithSamplingOptions/WithDefaultSampling (0.00s)
+    --- PASS: TestWithSamplingOptions/WithAggressiveSampling (0.00s)
+    --- PASS: TestWithSamplingOptions/WithoutSampling (0.00s)
+=== RUN   TestWithCircuitBreakerOptions
+=== RUN   TestWithCircuitBreakerOptions/WithCircuitBreaker
+=== RUN   TestWithCircuitBreakerOptions/WithDefaultCircuitBreaker
+=== RUN   TestWithCircuitBreakerOptions/WithStrictCircuitBreaker
+=== RUN   TestWithCircuitBreakerOptions/WithoutCircuitBreaker
+--- PASS: TestWithCircuitBreakerOptions (0.00s)
+    --- PASS: TestWithCircuitBreakerOptions/WithCircuitBreaker (0.00s)
+    --- PASS: TestWithCircuitBreakerOptions/WithDefaultCircuitBreaker (0.00s)
+    --- PASS: TestWithCircuitBreakerOptions/WithStrictCircuitBreaker (0.00s)
+    --- PASS: TestWithCircuitBreakerOptions/WithoutCircuitBreaker (0.00s)
+=== RUN   TestWithLogFileOptions
+=== RUN   TestWithLogFileOptions/WithLogFile
+=== RUN   TestWithLogFileOptions/WithLogFiles
+=== RUN   TestWithLogFileOptions/WithStandardLogFiles
+=== RUN   TestWithLogFileOptions/WithAllLevelLogFiles
+=== RUN   TestWithLogFileOptions/WithSingleLogFile
+--- PASS: TestWithLogFileOptions (0.00s)
+    --- PASS: TestWithLogFileOptions/WithLogFile (0.00s)
+    --- PASS: TestWithLogFileOptions/WithLogFiles (0.00s)
+    --- PASS: TestWithLogFileOptions/WithStandardLogFiles (0.00s)
+    --- PASS: TestWithLogFileOptions/WithAllLevelLogFiles (0.00s)
+    --- PASS: TestWithLogFileOptions/WithSingleLogFile (0.00s)
+=== RUN   TestWithEncoderOptions
+=== RUN   TestWithEncoderOptions/WithJSONEncoder
+=== RUN   TestWithEncoderOptions/WithConsoleEncoder
+--- PASS: TestWithEncoderOptions (0.00s)
+    --- PASS: TestWithEncoderOptions/WithJSONEncoder (0.00s)
+    --- PASS: TestWithEncoderOptions/WithConsoleEncoder (0.00s)
+=== RUN   TestPresetOptions
+=== RUN   TestPresetOptions/WithDevelopment
+=== RUN   TestPresetOptions/WithProduction
+=== RUN   TestPresetOptions/WithTest
+=== RUN   TestPresetOptions/WithHighPerformance
+--- PASS: TestPresetOptions (0.00s)
+    --- PASS: TestPresetOptions/WithDevelopment (0.00s)
+    --- PASS: TestPresetOptions/WithProduction (0.00s)
+    --- PASS: TestPresetOptions/WithTest (0.00s)
+    --- PASS: TestPresetOptions/WithHighPerformance (0.00s)
+=== RUN   TestNewLoggerWithOptions
+--- PASS: TestNewLoggerWithOptions (0.10s)
+=== RUN   TestNewDefaultLoggerWithOptions
+--- PASS: TestNewDefaultLoggerWithOptions (0.10s)
+=== RUN   TestMultipleOptionsOverride
+--- PASS: TestMultipleOptionsOverride (0.00s)
+=== RUN   TestOptionsCombination
+    option_test.go:490: 组合配置测试通过
+--- PASS: TestOptionsCombination (0.10s)
+=== RUN   TestWithPathName
+--- PASS: TestWithPathName (0.00s)
+=== RUN   TestWithFilename
+--- PASS: TestWithFilename (0.00s)
+=== RUN   TestWithFileNum
+--- PASS: TestWithFileNum (0.00s)
+=== RUN   TestWithCallerOnlyError
+--- PASS: TestWithCallerOnlyError (0.00s)
+=== RUN   TestWithGoroutineID
+=== RUN   TestWithGoroutineID/WithGoroutineID_Enable
+=== RUN   TestWithGoroutineID/WithGoroutineID_Disable
+=== RUN   TestWithGoroutineID/WithoutGoroutineID
+--- PASS: TestWithGoroutineID (0.00s)
+    --- PASS: TestWithGoroutineID/WithGoroutineID_Enable (0.00s)
+    --- PASS: TestWithGoroutineID/WithGoroutineID_Disable (0.00s)
+    --- PASS: TestWithGoroutineID/WithoutGoroutineID (0.00s)
+=== RUN   TestWithGoroutineIDField
+--- PASS: TestWithGoroutineIDField (0.00s)
+=== RUN   TestConvenienceOptions
+=== RUN   TestConvenienceOptions/WithDebug
+=== RUN   TestConvenienceOptions/WithInfo
+=== RUN   TestConvenienceOptions/WithWarn
+=== RUN   TestConvenienceOptions/WithError
+=== RUN   TestConvenienceOptions/WithLargeBuffer
+--- PASS: TestConvenienceOptions (0.00s)
+    --- PASS: TestConvenienceOptions/WithDebug (0.00s)
+    --- PASS: TestConvenienceOptions/WithInfo (0.00s)
+    --- PASS: TestConvenienceOptions/WithWarn (0.00s)
+    --- PASS: TestConvenienceOptions/WithError (0.00s)
+    --- PASS: TestConvenienceOptions/WithLargeBuffer (0.00s)
+=== RUN   TestWithStaging
+--- PASS: TestWithStaging (0.00s)
+=== RUN   TestOptionsIntegration
+    option_test.go:701: 集成测试通过，日志内容长度: 532 字节
+--- PASS: TestOptionsIntegration (0.16s)
+=== RUN   TestDynamicLevelWithOptions
+    option_test.go:754: 动态级别测试通过
+--- PASS: TestDynamicLevelWithOptions (0.16s)
+=== RUN   TestSamplingWithOptions
+    option_test.go:794: 采样测试通过，输出了 8/20 条日志
+--- PASS: TestSamplingWithOptions (0.16s)
+=== RUN   TestCircuitBreakerWithOptions
+    option_test.go:833: 熔断器测试通过，输出了 10/100 条日志
+--- PASS: TestCircuitBreakerWithOptions (0.16s)
+=== RUN   TestPresetWithOverride
+--- PASS: TestPresetWithOverride (0.00s)
+=== RUN   TestAllPresetsValid
+=== RUN   TestAllPresetsValid/Test
+2026-03-06 22:59:53.926 INFO test message for Test {"goroutine": 355}
+2026-03-06 22:59:53.927 ERROR /Users/zay/godir/zhenyi-core/zlog/option_test.go:887 error message for Test {"goroutine": 355}
+github.com/aiyang-zh/zhenyi-core/zlog.TestAllPresetsValid.func1
+	/Users/zay/godir/zhenyi-core/zlog/option_test.go:887
+testing.tRunner
+	/Users/zay/go/go1.26.0/src/testing/testing.go:2036
+    option_test.go:897: Test 预设配置测试通过
+=== RUN   TestAllPresetsValid/HighPerformance
+    option_test.go:897: HighPerformance 预设配置测试通过
+=== RUN   TestAllPresetsValid/Staging
+{"level":"INFO","time":"2026-03-06 22:59:54.239","caller":"/Users/zay/go/go1.26.0/src/testing/testing.go:2036","msg":"test message for Staging"}
+{"level":"ERROR","time":"2026-03-06 22:59:54.240","caller":"/Users/zay/go/go1.26.0/src/runtime/asm_arm64.s:1447","msg":"error message for Staging","stacktrace":"runtime.goexit\n\t/Users/zay/go/go1.26.0/src/runtime/asm_arm64.s:1447"}
+    option_test.go:897: Staging 预设配置测试通过
+=== RUN   TestAllPresetsValid/Development
+2026-03-06 22:59:54.398 INFO /Users/zay/go/go1.26.0/src/testing/testing.go:2036 test message for Development {"goroutine": 369}
+2026-03-06 22:59:54.398 ERROR /Users/zay/go/go1.26.0/src/runtime/asm_arm64.s:1447 error message for Development {"goroutine": 369}
+runtime.goexit
+	/Users/zay/go/go1.26.0/src/runtime/asm_arm64.s:1447
+    option_test.go:897: Development 预设配置测试通过
+=== RUN   TestAllPresetsValid/Production
+    option_test.go:897: Production 预设配置测试通过
+--- PASS: TestAllPresetsValid (0.79s)
+    --- PASS: TestAllPresetsValid/Test (0.16s)
+    --- PASS: TestAllPresetsValid/HighPerformance (0.16s)
+    --- PASS: TestAllPresetsValid/Staging (0.16s)
+    --- PASS: TestAllPresetsValid/Development (0.16s)
+    --- PASS: TestAllPresetsValid/Production (0.16s)
+=== RUN   TestGoroutineIDIntegration
+=== RUN   TestGoroutineIDIntegration/EnableGoroutineID
+=== RUN   TestGoroutineIDIntegration/DisableGoroutineID
+--- PASS: TestGoroutineIDIntegration (0.31s)
+    --- PASS: TestGoroutineIDIntegration/EnableGoroutineID (0.16s)
+    --- PASS: TestGoroutineIDIntegration/DisableGoroutineID (0.15s)
+=== RUN   TestPresetGoroutineIDSetting
+=== RUN   TestPresetGoroutineIDSetting/Development
+=== RUN   TestPresetGoroutineIDSetting/Production
+=== RUN   TestPresetGoroutineIDSetting/Test
+=== RUN   TestPresetGoroutineIDSetting/HighPerformance
+=== RUN   TestPresetGoroutineIDSetting/Staging
+--- PASS: TestPresetGoroutineIDSetting (0.00s)
+    --- PASS: TestPresetGoroutineIDSetting/Development (0.00s)
+    --- PASS: TestPresetGoroutineIDSetting/Production (0.00s)
+    --- PASS: TestPresetGoroutineIDSetting/Test (0.00s)
+    --- PASS: TestPresetGoroutineIDSetting/HighPerformance (0.00s)
+    --- PASS: TestPresetGoroutineIDSetting/Staging (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-core/zlog	(cached)
+=== RUN   TestAdaptiveWriter_TierNone_DirectWrite
+--- PASS: TestAdaptiveWriter_TierNone_DirectWrite (0.00s)
+=== RUN   TestAdaptiveWriter_UpgradeTier
+--- PASS: TestAdaptiveWriter_UpgradeTier (0.00s)
+=== RUN   TestAdaptiveWriter_DowngradeTier
+--- PASS: TestAdaptiveWriter_DowngradeTier (0.00s)
+=== RUN   TestAdaptiveWriter_UpgradeTier_Medium
+--- PASS: TestAdaptiveWriter_UpgradeTier_Medium (0.00s)
+=== RUN   TestAdaptiveWriter_UpgradeTier_Small
+--- PASS: TestAdaptiveWriter_UpgradeTier_Small (0.00s)
+=== RUN   TestAdaptiveWriter_ResizeTier_WithPendingFlush
+--- PASS: TestAdaptiveWriter_ResizeTier_WithPendingFlush (0.00s)
+=== RUN   TestAdaptiveWriter_ResizeTier_FlushError
+--- PASS: TestAdaptiveWriter_ResizeTier_FlushError (0.00s)
+=== RUN   TestAdaptiveWriter_Write_WithErrorState
+--- PASS: TestAdaptiveWriter_Write_WithErrorState (0.00s)
+=== RUN   TestAdaptiveWriter_FlushInternal_PartialWriteError
+--- PASS: TestAdaptiveWriter_FlushInternal_PartialWriteError (0.00s)
+=== RUN   TestAdaptiveWriter_FlushInternal_Error
+--- PASS: TestAdaptiveWriter_FlushInternal_Error (0.00s)
+=== RUN   TestAdaptiveWriter_FlushInternal_ShortWrite
+--- PASS: TestAdaptiveWriter_FlushInternal_ShortWrite (0.00s)
+=== RUN   TestAdaptiveWriter_Write_BufferFull_Flush
+--- PASS: TestAdaptiveWriter_Write_BufferFull_Flush (0.00s)
+=== RUN   TestAdaptiveWriter_Close_WithPendingData
+--- PASS: TestAdaptiveWriter_Close_WithPendingData (0.00s)
+=== RUN   TestAdaptiveWriter_Reset_WithBuffer
+--- PASS: TestAdaptiveWriter_Reset_WithBuffer (0.00s)
+=== RUN   TestAdaptiveWriter_Available_WithBuffer
+--- PASS: TestAdaptiveWriter_Available_WithBuffer (0.00s)
+=== RUN   TestRingBuffer_PeekTwoSlices_Wraparound
+--- PASS: TestRingBuffer_PeekTwoSlices_Wraparound (0.00s)
+=== RUN   TestRingBuffer_Read_Wraparound
+--- PASS: TestRingBuffer_Read_Wraparound (0.00s)
+=== RUN   TestRingBuffer_PeekBytes_Wraparound
+--- PASS: TestRingBuffer_PeekBytes_Wraparound (0.00s)
+=== RUN   TestRingBuffer_PeekUint32BE_Wraparound
+--- PASS: TestRingBuffer_PeekUint32BE_Wraparound (0.00s)
+=== RUN   TestRingBuffer_ReadUint32BE_Wraparound
+--- PASS: TestRingBuffer_ReadUint32BE_Wraparound (0.00s)
+=== RUN   TestRingBuffer_ReadFull_Wraparound
+--- PASS: TestRingBuffer_ReadFull_Wraparound (0.00s)
+=== RUN   TestRingBuffer_Write_Wraparound
+--- PASS: TestRingBuffer_Write_Wraparound (0.00s)
+=== RUN   TestRingBuffer_WriteFromReader_Wraparound
+--- PASS: TestRingBuffer_WriteFromReader_Wraparound (0.00s)
+=== RUN   TestRingBuffer_Peek_Wraparound
+--- PASS: TestRingBuffer_Peek_Wraparound (0.00s)
+=== RUN   TestRingBuffer_PeekAll_ActualWraparound
+--- PASS: TestRingBuffer_PeekAll_ActualWraparound (0.00s)
+=== RUN   TestRingBuffer_Grow_AtMaxSize
+--- PASS: TestRingBuffer_Grow_AtMaxSize (0.00s)
+=== RUN   TestRingBuffer_Discard_MoreThanAvailable
+--- PASS: TestRingBuffer_Discard_MoreThanAvailable (0.00s)
+=== RUN   TestRingBuffer_Write_PartialWhenFull
+--- PASS: TestRingBuffer_Write_PartialWhenFull (0.00s)
+=== RUN   TestRingBuffer_PeekHeader12_Wraparound
+--- PASS: TestRingBuffer_PeekHeader12_Wraparound (0.00s)
+=== RUN   TestRingBuffer_WriteFromReader_Partial
+--- PASS: TestRingBuffer_WriteFromReader_Partial (0.00s)
+=== RUN   TestRingBuffer_Peek_SplitData
+--- PASS: TestRingBuffer_Peek_SplitData (0.00s)
+=== RUN   TestRingBuffer_PeekAll_Wraparound
+--- PASS: TestRingBuffer_PeekAll_Wraparound (0.00s)
+=== RUN   TestBaseClient_ReadLoop_FullMessage
+--- PASS: TestBaseClient_ReadLoop_FullMessage (0.10s)
+=== RUN   TestBaseClient_Read_BufferFull_SinglePacketTooBig
+--- PASS: TestBaseClient_Read_BufferFull_SinglePacketTooBig (0.00s)
+=== RUN   TestBaseClient_Read_MultipleMessages
+--- PASS: TestBaseClient_Read_MultipleMessages (0.05s)
+=== RUN   TestBaseClient_Read_ParseError
+--- PASS: TestBaseClient_Read_ParseError (0.00s)
+=== RUN   TestBaseClient_Read_ClosedClient
+--- PASS: TestBaseClient_Read_ClosedClient (0.00s)
+=== RUN   TestBaseClient_isNormalCloseError
+--- PASS: TestBaseClient_isNormalCloseError (0.00s)
+=== RUN   TestParseFromRingBuffer_InsufficientHeader
+--- PASS: TestParseFromRingBuffer_InsufficientHeader (0.00s)
+=== RUN   TestParseFromRingBuffer_PartialBody
+--- PASS: TestParseFromRingBuffer_PartialBody (0.00s)
+=== RUN   TestParseFromRingBuffer_ProtocolVersionMismatch
+--- PASS: TestParseFromRingBuffer_ProtocolVersionMismatch (0.00s)
+=== RUN   TestParseFromRingBuffer_ProtocolV1
+--- PASS: TestParseFromRingBuffer_ProtocolV1 (0.00s)
+=== RUN   TestAllocStats
+    channel_bench_test.go:293: 零拷贝方式 分配次数: 0.00 allocs/op
+--- PASS: TestAllocStats (0.00s)
+=== RUN   TestBaseChannel_NewBaseChannel
+--- PASS: TestBaseChannel_NewBaseChannel (0.00s)
+=== RUN   TestBaseChannel_IsOpen
+--- PASS: TestBaseChannel_IsOpen (0.00s)
+=== RUN   TestBaseChannel_GetChannelId
+--- PASS: TestBaseChannel_GetChannelId (0.00s)
+=== RUN   TestBaseChannel_GetAddr
+--- PASS: TestBaseChannel_GetAddr (0.00s)
+=== RUN   TestBaseChannel_GetAuthId_SetAuthId
+--- PASS: TestBaseChannel_GetAuthId_SetAuthId (0.00s)
+=== RUN   TestBaseChannel_GetRpcId
+--- PASS: TestBaseChannel_GetRpcId (0.00s)
+=== RUN   TestBaseChannel_SetLimit_Allow
+--- PASS: TestBaseChannel_SetLimit_Allow (0.00s)
+=== RUN   TestBaseChannel_UpdateLastRecTime_Check
+--- PASS: TestBaseChannel_UpdateLastRecTime_Check (0.00s)
+=== RUN   TestBaseChannel_SetCloseCall
+--- PASS: TestBaseChannel_SetCloseCall (0.00s)
+=== RUN   TestBaseChannel_GetWriterTier_GetBuffered_Flush
+--- PASS: TestBaseChannel_GetWriterTier_GetBuffered_Flush (0.00s)
+=== RUN   TestBaseChannel_Send_EnqueuesMessage
+--- PASS: TestBaseChannel_Send_EnqueuesMessage (0.05s)
+=== RUN   TestBaseChannel_Send_WhenClosed_ReleasesMessage
+--- PASS: TestBaseChannel_Send_WhenClosed_ReleasesMessage (0.00s)
+=== RUN   TestBaseChannel_RecordRecv_GetReadBufferStats
+--- PASS: TestBaseChannel_RecordRecv_GetReadBufferStats (0.00s)
+=== RUN   TestBaseChannel_Close_Idempotent
+--- PASS: TestBaseChannel_Close_Idempotent (0.00s)
+=== RUN   TestBaseChannel_WriteBuffers_WhenClosed
+--- PASS: TestBaseChannel_WriteBuffers_WhenClosed (0.00s)
+=== RUN   TestBaseChannel_SendBatchMsg_Empty
+--- PASS: TestBaseChannel_SendBatchMsg_Empty (0.00s)
+=== RUN   TestBaseChannel_SendBatchMsg_SingleMessage
+--- PASS: TestBaseChannel_SendBatchMsg_SingleMessage (0.00s)
+=== RUN   TestBaseChannel_Start_ReadLoopExits
+--- PASS: TestBaseChannel_Start_ReadLoopExits (0.00s)
+=== RUN   TestBaseChannel_IsNormalCloseError_UseOfClosed
+--- PASS: TestBaseChannel_IsNormalCloseError_UseOfClosed (0.00s)
+=== RUN   TestBaseServer_SetHeartbeatTimeout
+--- PASS: TestBaseServer_SetHeartbeatTimeout (0.00s)
+=== RUN   TestBaseServer_SetMaxConnections_AcceptAllowed
+--- PASS: TestBaseServer_SetMaxConnections_AcceptAllowed (0.00s)
+=== RUN   TestBaseServer_AddChannel_SetChannelAuth_GetChannelByAuthId
+--- PASS: TestBaseServer_AddChannel_SetChannelAuth_GetChannelByAuthId (0.00s)
+=== RUN   TestBaseServer_RemoveChannel_OnClose
+--- PASS: TestBaseServer_RemoveChannel_OnClose (0.00s)
+=== RUN   TestRingBuffer_ReadByte
+--- PASS: TestRingBuffer_ReadByte (0.00s)
+=== RUN   TestRingBuffer_PeekByte
+--- PASS: TestRingBuffer_PeekByte (0.00s)
+=== RUN   TestRingBuffer_PeekBytes
+--- PASS: TestRingBuffer_PeekBytes (0.00s)
+=== RUN   TestRingBuffer_PeekBytes_WrapAround
+--- PASS: TestRingBuffer_PeekBytes_WrapAround (0.00s)
+=== RUN   TestRingBuffer_Stats
+--- PASS: TestRingBuffer_Stats (0.00s)
+=== RUN   TestBaseSocket_HeaderLen_ProtocolVersion
+--- PASS: TestBaseSocket_HeaderLen_ProtocolVersion (0.00s)
+=== RUN   TestBaseSocket_PreparePacket_ProtocolVersion1
+--- PASS: TestBaseSocket_PreparePacket_ProtocolVersion1 (0.00s)
+=== RUN   TestBaseChannel_ConcurrentSendClose
+--- PASS: TestBaseChannel_ConcurrentSendClose (0.02s)
+=== RUN   TestBaseChannel_Send_NotOpen
+--- PASS: TestBaseChannel_Send_NotOpen (0.00s)
+=== RUN   TestBaseChannel_GetReadBufferStats_NilBuffer
+--- PASS: TestBaseChannel_GetReadBufferStats_NilBuffer (0.00s)
+=== RUN   TestBaseChannel_Check_WithTimeout_Expired
+--- PASS: TestBaseChannel_Check_WithTimeout_Expired (0.15s)
+=== RUN   TestBaseChannel_resetReadDeadline_WithTimeout
+--- PASS: TestBaseChannel_resetReadDeadline_WithTimeout (0.00s)
+=== RUN   TestBaseChannel_Close_ConnAlreadyClosed
+--- PASS: TestBaseChannel_Close_ConnAlreadyClosed (0.05s)
+=== RUN   TestNetMessage_GetSet
+--- PASS: TestNetMessage_GetSet (0.00s)
+=== RUN   TestNetMessage_Reset
+--- PASS: TestNetMessage_Reset (0.00s)
+=== RUN   TestNetMessage_Clone_WithData
+--- PASS: TestNetMessage_Clone_WithData (0.00s)
+=== RUN   TestNetMessage_Clone_EmptyData
+--- PASS: TestNetMessage_Clone_EmptyData (0.00s)
+=== RUN   TestNetMessage_Clone_ZeroLengthData
+--- PASS: TestNetMessage_Clone_ZeroLengthData (0.00s)
+=== RUN   TestMessagePool_GetPut
+--- PASS: TestMessagePool_GetPut (0.00s)
+=== RUN   TestParseDataPool_GetPut
+--- PASS: TestParseDataPool_GetPut (0.00s)
+=== RUN   TestParseDataPool_PutNil
+--- PASS: TestParseDataPool_PutNil (0.00s)
+=== RUN   TestParseDataPool_Concurrent
+--- PASS: TestParseDataPool_Concurrent (0.00s)
+=== RUN   TestNewMessage_Alias
+--- PASS: TestNewMessage_Alias (0.00s)
+=== RUN   TestRingBufferPool_GetPut
+--- PASS: TestRingBufferPool_GetPut (0.00s)
+=== RUN   TestRingBufferPool_PutNil
+--- PASS: TestRingBufferPool_PutNil (0.00s)
+=== RUN   TestRingBufferPool_NonStandardSize
+--- PASS: TestRingBufferPool_NonStandardSize (0.00s)
+=== RUN   TestBaseSocket_DefaultConfig
+--- PASS: TestBaseSocket_DefaultConfig (0.00s)
+=== RUN   TestBaseSocket_CustomConfig
+--- PASS: TestBaseSocket_CustomConfig (0.00s)
+=== RUN   TestBaseSocket_ParseFromRingBuffer_SingleMessage
+--- PASS: TestBaseSocket_ParseFromRingBuffer_SingleMessage (0.00s)
+=== RUN   TestBaseSocket_ParseFromRingBuffer_EmptyData
+--- PASS: TestBaseSocket_ParseFromRingBuffer_EmptyData (0.00s)
+=== RUN   TestBaseSocket_ParseFromRingBuffer_InsufficientHeader
+--- PASS: TestBaseSocket_ParseFromRingBuffer_InsufficientHeader (0.00s)
+=== RUN   TestBaseSocket_ParseFromRingBuffer_InsufficientBody
+--- PASS: TestBaseSocket_ParseFromRingBuffer_InsufficientBody (0.00s)
+=== RUN   TestBaseSocket_ParseFromRingBuffer_InvalidMsgId
+--- PASS: TestBaseSocket_ParseFromRingBuffer_InvalidMsgId (0.00s)
+=== RUN   TestBaseSocket_ParseFromRingBuffer_InvalidDataLength
+--- PASS: TestBaseSocket_ParseFromRingBuffer_InvalidDataLength (0.00s)
+=== RUN   TestBaseSocket_ParseFromRingBuffer_MultipleMessages
+--- PASS: TestBaseSocket_ParseFromRingBuffer_MultipleMessages (0.00s)
+=== RUN   TestBaseSocket_ParseFromRingBuffer_WrapAround
+--- PASS: TestBaseSocket_ParseFromRingBuffer_WrapAround (0.00s)
+=== RUN   TestBaseSocket_PreparePacket
+--- PASS: TestBaseSocket_PreparePacket (0.00s)
+=== RUN   TestBaseSocket_PreparePacket_EmptyBody
+--- PASS: TestBaseSocket_PreparePacket_EmptyBody (0.00s)
+=== RUN   TestBaseSocket_RoundTrip
+--- PASS: TestBaseSocket_RoundTrip (0.00s)
+=== RUN   TestAdaptiveWriter_DirectWrite
+--- PASS: TestAdaptiveWriter_DirectWrite (0.00s)
+=== RUN   TestAdaptiveWriter_Available_NoBuffer
+--- PASS: TestAdaptiveWriter_Available_NoBuffer (0.00s)
+=== RUN   TestAdaptiveWriter_Close
+--- PASS: TestAdaptiveWriter_Close (0.00s)
+=== RUN   TestAdaptiveWriter_DoubleClose
+--- PASS: TestAdaptiveWriter_DoubleClose (0.00s)
+=== RUN   TestAdaptiveWriter_Reset
+--- PASS: TestAdaptiveWriter_Reset (0.00s)
+=== RUN   TestAdaptiveWriter_TierUpgrade
+--- PASS: TestAdaptiveWriter_TierUpgrade (0.00s)
+=== RUN   TestAdaptiveWriter_TierNames
+--- PASS: TestAdaptiveWriter_TierNames (0.00s)
+=== RUN   TestAdaptiveWriter_FlushEmpty
+--- PASS: TestAdaptiveWriter_FlushEmpty (0.00s)
+=== RUN   TestAdaptiveWriter_BufferedWrite
+--- PASS: TestAdaptiveWriter_BufferedWrite (0.00s)
+=== RUN   TestBaseServer_New
+--- PASS: TestBaseServer_New (0.00s)
+=== RUN   TestBaseServer_NextId
+--- PASS: TestBaseServer_NextId (0.00s)
+=== RUN   TestBaseServer_NextId_Concurrent
+--- PASS: TestBaseServer_NextId_Concurrent (0.00s)
+=== RUN   TestBaseServer_NilHandlersPanic
+--- PASS: TestBaseServer_NilHandlersPanic (0.00s)
+=== RUN   TestBaseServer_NilReadHandlerPanic
+--- PASS: TestBaseServer_NilReadHandlerPanic (0.00s)
+=== RUN   TestBaseServer_HandlersCalledOnEvents
+--- PASS: TestBaseServer_HandlersCalledOnEvents (0.00s)
+=== RUN   TestBaseServer_GetChannel_NotFound
+--- PASS: TestBaseServer_GetChannel_NotFound (0.00s)
+=== RUN   TestBaseServer_GetChannelByAuthId_NotFound
+--- PASS: TestBaseServer_GetChannelByAuthId_NotFound (0.00s)
+=== RUN   TestBaseServer_GetEncrypt
+--- PASS: TestBaseServer_GetEncrypt (0.00s)
+=== RUN   TestDefaultSocketConfig
+--- PASS: TestDefaultSocketConfig (0.00s)
+=== RUN   TestNetOperator_Fields
+--- PASS: TestNetOperator_Fields (0.00s)
+=== RUN   TestConnProtocol_Values
+--- PASS: TestConnProtocol_Values (0.00s)
+=== RUN   TestRingBuffer_Basic
+--- PASS: TestRingBuffer_Basic (0.00s)
+=== RUN   TestRingBuffer_WrapAround
+--- PASS: TestRingBuffer_WrapAround (0.00s)
+=== RUN   TestRingBuffer_ReadUint32BE
+--- PASS: TestRingBuffer_ReadUint32BE (0.00s)
+=== RUN   TestRingBuffer_PeekUint32BE
+--- PASS: TestRingBuffer_PeekUint32BE (0.00s)
+=== RUN   TestRingBuffer_PeekHeader12
+--- PASS: TestRingBuffer_PeekHeader12 (0.00s)
+=== RUN   TestRingBuffer_PeekHeader12_WrapAround
+--- PASS: TestRingBuffer_PeekHeader12_WrapAround (0.00s)
+=== RUN   TestRingBuffer_WriteFromReader
+--- PASS: TestRingBuffer_WriteFromReader (0.00s)
+=== RUN   TestRingBuffer_Full
+--- PASS: TestRingBuffer_Full (0.00s)
+=== RUN   TestRingBuffer_PeekAll
+--- PASS: TestRingBuffer_PeekAll (0.00s)
+=== RUN   TestRingBuffer_Grow
+--- PASS: TestRingBuffer_Grow (0.00s)
+=== RUN   TestRingBuffer_GrowMaxLimit
+--- PASS: TestRingBuffer_GrowMaxLimit (0.00s)
+=== RUN   TestRingBuffer_PeekTwoSlices
+--- PASS: TestRingBuffer_PeekTwoSlices (0.00s)
+=== RUN   TestRingBuffer_IoReader
+--- PASS: TestRingBuffer_IoReader (0.00s)
+=== RUN   TestRingBuffer_Uint64Overflow
+--- PASS: TestRingBuffer_Uint64Overflow (0.00s)
+=== RUN   TestTLSConfig_Nil_NoWrap
+--- PASS: TestTLSConfig_Nil_NoWrap (0.00s)
+=== RUN   TestTLSConfig_ModeNone_NoWrap
+--- PASS: TestTLSConfig_ModeNone_NoWrap (0.00s)
+=== RUN   TestNewStandardTLSConfig_FromPEM
+--- PASS: TestNewStandardTLSConfig_FromPEM (0.00s)
+=== RUN   TestNewStandardTLSConfig_FromFile
+--- PASS: TestNewStandardTLSConfig_FromFile (0.00s)
+=== RUN   TestNewStandardTLSConfig_InvalidFile
+--- PASS: TestNewStandardTLSConfig_InvalidFile (0.00s)
+=== RUN   TestNewStandardTLSConfigFromPEM_Invalid
+--- PASS: TestNewStandardTLSConfigFromPEM_Invalid (0.00s)
+=== RUN   TestDialTLS_Nil_PlainTCP
+--- PASS: TestDialTLS_Nil_PlainTCP (0.00s)
+=== RUN   TestDialTLS_ModeNone_PlainTCP
+--- PASS: TestDialTLS_ModeNone_PlainTCP (0.00s)
+=== RUN   TestStandardTLS_EndToEnd
+--- PASS: TestStandardTLS_EndToEnd (0.00s)
+=== RUN   TestClientTLSConfig_DefaultIsGM
+--- PASS: TestClientTLSConfig_DefaultIsGM (0.00s)
+=== RUN   TestClientStandardTLSConfig
+--- PASS: TestClientStandardTLSConfig (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-core/znet	(cached)
+=== RUN   TestPool_GetPut_Pointer
+--- PASS: TestPool_GetPut_Pointer (0.00s)
+=== RUN   TestPool_GetPut_Struct
+--- PASS: TestPool_GetPut_Struct (0.00s)
+=== RUN   TestPool_Concurrent
+--- PASS: TestPool_Concurrent (0.00s)
+=== RUN   TestPool_Get_NilNew
+--- PASS: TestPool_Get_NilNew (0.00s)
+=== RUN   TestBufferPool_GetPut
+--- PASS: TestBufferPool_GetPut (0.00s)
+=== RUN   TestBufferPool_PreserveCapacity
+--- PASS: TestBufferPool_PreserveCapacity (0.00s)
+=== RUN   TestGetBytesBuffer_Sizes
+--- PASS: TestGetBytesBuffer_Sizes (0.00s)
+=== RUN   TestGetBytesBuffer_Oversized
+--- PASS: TestGetBytesBuffer_Oversized (0.00s)
+=== RUN   TestGetBytesBuffer_ZeroPanic
+--- PASS: TestGetBytesBuffer_ZeroPanic (0.00s)
+=== RUN   TestGetBytesBuffer_NegativePanic
+--- PASS: TestGetBytesBuffer_NegativePanic (0.00s)
+=== RUN   TestGetBytesBufferZero
+--- PASS: TestGetBytesBufferZero (0.00s)
+=== RUN   TestBuffer_Reset
+--- PASS: TestBuffer_Reset (0.00s)
+=== RUN   TestBuffer_Write
+--- PASS: TestBuffer_Write (0.00s)
+=== RUN   TestBuffer_Len
+--- PASS: TestBuffer_Len (0.00s)
+=== RUN   TestPutBytesBuffer_Nil
+--- PASS: TestPutBytesBuffer_Nil (0.00s)
+=== RUN   TestPutBytesBuffer_InvalidCap
+--- PASS: TestPutBytesBuffer_InvalidCap (0.00s)
+=== RUN   TestPutBytesBuffer_RoundTrip
+--- PASS: TestPutBytesBuffer_RoundTrip (0.00s)
+=== RUN   TestGetStats
+--- PASS: TestGetStats (0.00s)
+=== RUN   TestGetIndex_BucketMapping
+--- PASS: TestGetIndex_BucketMapping (0.00s)
+=== RUN   TestNetBufferPool_GetPut
+--- PASS: TestNetBufferPool_GetPut (0.00s)
+=== RUN   TestNetBufferPool_PreserveCap
+--- PASS: TestNetBufferPool_PreserveCap (0.00s)
+=== RUN   TestNetBufferPool_Concurrent
+--- PASS: TestNetBufferPool_Concurrent (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-core/zpool	(cached)
+=== RUN   TestPriorityQueue_NewAndLen
+--- PASS: TestPriorityQueue_NewAndLen (0.00s)
+=== RUN   TestPriorityQueue_EnqueueDequeue_Single
+--- PASS: TestPriorityQueue_EnqueueDequeue_Single (0.00s)
+=== RUN   TestPriorityQueue_Dequeue_Empty
+--- PASS: TestPriorityQueue_Dequeue_Empty (0.00s)
+=== RUN   TestPriorityQueue_PriorityOrdering
+--- PASS: TestPriorityQueue_PriorityOrdering (0.00s)
+=== RUN   TestPriorityQueue_SamePriority
+--- PASS: TestPriorityQueue_SamePriority (0.00s)
+=== RUN   TestPriorityQueue_ManyElements
+--- PASS: TestPriorityQueue_ManyElements (0.00s)
+=== RUN   TestSPSCQueue_NewCapacity_LargeAndMaxCap
+--- PASS: TestSPSCQueue_NewCapacity_LargeAndMaxCap (0.00s)
+=== RUN   TestSPSCQueue_NewCapacityCorrection
+--- PASS: TestSPSCQueue_NewCapacityCorrection (0.00s)
+=== RUN   TestSPSCQueue_TryEnqueueTryDequeueBatch_Basic
+--- PASS: TestSPSCQueue_TryEnqueueTryDequeueBatch_Basic (0.00s)
+=== RUN   TestSPSCQueue_TryEnqueueBatch_Success
+--- PASS: TestSPSCQueue_TryEnqueueBatch_Success (0.00s)
+=== RUN   TestSPSCQueue_TryEnqueueBatch_Full
+--- PASS: TestSPSCQueue_TryEnqueueBatch_Full (0.00s)
+=== RUN   TestSPSCQueue_TryDequeueBatch_Empty
+--- PASS: TestSPSCQueue_TryDequeueBatch_Empty (0.00s)
+=== RUN   TestSPSCQueue_CloseIsClosed
+--- PASS: TestSPSCQueue_CloseIsClosed (0.00s)
+=== RUN   TestSPSCQueue_Len
+--- PASS: TestSPSCQueue_Len (0.00s)
+=== RUN   TestSPSCQueue_WrapAroundBatch
+--- PASS: TestSPSCQueue_WrapAroundBatch (0.00s)
+=== RUN   TestSPSCQueue_TryEnqueueBatch_EmptySlice
+--- PASS: TestSPSCQueue_TryEnqueueBatch_EmptySlice (0.00s)
+=== RUN   TestSPSCQueue_TryDequeueBatch_ZeroLenBuf
+--- PASS: TestSPSCQueue_TryDequeueBatch_ZeroLenBuf (0.00s)
+=== RUN   TestMPSCQueue_TryEnqueue_Success
+--- PASS: TestMPSCQueue_TryEnqueue_Success (0.00s)
+=== RUN   TestMPSCQueue_TryEnqueue_Full
+--- PASS: TestMPSCQueue_TryEnqueue_Full (0.00s)
+=== RUN   TestMPSCQueue_TryEnqueue_Closed
+--- PASS: TestMPSCQueue_TryEnqueue_Closed (0.00s)
+=== RUN   TestMPSCQueue_TryEnqueueBatch
+--- PASS: TestMPSCQueue_TryEnqueueBatch (0.00s)
+=== RUN   TestMPSCQueue_TryEnqueueBatch_PartialWhenFull
+--- PASS: TestMPSCQueue_TryEnqueueBatch_PartialWhenFull (0.00s)
+=== RUN   TestMPSCQueue_EnqueueBatch
+--- PASS: TestMPSCQueue_EnqueueBatch (0.00s)
+=== RUN   TestMPSCQueue_EnqueueBatch_PartialFailure
+--- PASS: TestMPSCQueue_EnqueueBatch_PartialFailure (0.00s)
+=== RUN   TestMPSCQueue_DequeueBatch_Basic
+--- PASS: TestMPSCQueue_DequeueBatch_Basic (0.00s)
+=== RUN   TestMPSCQueue_DequeueBatch_Empty
+--- PASS: TestMPSCQueue_DequeueBatch_Empty (0.00s)
+=== RUN   TestMPSCQueue_DequeueBatch_Partial
+--- PASS: TestMPSCQueue_DequeueBatch_Partial (0.00s)
+=== RUN   TestMPSCQueue_LenCap
+--- PASS: TestMPSCQueue_LenCap (0.00s)
+=== RUN   TestMPSCQueue_CloseIsClosed
+--- PASS: TestMPSCQueue_CloseIsClosed (0.00s)
+=== RUN   TestMPSCQueue_NonPowerOfTwoCapacity
+--- PASS: TestMPSCQueue_NonPowerOfTwoCapacity (0.00s)
+=== RUN   TestNewQueue_MaxSizeLessThanInitial
+--- PASS: TestNewQueue_MaxSizeLessThanInitial (0.00s)
+=== RUN   TestQueue_EnqueueBatch_Empty
+--- PASS: TestQueue_EnqueueBatch_Empty (0.00s)
+=== RUN   TestQueue_EnqueueBatch_Basic
+--- PASS: TestQueue_EnqueueBatch_Basic (0.00s)
+=== RUN   TestQueue_EnqueueBatch_WrapAround
+--- PASS: TestQueue_EnqueueBatch_WrapAround (0.00s)
+=== RUN   TestQueue_EnqueueBatch_Resize
+--- PASS: TestQueue_EnqueueBatch_Resize (0.00s)
+=== RUN   TestQueue_EnqueueBatch_DropPolicy
+--- PASS: TestQueue_EnqueueBatch_DropPolicy (0.00s)
+=== RUN   TestQueue_Enqueue_MaxSizeBlocksResize
+--- PASS: TestQueue_Enqueue_MaxSizeBlocksResize (0.00s)
+=== RUN   TestQueue_Front_Empty
+--- PASS: TestQueue_Front_Empty (0.00s)
+=== RUN   TestQueue_Front_NonEmpty
+--- PASS: TestQueue_Front_NonEmpty (0.00s)
+=== RUN   TestQueue_EnqueueBatch_WrapCopyPath
+--- PASS: TestQueue_EnqueueBatch_WrapCopyPath (0.00s)
+=== RUN   TestQueue_EnqueueBatch_MaxSizeExceeded
+--- PASS: TestQueue_EnqueueBatch_MaxSizeExceeded (0.00s)
+=== RUN   TestSPSCQueue_TryEnqueueBatch_WrapPath
+--- PASS: TestSPSCQueue_TryEnqueueBatch_WrapPath (0.00s)
+=== RUN   TestNextPowerOfTwo_EdgeCases
+--- PASS: TestNextPowerOfTwo_EdgeCases (0.00s)
+=== RUN   TestMPSCQueue_ConcurrentProducers
+--- PASS: TestMPSCQueue_ConcurrentProducers (0.00s)
+=== RUN   TestSPSCQueue_ConcurrentBlocking
+--- PASS: TestSPSCQueue_ConcurrentBlocking (0.00s)
+=== RUN   TestUnboundedMPSC_Shrink
+--- PASS: TestUnboundedMPSC_Shrink (0.00s)
+=== RUN   TestUnboundedMPSC_Close
+--- PASS: TestUnboundedMPSC_Close (0.00s)
+=== RUN   TestUnboundedSPSC_Close
+--- PASS: TestUnboundedSPSC_Close (0.00s)
+=== RUN   TestSPSCQueue_BlockingEnqueueDequeue
+--- PASS: TestSPSCQueue_BlockingEnqueueDequeue (0.00s)
+=== RUN   TestSPSCQueue_BlockingEnqueue_Closed
+--- PASS: TestSPSCQueue_BlockingEnqueue_Closed (0.05s)
+=== RUN   TestFullPolicyDrop
+--- PASS: TestFullPolicyDrop (0.00s)
+=== RUN   TestFullPolicyResize
+--- PASS: TestFullPolicyResize (0.00s)
+=== RUN   TestFullPolicyResizeWithMaxSize
+--- PASS: TestFullPolicyResizeWithMaxSize (0.00s)
+=== RUN   TestNewQueue
+--- PASS: TestNewQueue (0.00s)
+=== RUN   TestDropPolicy_MultipleTries
+--- PASS: TestDropPolicy_MultipleTries (0.00s)
+=== RUN   TestResizePolicy_ContinuousGrowth
+--- PASS: TestResizePolicy_ContinuousGrowth (0.00s)
+=== RUN   TestMaxSizeLimit_ExactBoundary
+--- PASS: TestMaxSizeLimit_ExactBoundary (0.00s)
+=== RUN   TestDequeueAndEnqueueCycle
+--- PASS: TestDequeueAndEnqueueCycle (0.00s)
+=== RUN   TestConcurrentEnqueueWithDrop
+    queue_fullpolicy_test.go:253: 队列当前元素: 15, 成功入队: 15, 丢弃数量: 985
+--- PASS: TestConcurrentEnqueueWithDrop (0.00s)
+=== RUN   TestConcurrentEnqueueWithResize
+--- PASS: TestConcurrentEnqueueWithResize (0.00s)
+=== RUN   TestDequeueBatch_Empty
+--- PASS: TestDequeueBatch_Empty (0.00s)
+=== RUN   TestDequeueBatch_LessThanLimit
+--- PASS: TestDequeueBatch_LessThanLimit (0.00s)
+=== RUN   TestDequeueBatch_ExactLimit
+--- PASS: TestDequeueBatch_ExactLimit (0.00s)
+=== RUN   TestDequeueBatch_MoreThanLimit
+--- PASS: TestDequeueBatch_MoreThanLimit (0.00s)
+=== RUN   TestDequeueBatch_MultipleOperations
+--- PASS: TestDequeueBatch_MultipleOperations (0.00s)
+=== RUN   TestDequeueBatch_WithResize
+--- PASS: TestDequeueBatch_WithResize (0.00s)
+=== RUN   TestDequeueBatch_ZeroLimit
+--- PASS: TestDequeueBatch_ZeroLimit (0.00s)
+=== RUN   TestQueue_Count
+16
+8192
+--- PASS: TestQueue_Count (0.00s)
+=== RUN   TestQueue_LockContention
+    queue_test.go:235: 20个协程并发写入:
+    queue_test.go:236:   总操作数: 1000000
+    queue_test.go:237:   总耗时: 181.613708ms
+    queue_test.go:238:   吞吐量: 5.51 M ops/秒
+    queue_test.go:239:   平均延迟: 181.61 ns/op
+--- PASS: TestQueue_LockContention (0.18s)
+=== RUN   TestNewMPMCQueue_Capacity
+--- PASS: TestNewMPMCQueue_Capacity (0.00s)
+=== RUN   TestSimpleEnqueueDequeue
+--- PASS: TestSimpleEnqueueDequeue (0.00s)
+=== RUN   TestMPSCQueue_SoakTest
+    swap_test.go:122: Success! Processed 1000000 messages without loss.
+--- PASS: TestMPSCQueue_SoakTest (0.05s)
+=== RUN   TestMPSCQueue_Padded_SoakTest
+--- PASS: TestMPSCQueue_Padded_SoakTest (0.06s)
+=== RUN   TestCloseDrain
+--- PASS: TestCloseDrain (0.00s)
+=== RUN   TestSmartDoubleQueue_Basic
+--- PASS: TestSmartDoubleQueue_Basic (0.00s)
+=== RUN   TestSmartDoubleQueue_MaxCap
+--- PASS: TestSmartDoubleQueue_MaxCap (0.00s)
+=== RUN   TestSmartDoubleQueue_Concurrency
+--- PASS: TestSmartDoubleQueue_Concurrency (2.00s)
+=== RUN   TestSmartDoubleQueue_Close
+--- PASS: TestSmartDoubleQueue_Close (0.00s)
+=== RUN   TestSmartDoubleQueue_EnqueueEmpty
+--- PASS: TestSmartDoubleQueue_EnqueueEmpty (0.00s)
+=== RUN   TestSmartDoubleQueue_BatchEnqueue
+--- PASS: TestSmartDoubleQueue_BatchEnqueue (0.00s)
+=== RUN   TestSmartDoubleQueue_Len
+--- PASS: TestSmartDoubleQueue_Len (0.00s)
+=== RUN   TestSmartDoubleQueue_Signal
+--- PASS: TestSmartDoubleQueue_Signal (0.00s)
+=== RUN   TestSmartDoubleQueue_NoSignal
+--- PASS: TestSmartDoubleQueue_NoSignal (0.05s)
+=== RUN   TestSmartDoubleQueue_PopEmpty
+--- PASS: TestSmartDoubleQueue_PopEmpty (0.00s)
+=== RUN   TestSmartDoubleQueue_DoubleClose
+--- PASS: TestSmartDoubleQueue_DoubleClose (0.00s)
+=== RUN   TestSmartDoubleQueue_MaxCapBatchExceeds
+--- PASS: TestSmartDoubleQueue_MaxCapBatchExceeds (0.00s)
+=== RUN   TestMPSCQueue_CloseThenEnqueue
+--- PASS: TestMPSCQueue_CloseThenEnqueue (0.00s)
+=== RUN   TestMPSCQueue_MinCapacity
+--- PASS: TestMPSCQueue_MinCapacity (0.00s)
+=== RUN   TestSmartDoubleQueue_MinInitCap
+--- PASS: TestSmartDoubleQueue_MinInitCap (0.00s)
+=== RUN   TestUnboundedMPSC_BasicEnqueueDequeue
+--- PASS: TestUnboundedMPSC_BasicEnqueueDequeue (0.00s)
+=== RUN   TestUnboundedMPSC_FIFO
+--- PASS: TestUnboundedMPSC_FIFO (0.00s)
+=== RUN   TestUnboundedMPSC_DequeueBatch
+--- PASS: TestUnboundedMPSC_DequeueBatch (0.00s)
+=== RUN   TestUnboundedMPSC_EnqueueBatch
+--- PASS: TestUnboundedMPSC_EnqueueBatch (0.00s)
+=== RUN   TestUnboundedMPSC_Concurrent
+--- PASS: TestUnboundedMPSC_Concurrent (0.00s)
+=== RUN   TestUnboundedMPSC_ConcurrentBatch
+--- PASS: TestUnboundedMPSC_ConcurrentBatch (0.00s)
+=== RUN   TestUnboundedMPSC_StressTest
+    unbounded_test.go:283: 压力测试：2 秒内生产并消费 15778454 个元素
+--- PASS: TestUnboundedMPSC_StressTest (2.30s)
+=== RUN   TestUnboundedSPSC_BasicEnqueueDequeue
+--- PASS: TestUnboundedSPSC_BasicEnqueueDequeue (0.00s)
+=== RUN   TestUnboundedSPSC_FIFO
+--- PASS: TestUnboundedSPSC_FIFO (0.00s)
+=== RUN   TestUnboundedSPSC_DequeueBatch
+--- PASS: TestUnboundedSPSC_DequeueBatch (0.00s)
+=== RUN   TestUnboundedSPSC_EnqueueBatch
+--- PASS: TestUnboundedSPSC_EnqueueBatch (0.00s)
+=== RUN   TestUnboundedSPSC_PingPong
+--- PASS: TestUnboundedSPSC_PingPong (0.00s)
+=== RUN   TestUnboundedSPSC_BatchPingPong
+--- PASS: TestUnboundedSPSC_BatchPingPong (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-core/zqueue	(cached)
+=== RUN   TestMarshalJson_DeSerialize
+--- PASS: TestMarshalJson_DeSerialize (0.00s)
+=== RUN   TestMarshalJson_EmptyStruct
+--- PASS: TestMarshalJson_EmptyStruct (0.00s)
+=== RUN   TestUnmarshalJson_InvalidJSON
+--- PASS: TestUnmarshalJson_InvalidJSON (0.00s)
+=== RUN   TestMarshalJson_NilSlice
+--- PASS: TestMarshalJson_NilSlice (0.00s)
+=== RUN   TestMarshalMsgPack_DeSerialize
+--- PASS: TestMarshalMsgPack_DeSerialize (0.00s)
+=== RUN   TestMarshalMsgPack_EmptyStruct
+--- PASS: TestMarshalMsgPack_EmptyStruct (0.00s)
+=== RUN   TestUnmarshalMsgPack_InvalidData
+--- PASS: TestUnmarshalMsgPack_InvalidData (0.00s)
+=== RUN   TestCrossFormat_Consistency
+--- PASS: TestCrossFormat_Consistency (0.00s)
+=== RUN   TestMsgPack_Concurrent
+--- PASS: TestMsgPack_Concurrent (0.00s)
+=== RUN   TestJson_Concurrent
+--- PASS: TestJson_Concurrent (0.00s)
+=== RUN   TestSerializationSize
+    serialize_test.go:377: JSON 大小:    339 bytes
+    serialize_test.go:378: MsgPack 大小: 308 bytes
+    serialize_test.go:379: 压缩率: 90.86%
+--- PASS: TestSerializationSize (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-core/zserialize	(cached)
+=== RUN   TestNew_Defaults
+--- PASS: TestNew_Defaults (0.00s)
+=== RUN   TestNew_WithOptions
+--- PASS: TestNew_WithOptions (0.00s)
+=== RUN   TestHandle_Registration
+--- PASS: TestHandle_Registration (0.00s)
+=== RUN   TestRequest_Fields
+--- PASS: TestRequest_Fields (0.00s)
+=== RUN   TestEchoIntegration
+[zynet] server listening on 127.0.0.1:0 (TCP, worker pool)
+--- PASS: TestEchoIntegration (0.40s)
+=== RUN   TestEchoMultipleMessages
+[zynet] server listening on 127.0.0.1:0 (TCP, worker pool)
+    server_test.go:153: echo: sent 50, received 50
+--- PASS: TestEchoMultipleMessages (2.15s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-core/zserver	(cached)
+=== RUN   TestTServer_TClient_FullIntegration
+--- PASS: TestTServer_TClient_FullIntegration (0.37s)
+=== RUN   TestTChannel_DirectTCPConnection
+--- PASS: TestTChannel_DirectTCPConnection (0.20s)
+=== RUN   TestBaseClient_FullOperations
+--- PASS: TestBaseClient_FullOperations (0.20s)
+=== RUN   TestTServer_OnAcceptReject
+--- PASS: TestTServer_OnAcceptReject (0.17s)
+=== RUN   TestTServer_ChannelHeartbeatTimeout
+--- PASS: TestTServer_ChannelHeartbeatTimeout (0.17s)
+=== RUN   TestTChannel_CloseCallback
+--- PASS: TestTChannel_CloseCallback (0.20s)
+=== RUN   TestTServer_MultipleChannels
+--- PASS: TestTServer_MultipleChannels (0.47s)
+=== RUN   TestParseData_ResetForReuse_ViaChannelRead
+--- PASS: TestParseData_ResetForReuse_ViaChannelRead (0.20s)
+=== RUN   TestTChannel_WriteBuffers_SendBatchMsg
+--- PASS: TestTChannel_WriteBuffers_SendBatchMsg (0.00s)
+=== RUN   TestTServer_SetMaxConnections_Reject
+--- PASS: TestTServer_SetMaxConnections_Reject (0.22s)
+=== RUN   TestTServer_SetChannelAuth_GetChannelByAuthId_RealChannel
+--- PASS: TestTServer_SetChannelAuth_GetChannelByAuthId_RealChannel (0.10s)
+=== RUN   TestBaseClient_SendMsg_WhenClosed
+--- PASS: TestBaseClient_SendMsg_WhenClosed (0.00s)
+=== RUN   TestBaseClient_SetEncrypt
+--- PASS: TestBaseClient_SetEncrypt (0.00s)
+=== RUN   TestBaseClient_Read_ConnectionClosed
+--- PASS: TestBaseClient_Read_ConnectionClosed (0.13s)
+=== RUN   TestNewTClient_InvalidAddress
+--- PASS: TestNewTClient_InvalidAddress (0.00s)
+=== RUN   TestBaseServer_SetChannelAuth_NonExistentChannel
+--- PASS: TestBaseServer_SetChannelAuth_NonExistentChannel (0.00s)
+=== RUN   TestTServer_Listen_ContextDone
+--- PASS: TestTServer_Listen_ContextDone (0.15s)
+=== RUN   TestTChannel_MalformedPacket_ParseError
+--- PASS: TestTChannel_MalformedPacket_ParseError (0.15s)
+=== RUN   TestTServer_Close_Idempotent
+--- PASS: TestTServer_Close_Idempotent (0.04s)
+=== RUN   TestTServer_WithTLS
+--- PASS: TestTServer_WithTLS (0.10s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-core/ztcp	(cached)
+=== RUN   TestTicker_NewTicker
+--- PASS: TestTicker_NewTicker (0.05s)
+=== RUN   TestTicker_ResetTime
+--- PASS: TestTicker_ResetTime (0.05s)
+=== RUN   TestTicker_StopAndReuse
+--- PASS: TestTicker_StopAndReuse (0.05s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-core/ztimer	(cached)
+=== RUN   TestWServer_WClient_FullIntegration
+--- PASS: TestWServer_WClient_FullIntegration (0.60s)
+=== RUN   TestWClient_ConnectInvalidAddr
+--- PASS: TestWClient_ConnectInvalidAddr (0.00s)
+=== RUN   TestWServer_Close_Idempotent
+--- PASS: TestWServer_Close_Idempotent (0.20s)
+=== RUN   TestWServer_OnAcceptReject
+--- PASS: TestWServer_OnAcceptReject (0.30s)
+=== RUN   TestWServer_StartAndClose
+--- PASS: TestWServer_StartAndClose (0.25s)
+=== RUN   TestWServer_Client_SendReceive
+--- PASS: TestWServer_Client_SendReceive (0.60s)
+=== RUN   TestWServer_CheckOrigin
+--- PASS: TestWServer_CheckOrigin (0.00s)
+=== RUN   TestWClient_InvalidAddress
+--- PASS: TestWClient_InvalidAddress (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-core/zws	(cached)
