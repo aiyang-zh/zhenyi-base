@@ -27,7 +27,8 @@ func NewServer(addr string, handlers znet.ServerHandlers) *Server {
 func (ser *Server) start(ctx context.Context) {
 	// 启动kcp连接
 	zlog.Info("Starting KCP server", zap.String("addr", ser.GetAddr()))
-	listener, err := kcp.ListenWithOptions(ser.GetAddr(), nil, 10, 3)
+	// dataShards=0, parityShards=0 关闭 FEC，与 Client 一致。localhost 无丢包时 FEC 纯属开销。
+	listener, err := kcp.ListenWithOptions(ser.GetAddr(), nil, 0, 0)
 	if err != nil {
 		zlog.Error("Failed to start KCP server",
 			zap.String("addr", ser.GetAddr()),

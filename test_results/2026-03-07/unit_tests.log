@@ -1,5 +1,19 @@
-?   	github.com/aiyang-zh/zhenyi-core/examples/echo/client	[no test files]
-?   	github.com/aiyang-zh/zhenyi-core/examples/echo/server	[no test files]
+?   	github.com/aiyang-zh/zhenyi-base/examples/echo/client	[no test files]
+?   	github.com/aiyang-zh/zhenyi-base/examples/echo/server	[no test files]
+=== RUN   TestBackoff_SpinPhase
+--- PASS: TestBackoff_SpinPhase (0.00s)
+=== RUN   TestBackoff_GoschedPhase
+--- PASS: TestBackoff_GoschedPhase (0.00s)
+=== RUN   TestBackoff_SleepPhase
+--- PASS: TestBackoff_SleepPhase (0.05s)
+=== RUN   TestBackoff_BoundaryValues
+--- PASS: TestBackoff_BoundaryValues (0.02s)
+=== RUN   TestBackoff_ZeroThresholds
+--- PASS: TestBackoff_ZeroThresholds (0.02s)
+=== RUN   TestBackoff_LargeK
+--- PASS: TestBackoff_LargeK (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-base/zbackoff	(cached)
 === RUN   TestAdaptiveBatcher_Basic
 --- PASS: TestAdaptiveBatcher_Basic (0.00s)
 === RUN   TestAdaptiveBatcher_EmptyQueue
@@ -57,7 +71,7 @@
 === RUN   TestFastAdaptiveBatcher_GetAvgLatency_ZeroTotal
 --- PASS: TestFastAdaptiveBatcher_GetAvgLatency_ZeroTotal (0.00s)
 PASS
-ok  	github.com/aiyang-zh/zhenyi-core/zbatch	(cached)
+ok  	github.com/aiyang-zh/zhenyi-base/zbatch	(cached)
 === RUN   TestSet_NewSet
 --- PASS: TestSet_NewSet (0.00s)
 === RUN   TestSet_NewSetByList
@@ -120,11 +134,11 @@ ok  	github.com/aiyang-zh/zhenyi-core/zbatch	(cached)
 --- PASS: TestShardMap_ConcurrentSetDelete (0.00s)
 === RUN   TestShardMap_ExpireRace
     shardmap_test.go:350: Expire race test completed successfully
---- PASS: TestShardMap_ExpireRace (0.11s)
+--- PASS: TestShardMap_ExpireRace (0.12s)
 === RUN   TestShardMap_ShardDistribution
 --- PASS: TestShardMap_ShardDistribution (0.00s)
 PASS
-ok  	github.com/aiyang-zh/zhenyi-core/zcoll	(cached)
+ok  	github.com/aiyang-zh/zhenyi-base/zcoll	(cached)
 === RUN   TestAesEncrypt_BasicEncryptDecrypt
 --- PASS: TestAesEncrypt_BasicEncryptDecrypt (0.00s)
 === RUN   TestAesEncrypt_RandomIV
@@ -214,13 +228,13 @@ ok  	github.com/aiyang-zh/zhenyi-core/zcoll	(cached)
     aesni_check_test.go:35: 加密实现: ARM Crypto Extensions (auto-detected)
 --- PASS: TestGetCryptoInfo (0.00s)
 === RUN   TestArgon2_Encrypt
---- PASS: TestArgon2_Encrypt (0.03s)
+--- PASS: TestArgon2_Encrypt (0.02s)
 === RUN   TestArgon2_RandomSalt
---- PASS: TestArgon2_RandomSalt (0.04s)
+--- PASS: TestArgon2_RandomSalt (0.03s)
 === RUN   TestArgon2_DifferentPasswords
 --- PASS: TestArgon2_DifferentPasswords (0.03s)
 === RUN   TestArgon2_CompareHashAndPassword_Match
---- PASS: TestArgon2_CompareHashAndPassword_Match (0.03s)
+--- PASS: TestArgon2_CompareHashAndPassword_Match (0.02s)
 === RUN   TestArgon2_CompareHashAndPassword_Mismatch
 --- PASS: TestArgon2_CompareHashAndPassword_Mismatch (0.03s)
 === RUN   TestArgon2_CompareHashAndPassword_InvalidHash
@@ -252,16 +266,16 @@ ok  	github.com/aiyang-zh/zhenyi-core/zcoll	(cached)
 === RUN   TestBatchEncrypt_Concurrent
 --- PASS: TestBatchEncrypt_Concurrent (0.00s)
 === RUN   TestBatchEncrypt_LargeData
-    batch_encrypt_test.go:260: 批量加密 1000 个 1KB 包，耗时: 683.958µs
+    batch_encrypt_test.go:260: 批量加密 1000 个 1KB 包，耗时: 601.25µs
 --- PASS: TestBatchEncrypt_LargeData (0.00s)
 === RUN   TestBcrypt_Encrypt
 --- PASS: TestBcrypt_Encrypt (0.05s)
 === RUN   TestBcrypt_NonDeterministic
---- PASS: TestBcrypt_NonDeterministic (0.10s)
+--- PASS: TestBcrypt_NonDeterministic (0.11s)
 === RUN   TestBcrypt_CompareHashAndPassword_Match
 --- PASS: TestBcrypt_CompareHashAndPassword_Match (0.11s)
 === RUN   TestBcrypt_CompareHashAndPassword_Mismatch
---- PASS: TestBcrypt_CompareHashAndPassword_Mismatch (0.10s)
+--- PASS: TestBcrypt_CompareHashAndPassword_Mismatch (0.11s)
 === RUN   TestBcrypt_CompareHashAndPassword_InvalidHash
 --- PASS: TestBcrypt_CompareHashAndPassword_InvalidHash (0.00s)
 === RUN   TestBaseEncrypt_EncryptPassthrough
@@ -332,51 +346,51 @@ ok  	github.com/aiyang-zh/zhenyi-core/zcoll	(cached)
     rsa_test.go:38: ✓ Generated 3072-bit RSA key successfully
 === RUN   TestRSA_KeyGeneration/RejectWeakKey
     rsa_test.go:47: ✓ Weak key rejected as expected
---- PASS: TestRSA_KeyGeneration (0.06s)
-    --- PASS: TestRSA_KeyGeneration/Default2048Bits (0.02s)
-    --- PASS: TestRSA_KeyGeneration/Custom3072Bits (0.03s)
+--- PASS: TestRSA_KeyGeneration (0.16s)
+    --- PASS: TestRSA_KeyGeneration/Default2048Bits (0.08s)
+    --- PASS: TestRSA_KeyGeneration/Custom3072Bits (0.08s)
     --- PASS: TestRSA_KeyGeneration/RejectWeakKey (0.00s)
 === RUN   TestRSA_OAEP_BasicEncryptDecrypt
     rsa_test.go:80: ✓ Basic OAEP encrypt/decrypt works correctly
---- PASS: TestRSA_OAEP_BasicEncryptDecrypt (0.03s)
+--- PASS: TestRSA_OAEP_BasicEncryptDecrypt (0.06s)
 === RUN   TestRSA_OAEP_RandomCiphertexts
     rsa_test.go:108: ✓ OAEP produces random ciphertexts (secure)
---- PASS: TestRSA_OAEP_RandomCiphertexts (0.05s)
+--- PASS: TestRSA_OAEP_RandomCiphertexts (0.04s)
 === RUN   TestRSA_OAEP_MaximumPlaintextSize
 === RUN   TestRSA_OAEP_MaximumPlaintextSize/MaximumSize
     rsa_test.go:147: ✓ Maximum plaintext size (190 bytes) works
 === RUN   TestRSA_OAEP_MaximumPlaintextSize/ExceedMaximumSize
     rsa_test.go:156: ✓ Correctly rejects oversized plaintext: crypto/rsa: message too long for RSA key size
---- PASS: TestRSA_OAEP_MaximumPlaintextSize (0.03s)
+--- PASS: TestRSA_OAEP_MaximumPlaintextSize (0.02s)
     --- PASS: TestRSA_OAEP_MaximumPlaintextSize/MaximumSize (0.00s)
     --- PASS: TestRSA_OAEP_MaximumPlaintextSize/ExceedMaximumSize (0.00s)
 === RUN   TestRSA_OAEP_CustomHash
     rsa_test.go:187: ✓ OAEP with custom hash (SHA-512) works correctly
---- PASS: TestRSA_OAEP_CustomHash (0.32s)
+--- PASS: TestRSA_OAEP_CustomHash (0.25s)
 === RUN   TestRSA_OAEP_WrongKey
     rsa_test.go:209: ✓ Correctly rejects wrong key: crypto/rsa: decryption error
---- PASS: TestRSA_OAEP_WrongKey (0.10s)
+--- PASS: TestRSA_OAEP_WrongKey (0.18s)
 === RUN   TestRSA_OAEP_EmptyData
     rsa_test.go:234: ✓ Empty data encryption/decryption works
---- PASS: TestRSA_OAEP_EmptyData (0.19s)
+--- PASS: TestRSA_OAEP_EmptyData (0.03s)
 === RUN   TestRSA_Sign_BasicSignVerify
     rsa_test.go:259: ✓ Basic signing and verification works
---- PASS: TestRSA_Sign_BasicSignVerify (0.05s)
+--- PASS: TestRSA_Sign_BasicSignVerify (0.06s)
 === RUN   TestRSA_Sign_TamperedData
     rsa_test.go:281: ✓ Correctly detected tampered data: crypto/rsa: verification error
---- PASS: TestRSA_Sign_TamperedData (0.03s)
+--- PASS: TestRSA_Sign_TamperedData (0.02s)
 === RUN   TestRSA_Sign_TamperedSignature
     rsa_test.go:301: ✓ Correctly detected tampered signature: crypto/rsa: verification error
---- PASS: TestRSA_Sign_TamperedSignature (0.02s)
+--- PASS: TestRSA_Sign_TamperedSignature (0.04s)
 === RUN   TestRSA_Sign_DeterministicSignature
     rsa_test.go:317: ✓ Signatures are deterministic (same for identical data)
---- PASS: TestRSA_Sign_DeterministicSignature (0.06s)
+--- PASS: TestRSA_Sign_DeterministicSignature (0.08s)
 === RUN   TestRSA_Rsa2_LoadPKCS1
     rsa_test.go:360: ✓ PKCS#1格式加载和签名成功
---- PASS: TestRSA_Rsa2_LoadPKCS1 (0.04s)
+--- PASS: TestRSA_Rsa2_LoadPKCS1 (0.02s)
 === RUN   TestRSA_Rsa2_LoadPKCS8
     rsa_test.go:404: ✓ PKCS#8格式加载和签名成功
---- PASS: TestRSA_Rsa2_LoadPKCS8 (0.03s)
+--- PASS: TestRSA_Rsa2_LoadPKCS8 (0.08s)
 === RUN   TestRSA_Rsa2_DefensiveParsing
 === RUN   TestRSA_Rsa2_DefensiveParsing/标准PKCS#1
     rsa_test.go:513: ✓ 标准PKCS#1: 标准格式，应立即成功
@@ -391,7 +405,7 @@ ok  	github.com/aiyang-zh/zhenyi-core/zcoll	(cached)
 === NAME  TestRSA_Rsa2_DefensiveParsing
     rsa_test.go:518: ✓ 防御性解析测试全部通过
     rsa_test.go:519: 💡 即使PEM Type不标准，也能正确解析密钥内容
---- PASS: TestRSA_Rsa2_DefensiveParsing (0.17s)
+--- PASS: TestRSA_Rsa2_DefensiveParsing (0.11s)
     --- PASS: TestRSA_Rsa2_DefensiveParsing/标准PKCS#1 (0.00s)
     --- PASS: TestRSA_Rsa2_DefensiveParsing/标准PKCS#8 (0.00s)
     --- PASS: TestRSA_Rsa2_DefensiveParsing/错误Type但内容是PKCS#1 (0.00s)
@@ -421,7 +435,7 @@ ok  	github.com/aiyang-zh/zhenyi-core/zcoll	(cached)
 --- PASS: TestRSA_OAEP_WithLabel (0.01s)
 === RUN   TestRSA_OAEP_LabelPreventsReplay
     rsa_test.go:660: ✓ Label成功防止跨上下文重放
---- PASS: TestRSA_OAEP_LabelPreventsReplay (0.06s)
+--- PASS: TestRSA_OAEP_LabelPreventsReplay (0.02s)
 === RUN   TestRSA_OAEP_HashConcurrency
     rsa_test.go:666: ⚠️  测试Hash并发使用（验证文档警告的必要性）
 === RUN   TestRSA_OAEP_HashConcurrency/正确用法
@@ -430,13 +444,13 @@ ok  	github.com/aiyang-zh/zhenyi-core/zcoll	(cached)
     rsa_test.go:695: ⚠️  文档警告：不要复用Hash实例
     rsa_test.go:696: ❌ 错误：h := sha512.New(); EncryptOAEPWithHash(..., h, ...); EncryptOAEPWithHash(..., h, ...)
     rsa_test.go:697: ✅ 正确：EncryptOAEPWithHash(..., sha512.New(), ...)
---- PASS: TestRSA_OAEP_HashConcurrency (0.12s)
+--- PASS: TestRSA_OAEP_HashConcurrency (0.04s)
     --- PASS: TestRSA_OAEP_HashConcurrency/正确用法 (0.00s)
     --- PASS: TestRSA_OAEP_HashConcurrency/错误用法演示 (0.00s)
 === RUN   TestRSA_LongMessage
     rsa_test.go:713: ✓ Correctly rejects oversized message: crypto/rsa: message too long for RSA key size
     rsa_test.go:714: 💡 For long messages, use hybrid encryption (RSA + AES)
---- PASS: TestRSA_LongMessage (0.02s)
+--- PASS: TestRSA_LongMessage (0.04s)
 === RUN   TestSha256_Basic
 --- PASS: TestSha256_Basic (0.00s)
 === RUN   TestSha256_Deterministic
@@ -566,8 +580,234 @@ ok  	github.com/aiyang-zh/zhenyi-core/zcoll	(cached)
 === RUN   Example_poolUsage
 --- PASS: Example_poolUsage (0.00s)
 PASS
-ok  	github.com/aiyang-zh/zhenyi-core/zencrypt	(cached)
-?   	github.com/aiyang-zh/zhenyi-core/ziface	[no test files]
+ok  	github.com/aiyang-zh/zhenyi-base/zencrypt	(cached)
+=== RUN   TestNew
+--- PASS: TestNew (0.00s)
+=== RUN   TestNewf
+--- PASS: TestNewf (0.00s)
+=== RUN   TestWithStack_HasStack
+--- PASS: TestWithStack_HasStack (0.00s)
+=== RUN   TestWithStackf
+--- PASS: TestWithStackf (0.00s)
+=== RUN   TestWithStackSkip_SkipsHelper
+--- PASS: TestWithStackSkip_SkipsHelper (0.00s)
+=== RUN   TestWithStackSkip_Zero_SameAsWithStack
+--- PASS: TestWithStackSkip_Zero_SameAsWithStack (0.00s)
+=== RUN   TestWithStackSkipf
+--- PASS: TestWithStackSkipf (0.00s)
+=== RUN   TestWrap
+--- PASS: TestWrap (0.00s)
+=== RUN   TestWrap_NilReturnsNil
+--- PASS: TestWrap_NilReturnsNil (0.00s)
+=== RUN   TestWrapf_NilReturnsNil
+--- PASS: TestWrapf_NilReturnsNil (0.00s)
+=== RUN   TestWrapWithStack
+--- PASS: TestWrapWithStack (0.00s)
+=== RUN   TestWrapWithStack_NilReturnsNil
+--- PASS: TestWrapWithStack_NilReturnsNil (0.00s)
+=== RUN   TestWrapWithStackf
+--- PASS: TestWrapWithStackf (0.00s)
+=== RUN   TestWrapWithStackf_NilReturnsNil
+--- PASS: TestWrapWithStackf_NilReturnsNil (0.00s)
+=== RUN   TestUnwrap
+--- PASS: TestUnwrap (0.00s)
+=== RUN   TestUnwrap_NoInner
+--- PASS: TestUnwrap_NoInner (0.00s)
+=== RUN   TestIs_SameType
+--- PASS: TestIs_SameType (0.00s)
+=== RUN   TestIs_DifferentType
+--- PASS: TestIs_DifferentType (0.00s)
+=== RUN   TestIs_NonTypedError
+--- PASS: TestIs_NonTypedError (0.00s)
+=== RUN   TestAs
+--- PASS: TestAs (0.00s)
+=== RUN   TestIs_WrappedChain
+--- PASS: TestIs_WrappedChain (0.00s)
+=== RUN   TestIsType
+--- PASS: TestIsType (0.00s)
+=== RUN   TestIsType_NilError
+--- PASS: TestIsType_NilError (0.00s)
+=== RUN   TestGetType
+--- PASS: TestGetType (0.00s)
+=== RUN   TestGetType_NilError
+--- PASS: TestGetType_NilError (0.00s)
+=== RUN   TestGetType_NonTypedError
+--- PASS: TestGetType_NonTypedError (0.00s)
+=== RUN   TestGetTypedError
+--- PASS: TestGetTypedError (0.00s)
+=== RUN   TestGetTypedError_Nil
+--- PASS: TestGetTypedError_Nil (0.00s)
+=== RUN   TestConvenienceChecks
+=== RUN   TestConvenienceChecks/IsTimeout/true
+=== RUN   TestConvenienceChecks/IsTimeout/false
+=== RUN   TestConvenienceChecks/IsNetwork/true
+=== RUN   TestConvenienceChecks/IsDatabase/true
+=== RUN   TestConvenienceChecks/IsValidation/true
+=== RUN   TestConvenienceChecks/IsNotFound/true
+=== RUN   TestConvenienceChecks/IsAlreadyExists/true
+--- PASS: TestConvenienceChecks (0.00s)
+    --- PASS: TestConvenienceChecks/IsTimeout/true (0.00s)
+    --- PASS: TestConvenienceChecks/IsTimeout/false (0.00s)
+    --- PASS: TestConvenienceChecks/IsNetwork/true (0.00s)
+    --- PASS: TestConvenienceChecks/IsDatabase/true (0.00s)
+    --- PASS: TestConvenienceChecks/IsValidation/true (0.00s)
+    --- PASS: TestConvenienceChecks/IsNotFound/true (0.00s)
+    --- PASS: TestConvenienceChecks/IsAlreadyExists/true (0.00s)
+=== RUN   TestSentinelErrors_IsType
+--- PASS: TestSentinelErrors_IsType (0.00s)
+=== RUN   TestSentinelErrors_ErrorsIs
+--- PASS: TestSentinelErrors_ErrorsIs (0.00s)
+=== RUN   TestConvenienceCreators
+=== RUN   TestConvenienceCreators/InvalidParameterf
+=== RUN   TestConvenienceCreators/Timeoutf
+=== RUN   TestConvenienceCreators/NotFoundf
+=== RUN   TestConvenienceCreators/AlreadyExistsf
+=== RUN   TestConvenienceCreators/Networkf
+=== RUN   TestConvenienceCreators/Databasef
+=== RUN   TestConvenienceCreators/Actorf
+=== RUN   TestConvenienceCreators/RPCf
+=== RUN   TestConvenienceCreators/Configf
+--- PASS: TestConvenienceCreators (0.00s)
+    --- PASS: TestConvenienceCreators/InvalidParameterf (0.00s)
+    --- PASS: TestConvenienceCreators/Timeoutf (0.00s)
+    --- PASS: TestConvenienceCreators/NotFoundf (0.00s)
+    --- PASS: TestConvenienceCreators/AlreadyExistsf (0.00s)
+    --- PASS: TestConvenienceCreators/Networkf (0.00s)
+    --- PASS: TestConvenienceCreators/Databasef (0.00s)
+    --- PASS: TestConvenienceCreators/Actorf (0.00s)
+    --- PASS: TestConvenienceCreators/RPCf (0.00s)
+    --- PASS: TestConvenienceCreators/Configf (0.00s)
+=== RUN   TestInternalf_HasStack
+--- PASS: TestInternalf_HasStack (0.00s)
+=== RUN   TestFormat_V
+--- PASS: TestFormat_V (0.00s)
+=== RUN   TestFormat_S
+--- PASS: TestFormat_S (0.00s)
+=== RUN   TestFormat_Q
+--- PASS: TestFormat_Q (0.00s)
+=== RUN   TestFormat_PlusV_NoStack
+--- PASS: TestFormat_PlusV_NoStack (0.00s)
+=== RUN   TestFormat_PlusV_WithStack
+--- PASS: TestFormat_PlusV_WithStack (0.00s)
+=== RUN   TestFormat_PlusV_WithWrap
+--- PASS: TestFormat_PlusV_WithWrap (0.00s)
+=== RUN   TestStackTrace_Empty
+--- PASS: TestStackTrace_Empty (0.00s)
+=== RUN   TestStackTrace_NonEmpty
+--- PASS: TestStackTrace_NonEmpty (0.00s)
+=== RUN   TestError_WithInnerError
+--- PASS: TestError_WithInnerError (0.00s)
+=== RUN   TestError_WithoutInnerError
+--- PASS: TestError_WithoutInnerError (0.00s)
+=== RUN   TestIs_PackageLevelFunctions
+--- PASS: TestIs_PackageLevelFunctions (0.00s)
+=== RUN   TestAs_PackageLevelFunction
+--- PASS: TestAs_PackageLevelFunction (0.00s)
+=== RUN   ExampleNew
+--- PASS: ExampleNew (0.00s)
+=== RUN   ExampleNewf
+--- PASS: ExampleNewf (0.00s)
+=== RUN   ExampleWithStack
+--- PASS: ExampleWithStack (0.00s)
+=== RUN   ExampleWrap
+--- PASS: ExampleWrap (0.00s)
+=== RUN   ExampleWrapWithStack
+--- PASS: ExampleWrapWithStack (0.00s)
+=== RUN   ExampleWithStackSkip
+--- PASS: ExampleWithStackSkip (0.00s)
+=== RUN   ExampleIsType
+--- PASS: ExampleIsType (0.00s)
+=== RUN   ExampleGetType
+--- PASS: ExampleGetType (0.00s)
+=== RUN   ExampleIsTimeout
+--- PASS: ExampleIsTimeout (0.00s)
+=== RUN   ExampleTypedError_Format
+--- PASS: ExampleTypedError_Format (0.00s)
+=== RUN   ExampleTypedError_Is
+--- PASS: ExampleTypedError_Is (0.00s)
+=== RUN   ExampleInternalf
+--- PASS: ExampleInternalf (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-base/zerrs	(cached)
+=== RUN   TestExists_FileExists
+--- PASS: TestExists_FileExists (0.00s)
+=== RUN   TestExists_FileNotExists
+--- PASS: TestExists_FileNotExists (0.00s)
+=== RUN   TestExists_DirExists
+--- PASS: TestExists_DirExists (0.00s)
+=== RUN   TestMkdir_CreateNew
+--- PASS: TestMkdir_CreateNew (0.00s)
+=== RUN   TestMkdir_Nested
+--- PASS: TestMkdir_Nested (0.00s)
+=== RUN   TestMkdir_AlreadyExists
+--- PASS: TestMkdir_AlreadyExists (0.00s)
+=== RUN   TestCreateFile_Basic
+--- PASS: TestCreateFile_Basic (0.00s)
+=== RUN   TestCreateFile_Overwrite
+--- PASS: TestCreateFile_Overwrite (0.00s)
+=== RUN   TestCreateFile_Empty
+--- PASS: TestCreateFile_Empty (0.00s)
+=== RUN   TestIsDirEmpty_EmptyDir
+--- PASS: TestIsDirEmpty_EmptyDir (0.00s)
+=== RUN   TestIsDirEmpty_NonEmptyDir
+--- PASS: TestIsDirEmpty_NonEmptyDir (0.00s)
+=== RUN   TestIsDirEmpty_NotExist
+--- PASS: TestIsDirEmpty_NotExist (0.00s)
+=== RUN   TestGoFmt_ValidCode
+--- PASS: TestGoFmt_ValidCode (0.00s)
+=== RUN   TestGoFmt_InvalidCode
+--- PASS: TestGoFmt_InvalidCode (0.00s)
+=== RUN   TestGoFmt_NonExistent
+--- PASS: TestGoFmt_NonExistent (0.00s)
+=== RUN   TestGoFmtDir_Basic
+--- PASS: TestGoFmtDir_Basic (0.00s)
+=== RUN   TestGoFmtDir_NonExistent
+--- PASS: TestGoFmtDir_NonExistent (0.00s)
+=== RUN   TestParseFile_Basic
+--- PASS: TestParseFile_Basic (0.00s)
+=== RUN   TestParseFile_NoExt
+--- PASS: TestParseFile_NoExt (0.00s)
+=== RUN   TestParseFile_MultiDot
+--- PASS: TestParseFile_MultiDot (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-base/zfile	(cached)
+=== RUN   TestGrace_New
+--- PASS: TestGrace_New (0.00s)
+=== RUN   TestGrace_Register
+--- PASS: TestGrace_Register (0.00s)
+=== RUN   TestGrace_RegisterMultiple
+--- PASS: TestGrace_RegisterMultiple (0.00s)
+=== RUN   TestGrace_StopTriggersClose
+--- PASS: TestGrace_StopTriggersClose (0.05s)
+=== RUN   TestGrace_ExecutionOrder
+--- PASS: TestGrace_ExecutionOrder (0.05s)
+=== RUN   TestCustomSignal_String
+--- PASS: TestCustomSignal_String (0.00s)
+=== RUN   TestCustomSignal_Signal
+--- PASS: TestCustomSignal_Signal (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-base/zgrace	(cached)
+=== RUN   TestFastId_Init
+--- PASS: TestFastId_Init (0.00s)
+=== RUN   TestFastId_UniqueIds
+--- PASS: TestFastId_UniqueIds (0.00s)
+=== RUN   TestFastId_DifferentNodes
+--- PASS: TestFastId_DifferentNodes (0.00s)
+=== RUN   TestFastId_Concurrent
+--- PASS: TestFastId_Concurrent (0.00s)
+=== RUN   TestFastId_NodeIdOverflow
+--- PASS: TestFastId_NodeIdOverflow (0.00s)
+=== RUN   TestSonyFlake_Next
+--- PASS: TestSonyFlake_Next (0.00s)
+=== RUN   TestSonyFlake_Unique
+--- PASS: TestSonyFlake_Unique (0.02s)
+=== RUN   TestUuid_GenId
+--- PASS: TestUuid_GenId (0.00s)
+=== RUN   TestUuid_Unique
+--- PASS: TestUuid_Unique (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-base/zid	(cached)
+?   	github.com/aiyang-zh/zhenyi-base/ziface	[no test files]
 === RUN   TestKServer_KClient_FullIntegration
 --- PASS: TestKServer_KClient_FullIntegration (0.52s)
 === RUN   TestKClient_ConnectInvalidAddr
@@ -585,7 +825,30 @@ ok  	github.com/aiyang-zh/zhenyi-core/zencrypt	(cached)
 === RUN   TestKCPClient_InvalidAddress
 --- PASS: TestKCPClient_InvalidAddress (0.00s)
 PASS
-ok  	github.com/aiyang-zh/zhenyi-core/zkcp	(cached)
+ok  	github.com/aiyang-zh/zhenyi-base/zkcp	1.794s
+=== RUN   TestLimiter_Basic
+--- PASS: TestLimiter_Basic (0.00s)
+=== RUN   TestLimiter_Allow
+--- PASS: TestLimiter_Allow (0.00s)
+=== RUN   TestLimiter_Refill
+--- PASS: TestLimiter_Refill (0.20s)
+=== RUN   TestLimiter_HighRate
+    limiter_test.go:99: Allowed: 100, Denied: 50
+--- PASS: TestLimiter_HighRate (0.00s)
+=== RUN   TestLimiter_Concurrent
+    limiter_test.go:144: Concurrent test - Allowed: 50, Denied: 50
+--- PASS: TestLimiter_Concurrent (0.00s)
+=== RUN   TestLimiter_ZeroLimit
+--- PASS: TestLimiter_ZeroLimit (0.00s)
+=== RUN   TestLimiter_LowBurst
+--- PASS: TestLimiter_LowBurst (0.00s)
+=== RUN   TestLimiter_SustainedLoad
+    limiter_test.go:205: Sustained load - Allowed: 41, Denied: 59
+--- PASS: TestLimiter_SustainedLoad (1.06s)
+=== RUN   TestLimiter_BurstRecovery
+--- PASS: TestLimiter_BurstRecovery (1.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-base/zlimiter	(cached)
 === RUN   TestAsyncWriter_PoolUsage
     asyncwriter_test.go:56: 对象池使用统计:
     asyncwriter_test.go:57:   Get 次数: 50
@@ -658,7 +921,7 @@ ok  	github.com/aiyang-zh/zhenyi-core/zkcp	(cached)
     --- PASS: TestFieldsHelper/Fields5 (0.00s)
     --- PASS: TestFieldsHelper/Fields6 (0.00s)
 === RUN   TestLogger_BasicLogging
---- PASS: TestLogger_BasicLogging (0.16s)
+--- PASS: TestLogger_BasicLogging (0.15s)
 === RUN   TestLogger_DynamicLevel
 --- PASS: TestLogger_DynamicLevel (0.10s)
 === RUN   TestLogger_DynamicLevel_ErrorFileIsolation
@@ -668,8 +931,8 @@ ok  	github.com/aiyang-zh/zhenyi-core/zkcp	(cached)
 === RUN   TestLogger_SetLevelByString/info
 === RUN   TestLogger_SetLevelByString/warn
 === RUN   TestLogger_SetLevelByString/error
---- PASS: TestLogger_SetLevelByString (0.72s)
-    --- PASS: TestLogger_SetLevelByString/debug (0.16s)
+--- PASS: TestLogger_SetLevelByString (0.70s)
+    --- PASS: TestLogger_SetLevelByString/debug (0.15s)
     --- PASS: TestLogger_SetLevelByString/info (0.15s)
     --- PASS: TestLogger_SetLevelByString/warn (0.15s)
     --- PASS: TestLogger_SetLevelByString/error (0.15s)
@@ -678,20 +941,20 @@ ok  	github.com/aiyang-zh/zhenyi-core/zkcp	(cached)
 --- PASS: TestLogger_Sampling (0.15s)
 === RUN   TestLogger_CircuitBreaker
     logger_test.go:356: 熔断结果：Info=15/100, Error=5/5
---- PASS: TestLogger_CircuitBreaker (0.16s)
+--- PASS: TestLogger_CircuitBreaker (0.15s)
 === RUN   TestLogger_CircuitBreaker_Concurrent
     logger_test.go:402: 并发熔断结果：100/1000 条日志通过
---- PASS: TestLogger_CircuitBreaker_Concurrent (0.11s)
+--- PASS: TestLogger_CircuitBreaker_Concurrent (0.10s)
 === RUN   TestLogger_WriteInterface
---- PASS: TestLogger_WriteInterface (0.16s)
+--- PASS: TestLogger_WriteInterface (0.15s)
 === RUN   TestLogger_Concurrent
     logger_test.go:513: 并发测试：Debug=70, Info=60, Warn=60, Error=60 (总计: 250/250)
---- PASS: TestLogger_Concurrent (0.16s)
+--- PASS: TestLogger_Concurrent (0.15s)
 === RUN   TestLogger_DynamicLevel_Concurrent
-    logger_test.go:584: 并发动态级别测试通过，输出了 3452 行日志
+    logger_test.go:584: 并发动态级别测试通过，输出了 3576 行日志
 --- PASS: TestLogger_DynamicLevel_Concurrent (0.60s)
 === RUN   TestLogger_AutoSync
---- PASS: TestLogger_AutoSync (0.31s)
+--- PASS: TestLogger_AutoSync (0.30s)
 === RUN   TestLogger_FormattedLogging
 --- PASS: TestLogger_FormattedLogging (0.10s)
 === RUN   TestLogger_BufferedWrite
@@ -843,7 +1106,7 @@ ok  	github.com/aiyang-zh/zhenyi-core/zkcp	(cached)
 --- PASS: TestWithStaging (0.00s)
 === RUN   TestOptionsIntegration
     option_test.go:701: 集成测试通过，日志内容长度: 532 字节
---- PASS: TestOptionsIntegration (0.16s)
+--- PASS: TestOptionsIntegration (0.15s)
 === RUN   TestDynamicLevelWithOptions
     option_test.go:754: 动态级别测试通过
 --- PASS: TestDynamicLevelWithOptions (0.16s)
@@ -856,40 +1119,40 @@ ok  	github.com/aiyang-zh/zhenyi-core/zkcp	(cached)
 === RUN   TestPresetWithOverride
 --- PASS: TestPresetWithOverride (0.00s)
 === RUN   TestAllPresetsValid
+=== RUN   TestAllPresetsValid/Development
+2026-03-07 23:32:40.837 INFO /Users/zay/go/go1.26.0/src/testing/testing.go:2036 test message for Development {"goroutine": 353}
+2026-03-07 23:32:40.837 ERROR /Users/zay/go/go1.26.0/src/runtime/asm_arm64.s:1447 error message for Development {"goroutine": 353}
+runtime.goexit
+	/Users/zay/go/go1.26.0/src/runtime/asm_arm64.s:1447
+    option_test.go:897: Development 预设配置测试通过
+=== RUN   TestAllPresetsValid/Production
+    option_test.go:897: Production 预设配置测试通过
 === RUN   TestAllPresetsValid/Test
-2026-03-06 22:59:53.926 INFO test message for Test {"goroutine": 355}
-2026-03-06 22:59:53.927 ERROR /Users/zay/godir/zhenyi-core/zlog/option_test.go:887 error message for Test {"goroutine": 355}
-github.com/aiyang-zh/zhenyi-core/zlog.TestAllPresetsValid.func1
-	/Users/zay/godir/zhenyi-core/zlog/option_test.go:887
+2026-03-07 23:32:41.150 INFO test message for Test {"goroutine": 358}
+2026-03-07 23:32:41.150 ERROR /Users/zay/godir/zhenyi-base/zlog/option_test.go:887 error message for Test {"goroutine": 358}
+github.com/aiyang-zh/zhenyi-base/zlog.TestAllPresetsValid.func1
+	/Users/zay/godir/zhenyi-base/zlog/option_test.go:887
 testing.tRunner
 	/Users/zay/go/go1.26.0/src/testing/testing.go:2036
     option_test.go:897: Test 预设配置测试通过
 === RUN   TestAllPresetsValid/HighPerformance
     option_test.go:897: HighPerformance 预设配置测试通过
 === RUN   TestAllPresetsValid/Staging
-{"level":"INFO","time":"2026-03-06 22:59:54.239","caller":"/Users/zay/go/go1.26.0/src/testing/testing.go:2036","msg":"test message for Staging"}
-{"level":"ERROR","time":"2026-03-06 22:59:54.240","caller":"/Users/zay/go/go1.26.0/src/runtime/asm_arm64.s:1447","msg":"error message for Staging","stacktrace":"runtime.goexit\n\t/Users/zay/go/go1.26.0/src/runtime/asm_arm64.s:1447"}
+{"level":"INFO","time":"2026-03-07 23:32:41.462","caller":"/Users/zay/go/go1.26.0/src/testing/testing.go:2036","msg":"test message for Staging"}
+{"level":"ERROR","time":"2026-03-07 23:32:41.462","caller":"/Users/zay/go/go1.26.0/src/runtime/asm_arm64.s:1447","msg":"error message for Staging","stacktrace":"runtime.goexit\n\t/Users/zay/go/go1.26.0/src/runtime/asm_arm64.s:1447"}
     option_test.go:897: Staging 预设配置测试通过
-=== RUN   TestAllPresetsValid/Development
-2026-03-06 22:59:54.398 INFO /Users/zay/go/go1.26.0/src/testing/testing.go:2036 test message for Development {"goroutine": 369}
-2026-03-06 22:59:54.398 ERROR /Users/zay/go/go1.26.0/src/runtime/asm_arm64.s:1447 error message for Development {"goroutine": 369}
-runtime.goexit
-	/Users/zay/go/go1.26.0/src/runtime/asm_arm64.s:1447
-    option_test.go:897: Development 预设配置测试通过
-=== RUN   TestAllPresetsValid/Production
-    option_test.go:897: Production 预设配置测试通过
---- PASS: TestAllPresetsValid (0.79s)
+--- PASS: TestAllPresetsValid (0.78s)
+    --- PASS: TestAllPresetsValid/Development (0.16s)
+    --- PASS: TestAllPresetsValid/Production (0.16s)
     --- PASS: TestAllPresetsValid/Test (0.16s)
     --- PASS: TestAllPresetsValid/HighPerformance (0.16s)
     --- PASS: TestAllPresetsValid/Staging (0.16s)
-    --- PASS: TestAllPresetsValid/Development (0.16s)
-    --- PASS: TestAllPresetsValid/Production (0.16s)
 === RUN   TestGoroutineIDIntegration
 === RUN   TestGoroutineIDIntegration/EnableGoroutineID
 === RUN   TestGoroutineIDIntegration/DisableGoroutineID
 --- PASS: TestGoroutineIDIntegration (0.31s)
     --- PASS: TestGoroutineIDIntegration/EnableGoroutineID (0.16s)
-    --- PASS: TestGoroutineIDIntegration/DisableGoroutineID (0.15s)
+    --- PASS: TestGoroutineIDIntegration/DisableGoroutineID (0.16s)
 === RUN   TestPresetGoroutineIDSetting
 === RUN   TestPresetGoroutineIDSetting/Development
 === RUN   TestPresetGoroutineIDSetting/Production
@@ -903,7 +1166,7 @@ runtime.goexit
     --- PASS: TestPresetGoroutineIDSetting/HighPerformance (0.00s)
     --- PASS: TestPresetGoroutineIDSetting/Staging (0.00s)
 PASS
-ok  	github.com/aiyang-zh/zhenyi-core/zlog	(cached)
+ok  	github.com/aiyang-zh/zhenyi-base/zlog	(cached)
 === RUN   TestAdaptiveWriter_TierNone_DirectWrite
 --- PASS: TestAdaptiveWriter_TierNone_DirectWrite (0.00s)
 === RUN   TestAdaptiveWriter_UpgradeTier
@@ -1208,7 +1471,7 @@ ok  	github.com/aiyang-zh/zhenyi-core/zlog	(cached)
 === RUN   TestClientStandardTLSConfig
 --- PASS: TestClientStandardTLSConfig (0.00s)
 PASS
-ok  	github.com/aiyang-zh/zhenyi-core/znet	(cached)
+ok  	github.com/aiyang-zh/zhenyi-base/znet	(cached)
 === RUN   TestPool_GetPut_Pointer
 --- PASS: TestPool_GetPut_Pointer (0.00s)
 === RUN   TestPool_GetPut_Struct
@@ -1254,7 +1517,37 @@ ok  	github.com/aiyang-zh/zhenyi-core/znet	(cached)
 === RUN   TestNetBufferPool_Concurrent
 --- PASS: TestNetBufferPool_Concurrent (0.00s)
 PASS
-ok  	github.com/aiyang-zh/zhenyi-core/zpool	(cached)
+ok  	github.com/aiyang-zh/zhenyi-base/zpool	(cached)
+=== RUN   TestEventBus_BasicFlow
+--- PASS: TestEventBus_BasicFlow (0.00s)
+=== RUN   TestEventBus_DeadlockPrevention
+--- PASS: TestEventBus_DeadlockPrevention (0.00s)
+=== RUN   TestEventBus_PanicRecovery
+--- PASS: TestEventBus_PanicRecovery (0.00s)
+=== RUN   TestEventBus_PointerEnforcement
+    pub_test.go:134: 成功捕获预期的 panic: EventBus: Subscribe observer must be a pointer, got zpub.BadStruct
+--- PASS: TestEventBus_PointerEnforcement (0.00s)
+=== RUN   TestEventBus_AsyncPublish
+    pub_test.go:197: 所有异步任务完成，总耗时: 10.111ms
+--- PASS: TestEventBus_AsyncPublish (0.01s)
+=== RUN   TestEventBus_MultipleTopics
+--- PASS: TestEventBus_MultipleTopics (0.00s)
+=== RUN   TestEventBus_PublishNoSubscribers
+--- PASS: TestEventBus_PublishNoSubscribers (0.00s)
+=== RUN   TestEventBus_UnSubscribeNonExistent
+--- PASS: TestEventBus_UnSubscribeNonExistent (0.00s)
+=== RUN   TestEventBus_SubscribeSameObserverTwice
+--- PASS: TestEventBus_SubscribeSameObserverTwice (0.00s)
+=== RUN   TestEventBus_MultipleObserversSameTopic
+--- PASS: TestEventBus_MultipleObserversSameTopic (0.00s)
+=== RUN   TestEventBus_UnSubscribeMiddle
+--- PASS: TestEventBus_UnSubscribeMiddle (0.00s)
+=== RUN   TestEventBus_ConcurrentPublish
+--- PASS: TestEventBus_ConcurrentPublish (0.00s)
+=== RUN   TestEventBus_EventData
+--- PASS: TestEventBus_EventData (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-base/zpub	0.538s
 === RUN   TestPriorityQueue_NewAndLen
 --- PASS: TestPriorityQueue_NewAndLen (0.00s)
 === RUN   TestPriorityQueue_EnqueueDequeue_Single
@@ -1397,19 +1690,19 @@ ok  	github.com/aiyang-zh/zhenyi-core/zpool	(cached)
 === RUN   TestQueue_LockContention
     queue_test.go:235: 20个协程并发写入:
     queue_test.go:236:   总操作数: 1000000
-    queue_test.go:237:   总耗时: 181.613708ms
-    queue_test.go:238:   吞吐量: 5.51 M ops/秒
-    queue_test.go:239:   平均延迟: 181.61 ns/op
---- PASS: TestQueue_LockContention (0.18s)
+    queue_test.go:237:   总耗时: 74.011417ms
+    queue_test.go:238:   吞吐量: 13.51 M ops/秒
+    queue_test.go:239:   平均延迟: 74.01 ns/op
+--- PASS: TestQueue_LockContention (0.07s)
 === RUN   TestNewMPMCQueue_Capacity
 --- PASS: TestNewMPMCQueue_Capacity (0.00s)
 === RUN   TestSimpleEnqueueDequeue
 --- PASS: TestSimpleEnqueueDequeue (0.00s)
 === RUN   TestMPSCQueue_SoakTest
     swap_test.go:122: Success! Processed 1000000 messages without loss.
---- PASS: TestMPSCQueue_SoakTest (0.05s)
+--- PASS: TestMPSCQueue_SoakTest (0.02s)
 === RUN   TestMPSCQueue_Padded_SoakTest
---- PASS: TestMPSCQueue_Padded_SoakTest (0.06s)
+--- PASS: TestMPSCQueue_Padded_SoakTest (0.03s)
 === RUN   TestCloseDrain
 --- PASS: TestCloseDrain (0.00s)
 === RUN   TestSmartDoubleQueue_Basic
@@ -1455,8 +1748,8 @@ ok  	github.com/aiyang-zh/zhenyi-core/zpool	(cached)
 === RUN   TestUnboundedMPSC_ConcurrentBatch
 --- PASS: TestUnboundedMPSC_ConcurrentBatch (0.00s)
 === RUN   TestUnboundedMPSC_StressTest
-    unbounded_test.go:283: 压力测试：2 秒内生产并消费 15778454 个元素
---- PASS: TestUnboundedMPSC_StressTest (2.30s)
+    unbounded_test.go:283: 压力测试：2 秒内生产并消费 23812062 个元素
+--- PASS: TestUnboundedMPSC_StressTest (2.10s)
 === RUN   TestUnboundedSPSC_BasicEnqueueDequeue
 --- PASS: TestUnboundedSPSC_BasicEnqueueDequeue (0.00s)
 === RUN   TestUnboundedSPSC_FIFO
@@ -1470,7 +1763,53 @@ ok  	github.com/aiyang-zh/zhenyi-core/zpool	(cached)
 === RUN   TestUnboundedSPSC_BatchPingPong
 --- PASS: TestUnboundedSPSC_BatchPingPong (0.00s)
 PASS
-ok  	github.com/aiyang-zh/zhenyi-core/zqueue	(cached)
+ok  	github.com/aiyang-zh/zhenyi-base/zqueue	(cached)
+=== RUN   TestRandomList_Int
+--- PASS: TestRandomList_Int (0.00s)
+=== RUN   TestRandomList_String
+--- PASS: TestRandomList_String (0.00s)
+=== RUN   TestRandomList_SingleElement
+--- PASS: TestRandomList_SingleElement (0.00s)
+=== RUN   TestRange_Int
+--- PASS: TestRange_Int (0.00s)
+=== RUN   TestRange_Int_Reversed
+--- PASS: TestRange_Int_Reversed (0.00s)
+=== RUN   TestRange_Int_Equal
+--- PASS: TestRange_Int_Equal (0.00s)
+=== RUN   TestRange_Int32
+--- PASS: TestRange_Int32 (0.00s)
+=== RUN   TestRange_Uint32
+--- PASS: TestRange_Uint32 (0.00s)
+=== RUN   TestRange_Float64
+--- PASS: TestRange_Float64 (0.00s)
+=== RUN   TestRange_Float64_Reversed
+--- PASS: TestRange_Float64_Reversed (0.00s)
+=== RUN   TestRange_Float64_Equal
+--- PASS: TestRange_Float64_Equal (0.00s)
+=== RUN   TestRange_Float32
+--- PASS: TestRange_Float32 (0.00s)
+=== RUN   TestRange_Int_Distribution
+--- PASS: TestRange_Int_Distribution (0.00s)
+=== RUN   TestRange_Float64_Distribution
+--- PASS: TestRange_Float64_Distribution (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-base/zrand	(cached)
+=== RUN   TestRecover_CatchesPanic
+--- PASS: TestRecover_CatchesPanic (0.00s)
+=== RUN   TestRecover_NoPanic
+--- PASS: TestRecover_NoPanic (0.00s)
+=== RUN   TestRecover_StringPanic
+--- PASS: TestRecover_StringPanic (0.00s)
+=== RUN   TestRecover_ErrorPanic
+--- PASS: TestRecover_ErrorPanic (0.00s)
+=== RUN   TestRecover_NilPanic
+--- PASS: TestRecover_NilPanic (0.00s)
+=== RUN   TestRecover_NestedPanic
+--- PASS: TestRecover_NestedPanic (0.00s)
+=== RUN   TestRecover_SubsequentCodeRuns
+--- PASS: TestRecover_SubsequentCodeRuns (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-base/zsafe	0.793s
 === RUN   TestMarshalJson_DeSerialize
 --- PASS: TestMarshalJson_DeSerialize (0.00s)
 === RUN   TestMarshalJson_EmptyStruct
@@ -1497,7 +1836,7 @@ ok  	github.com/aiyang-zh/zhenyi-core/zqueue	(cached)
     serialize_test.go:379: 压缩率: 90.86%
 --- PASS: TestSerializationSize (0.00s)
 PASS
-ok  	github.com/aiyang-zh/zhenyi-core/zserialize	(cached)
+ok  	github.com/aiyang-zh/zhenyi-base/zserialize	(cached)
 === RUN   TestNew_Defaults
 --- PASS: TestNew_Defaults (0.00s)
 === RUN   TestNew_WithOptions
@@ -1507,14 +1846,14 @@ ok  	github.com/aiyang-zh/zhenyi-core/zserialize	(cached)
 === RUN   TestRequest_Fields
 --- PASS: TestRequest_Fields (0.00s)
 === RUN   TestEchoIntegration
-[zynet] server listening on 127.0.0.1:0 (TCP, worker pool)
+[zhenyi] server listening on 127.0.0.1:0 (TCP, worker pool)
 --- PASS: TestEchoIntegration (0.40s)
 === RUN   TestEchoMultipleMessages
-[zynet] server listening on 127.0.0.1:0 (TCP, worker pool)
+[zhenyi] server listening on 127.0.0.1:0 (TCP, worker pool)
     server_test.go:153: echo: sent 50, received 50
 --- PASS: TestEchoMultipleMessages (2.15s)
 PASS
-ok  	github.com/aiyang-zh/zhenyi-core/zserver	(cached)
+ok  	github.com/aiyang-zh/zhenyi-base/zserver	4.029s
 === RUN   TestTServer_TClient_FullIntegration
 --- PASS: TestTServer_TClient_FullIntegration (0.37s)
 === RUN   TestTChannel_DirectTCPConnection
@@ -1556,7 +1895,39 @@ ok  	github.com/aiyang-zh/zhenyi-core/zserver	(cached)
 === RUN   TestTServer_WithTLS
 --- PASS: TestTServer_WithTLS (0.10s)
 PASS
-ok  	github.com/aiyang-zh/zhenyi-core/ztcp	(cached)
+ok  	github.com/aiyang-zh/zhenyi-base/ztcp	4.061s
+=== RUN   TestTime_Now_NoOffset
+--- PASS: TestTime_Now_NoOffset (0.00s)
+=== RUN   TestTime_AddOffset
+--- PASS: TestTime_AddOffset (0.00s)
+=== RUN   TestTime_ResetOffset
+--- PASS: TestTime_ResetOffset (0.00s)
+=== RUN   TestServerNowMilli
+--- PASS: TestServerNowMilli (0.00s)
+=== RUN   TestTimeStampToStr
+--- PASS: TestTimeStampToStr (0.00s)
+=== RUN   TestTimeStampToStr_CustomFormat
+--- PASS: TestTimeStampToStr_CustomFormat (0.00s)
+=== RUN   TestTimeNowToStr
+--- PASS: TestTimeNowToStr (0.00s)
+=== RUN   TestCurrentHour
+--- PASS: TestCurrentHour (0.00s)
+=== RUN   TestNextHour
+--- PASS: TestNextHour (0.00s)
+=== RUN   TestCurrentDay
+--- PASS: TestCurrentDay (0.00s)
+=== RUN   TestNextDay
+--- PASS: TestNextDay (0.00s)
+=== RUN   TestCurrentWeek
+--- PASS: TestCurrentWeek (0.00s)
+=== RUN   TestNextWeek
+--- PASS: TestNextWeek (0.00s)
+=== RUN   TestCurrentMonth
+--- PASS: TestCurrentMonth (0.00s)
+=== RUN   TestNextMonth
+--- PASS: TestNextMonth (0.00s)
+PASS
+ok  	github.com/aiyang-zh/zhenyi-base/ztime	(cached)
 === RUN   TestTicker_NewTicker
 --- PASS: TestTicker_NewTicker (0.05s)
 === RUN   TestTicker_ResetTime
@@ -1564,7 +1935,7 @@ ok  	github.com/aiyang-zh/zhenyi-core/ztcp	(cached)
 === RUN   TestTicker_StopAndReuse
 --- PASS: TestTicker_StopAndReuse (0.05s)
 PASS
-ok  	github.com/aiyang-zh/zhenyi-core/ztimer	(cached)
+ok  	github.com/aiyang-zh/zhenyi-base/ztimer	(cached)
 === RUN   TestWServer_WClient_FullIntegration
 --- PASS: TestWServer_WClient_FullIntegration (0.60s)
 === RUN   TestWClient_ConnectInvalidAddr
@@ -1582,4 +1953,4 @@ ok  	github.com/aiyang-zh/zhenyi-core/ztimer	(cached)
 === RUN   TestWClient_InvalidAddress
 --- PASS: TestWClient_InvalidAddress (0.00s)
 PASS
-ok  	github.com/aiyang-zh/zhenyi-core/zws	(cached)
+ok  	github.com/aiyang-zh/zhenyi-base/zws	3.704s

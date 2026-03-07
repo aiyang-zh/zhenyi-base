@@ -12,8 +12,8 @@ import (
 
 // 测试辅助函数
 func createOptionTestDir(t *testing.T) string {
-	tempDir := filepath.Join(os.TempDir(), "zynet_option_test", t.Name(), time.Now().Format("150405.000"))
-	os.RemoveAll(filepath.Join(os.TempDir(), "zynet_option_test", t.Name()))
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_option_test", t.Name(), time.Now().Format("150405.000"))
+	os.RemoveAll(filepath.Join(os.TempDir(), "zhenyi_option_test", t.Name()))
 	os.MkdirAll(tempDir, 0755)
 	t.Cleanup(func() {
 		time.Sleep(100 * time.Millisecond)
@@ -1025,7 +1025,7 @@ func BenchmarkMultipleOptionsApply(b *testing.B) {
 
 // BenchmarkNewLoggerWithOptions 基准测试：使用 Options 创建 Logger
 func BenchmarkNewLoggerWithOptions(b *testing.B) {
-	tempDir := filepath.Join(os.TempDir(), "zynet_bench_options")
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_bench_options")
 	os.MkdirAll(tempDir, 0755)
 	defer os.RemoveAll(tempDir)
 

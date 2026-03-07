@@ -1,23 +1,23 @@
 # Echo Demo
 
-最简单的 zynet 示例：服务端收到什么回什么。
+最简单的 zhenyi-base 示例：服务端收到什么回什么。
 
 ## 启动服务端
 
 ```bash
-go run ./examples/echo/server
+go run ./examples/echobench/server
 ```
 
 输出：
 ```
 [echo] starting server on :9001
-[zynet] server listening on :9001 (TCP)
+[zhenyi] server listening on :9001 (TCP)
 ```
 
 ## 交互模式
 
 ```bash
-go run ./examples/echo/client
+go run ./examples/echobench/client
 ```
 
 输入文字后回车发送，收到服务端回显：
@@ -31,7 +31,7 @@ hello
 ## 压测模式
 
 ```bash
-go run ./examples/echo/client -bench -n 100000 -c 10
+go run ./examples/echobench/client -bench -n 100000 -c 10
 ```
 
 参数：

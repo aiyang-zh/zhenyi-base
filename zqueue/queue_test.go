@@ -338,7 +338,7 @@ func BenchmarkQueue_ConcurrencyLevels(b *testing.B) {
 	concurrencyLevels := []int{1, 2, 4, 8, 16, 20}
 
 	for _, level := range concurrencyLevels {
-		b.Run(string(rune('0'+level)), func(b *testing.B) {
+		b.Run(fmt.Sprintf("%d", level), func(b *testing.B) {
 			q := GetDefaultQueue[int](10000)
 
 			b.SetParallelism(level)

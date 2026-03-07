@@ -1,6 +1,7 @@
 package zencrypt
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -133,9 +134,9 @@ func BenchmarkAESGCM_Decrypt(b *testing.B) {
 
 func formatSize(size int) string {
 	if size < 1024 {
-		return string(rune(size)) + "B"
+		return fmt.Sprintf("%dB", size)
 	}
-	return string(rune(size/1024)) + "KB"
+	return fmt.Sprintf("%dKB", size/1024)
 }
 
 // ============================================

@@ -1,2 +1,245 @@
-# zhenyi
-Zhenyi 核心运行时：高性能无锁网络、并发模型与基础组件，一行命令即可构建高并发服务。
+<div align="center">
+
+# zhenyi-base
+
+**高性能 Go 网络与基础工具库**
+
+*MIT 协议 · 零分配 · 无锁队列 · 开箱即用*
+
+[![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go)](https://golang.org)
+[![License](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE)
+
+</div>
+
+---
+
+## 简介
+
+zhenyi-base 是 Zhenyi 生态的 **MIT 协议** 基础层，提供生产级的网络通信、无锁队列、对象池、自适应批处理、加密、日志、序列化等核心组件。
+
+按需引入，只编译你用到的包——用 `zqueue` 不会拉入 zap，用 `zpool` 不会拉入 websocket。
+
+> 基于 zhenyi-base，更多高阶能力正在路上 →
+
+---
+
+## 核心模块
+
+### 网络与服务
+
+| 包 | 说明 | 亮点 |
+|------|------|------|
+| **znet** | 网络核心层 | Ring Buffer 零拷贝、writev 批量发送 |
+| **ztcp** | TCP 传输 | 高性能 TCP 连接管理 |
+| **zws** | WebSocket 传输 | 基于 gorilla/websocket |
+| **zkcp** | KCP 传输 | 可靠 UDP，适合弱网环境 |
+| **zserver** | 轻量服务器 | 3 步启动，内置连接管理与优雅关闭 |
+| **ziface** | 接口抽象 | IServer / IChannel / IClient / IMessage |
+
+### 高性能数据结构
+
+| 包 | 说明 | 亮点 |
+|------|------|------|
+| **zqueue** | 无锁泛型队列 | MPSC / SPSC / Priority / Swap，节点池化 + Shrink 缩容 |
+| **zpool** | 泛型对象池 | `Pool[T]`、Buffer 字节池、网络缓冲池 |
+| **zbatch** | 自适应批处理 | 延迟反馈、动态步长 |
+| **zcoll** | 并发集合 | 泛型 Set、ShardMap（分片并发 Map） |
+
+### 基础工具
+
+| 包 | 说明 | 亮点 |
+|------|------|------|
+| **zerrs** | 结构化错误 | 带堆栈，`pkg/errors` 兼容 |
+| **zlog** | 高性能日志 | 基于 Zap，异步 Writer + 自动轮转 |
+| **zencrypt** | 加密工具库 | AES-GCM / RSA / XTEA / 国密 SM2/SM3/SM4，零拷贝加密 |
+| **zserialize** | 多格式序列化 | Protobuf / JSON(sonic) / MsgPack |
+| **zbackoff** | 退避策略 | 三级退避，CPU PAUSE 指令优化，适用于无锁场景 |
+| **zlimiter** | 令牌桶限流 | 通用限流组件 |
+| **zpub** | 进程内事件总线 | 发布-订阅模式 |
+| **zid** | ID 生成器 | Snowflake / UUID / FastID（轻量零依赖） |
+| **zgrace** | 优雅关闭 | 信号监听 + 关闭回调管理 |
+| **zsafe** | 安全工具 | Goroutine Recovery 封装 |
+| **zrand** | 泛型随机数 | 轻量随机数工具 |
+| **ztime** | 时间工具 | 时间格式化与管理 |
+| **ztimer** | 定时器 | Ticker 封装 |
+| **zfile** | 文件工具 | 文件操作辅助 |
+
+---
+
+## 性能指标
+
+> **测试环境**: darwin/arm64 · Apple M3 · Go 1.26
+>
+> **测试覆盖率**: 核心包 85%+，详见下表
+
+### Network Echo 压测
+
+> 50 万消息 / 20 并发客户端，运行 `./run_echo_bench.sh`
+
+| 协议 | 连接数 | QPS | 说明 |
+|------|:---:|:---:|:---|
+| **TCP** | 20 | **569,000/s** | 原生 TCP |
+| **WebSocket** | 20 | **651,000/s** | gorilla/websocket |
+| **KCP** | 20 | **76,000/s** | 可靠 UDP，弱网优化 |
+
+### 核心组件基准
+
+| 组件 | 指标 | 结果 |
+|:---:|:---:|:---|
+| **MPSC 无锁队列** | Dequeue 单次 | **16.5 ns/op**，0 allocs |
+| **SPSC 无锁队列** | Dequeue 单次 | **11.6 ns/op**，0 allocs |
+| **对象池 Get/Put** | 单线程 | **7.6 ns/op**，0 allocs |
+| **自适应批处理** | FastPath 单次 | **1.5 ns/op**，0 allocs |
+| **错误哨兵匹配** | Sentinel 匹配 | **0.27 ns/op**，0 allocs |
+| **日志并发吞吐** | AsyncWriter | **849 MB/s** |
+
+### 测试覆盖率
+
+| 包 | 覆盖率 | 包 | 覆盖率 |
+|:---:|:---:|:---:|:---:|
+| zbackoff | **100%** | zpool | **100%** |
+| zgrace | **100%** | zsafe | **100%** |
+| zlimiter | **100%** | zerrs | **97.8%** |
+| zbatch | **96.1%** | zpub | **95.5%** |
+| zqueue | **95.1%** | zfile | **94.4%** |
+| ztcp | **91.2%** | ztimer | **92.9%** |
+| ztime | **92.1%** | zencrypt | **90.9%** |
+| zrand | **89.5%** | zws | **87.1%** |
+| zkcp | **87.5%** | znet | **77.9%** |
+| zserialize | **76.0%** | zcoll | **72.8%** |
+| zid | **66.7%** | zlog | **63.2%** |
+| zserver | **59.7%** | | |
+
+---
+
+## 快速开始
+
+### 安装
+
+```bash
+go get github.com/aiyang-zh/zhenyi-base
+```
+
+### Echo 服务器（3 步启动）
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/aiyang-zh/zhenyi-base/zserver"
+)
+
+func main() {
+    s := zserver.New(zserver.WithAddr(":9001"))
+
+    s.Handle(1, func(req *zserver.Request) {
+        fmt.Printf("收到: %s\n", string(req.Data()))
+        req.Reply(1, req.Data())
+    })
+
+    s.Run()
+}
+```
+
+### 单独使用无锁队列（零外部依赖）
+
+```go
+package main
+
+import "github.com/aiyang-zh/zhenyi-base/zqueue"
+
+func main() {
+    q := zqueue.NewMPSC[int](1024)
+    q.Push(42)
+    val, ok := q.Pop()
+    // val == 42, ok == true
+}
+```
+
+### 单独使用对象池（零外部依赖）
+
+```go
+package main
+
+import "github.com/aiyang-zh/zhenyi-base/zpool"
+
+func main() {
+    pool := zpool.New(func() *MyObject {
+        return &MyObject{}
+    })
+    obj := pool.Get()
+    defer pool.Put(obj)
+}
+```
+
+**示例**：极简 Echo 见 [examples/echodemo](examples/echodemo)，压测见 [examples/echobench](examples/echobench)（运行 `./run_echo_bench.sh`）。
+
+---
+
+## 依赖说明
+
+zhenyi-base 的每个包独立设计，按需引入。Go 的构建系统只编译你实际 import 的包：
+
+| 你 import 的包 | 实际拉入的外部依赖 |
+|---------------|------------------|
+| `zqueue`、`zpool`、`zbatch`、`zbackoff`、`zerrs`、`zsafe`、`zrand` | **无**（零外部依赖） |
+| `zlog` | zap |
+| `zencrypt` | crypto、gmsm |
+| `zserialize` | sonic、protobuf、msgpack |
+| `znet` / `ztcp` | 以上 + 内部工具包 |
+| `zws` | + gorilla/websocket |
+| `zkcp` | + kcp-go |
+
+---
+
+## 项目结构
+
+```
+zhenyi-base/
+├── znet/          # 网络核心（Ring Buffer + 零拷贝）
+├── ztcp/          # TCP 传输
+├── zws/           # WebSocket 传输
+├── zkcp/          # KCP 传输
+├── zserver/       # 轻量服务器
+├── ziface/        # 核心接口定义
+├── zqueue/        # 无锁泛型队列（MPSC/SPSC/Priority/Swap）
+├── zpool/         # 泛型对象池
+├── zbatch/        # 自适应批处理引擎
+├── zcoll/         # 并发集合（Set/ShardMap）
+├── zerrs/         # 结构化错误处理
+├── zlog/          # 高性能异步日志
+├── zencrypt/      # 加密工具库（AES/RSA/XTEA/国密）
+├── zserialize/    # 多格式序列化
+├── zbackoff/      # 退避策略
+├── zlimiter/      # 令牌桶限流
+├── zpub/          # 进程内事件总线
+├── zid/           # ID 生成器
+├── zgrace/        # 优雅关闭管理
+├── zsafe/         # Recovery 封装
+├── zrand/         # 泛型随机数
+├── ztime/         # 时间工具
+├── ztimer/        # 定时器
+├── zfile/         # 文件工具
+└── examples/      # 示例代码
+```
+
+---
+
+## 协议
+
+本项目采用 [MIT License](LICENSE)，可自由使用、修改、分发、商用，无需公开源代码。
+
+---
+
+## 贡献
+
+欢迎参与！请查看 [CONTRIBUTING.md](CONTRIBUTING.md)，更新日志见 [CHANGELOG.md](CHANGELOG.md)。
+
+---
+
+<div align="center">
+
+**如果 zhenyi-base 对你有帮助，请给我们一颗 Star！**
+
+</div>

@@ -1,6 +1,3 @@
-// Copyright (c) 2025 zynet contributors. All rights reserved.
-// Licensed under the MIT License. See LICENSE file in the project root.
-
 package zbatch
 
 import (

@@ -28,6 +28,11 @@ func WithName(name string) Option {
 	return func(s *Server) { s.name = name }
 }
 
+// WithBanner 是否显示启动标识（默认 true）
+func WithBanner(show bool) Option {
+	return func(s *Server) { s.showBanner = show }
+}
+
 // WithDirectDispatch 直连模式：handler 在读 goroutine 内直接执行，
 // 不经过 worker pool。适用于 handler 极轻量且无阻塞的场景（如 Echo）。
 func WithDirectDispatch() Option {

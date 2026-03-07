@@ -2,6 +2,7 @@ package zlog
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/aiyang-zh/zhenyi-base/zpool"
 	"io"
 	"testing"
@@ -231,7 +232,7 @@ func BenchmarkAsyncWriter_WriteDifferentSizes(b *testing.B) {
 	}
 
 	for _, size := range sizes {
-		b.Run("Size-"+string(rune(size)), func(b *testing.B) {
+		b.Run(fmt.Sprintf("Size-%d", size), func(b *testing.B) {
 			discard := &discardWriteSyncer{}
 			async := newAsyncWriteSyncer(discard, 4096)
 			defer async.Close()

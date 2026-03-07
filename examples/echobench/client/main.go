@@ -4,16 +4,18 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"os"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/aiyang-zh/zhenyi-base/zerrs"
 	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"github.com/aiyang-zh/zhenyi-base/zkcp"
 	"github.com/aiyang-zh/zhenyi-base/znet"
 	"github.com/aiyang-zh/zhenyi-base/ztcp"
 	"github.com/aiyang-zh/zhenyi-base/zws"
-	"os"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 var (
@@ -21,7 +23,8 @@ var (
 	bench    = flag.Bool("bench", false, "run benchmark mode")
 	total    = flag.Int("n", 10000, "total messages (benchmark mode)")
 	clients  = flag.Int("c", 1, "concurrent clients (benchmark mode)")
-	protocol = flag.Int("p", 1, "znet.TCP")
+	protocol = flag.String("p", "tcp", "protocol: tcp|ws|kcp (or 1|2|3)")
+	size     = flag.Int("size", 23, "payload size in bytes (benchmark mode)")
 )
 
 func main() {
@@ -33,19 +36,47 @@ func main() {
 		runInteractive()
 	}
 }
+
 func newClient() (ziface.IClient, error) {
-	var client ziface.IClient
-	var err error
-	if *protocol == int(znet.TCP) {
-		client, err = ztcp.NewClient(*addr)
-	} else if *protocol == int(znet.WebSocket) {
-		client, err = zws.NewClient(*addr)
-	} else if *protocol == int(znet.KCP) {
-		client, err = zkcp.NewClient(*addr)
-	} else {
-		err = zerrs.New(zerrs.ErrTypeNetwork, "protocol error")
+	switch parseProtocol(*protocol) {
+	case znet.TCP:
+		return ztcp.NewClient(*addr)
+	case znet.WebSocket:
+		return zws.NewClient(*addr)
+	case znet.KCP:
+		return zkcp.NewClient(*addr)
+	default:
+		return nil, zerrs.New(zerrs.ErrTypeNetwork, "protocol error: use tcp|ws|kcp")
 	}
-	return client, err
+}
+
+func parseProtocol(s string) znet.ConnProtocol {
+	switch strings.ToLower(s) {
+	case "tcp", "1":
+		return znet.TCP
+	case "kcp", "2":
+		return znet.KCP
+	case "ws", "websocket", "3":
+		return znet.WebSocket
+	default:
+		return znet.TCP
+	}
+}
+
+func makePayload(size int) []byte {
+	if size <= 0 {
+		size = 23
+	}
+	base := []byte("hello zhenyi benchmark")
+	if size <= len(base) {
+		return base[:size]
+	}
+	b := make([]byte, size)
+	copy(b, base)
+	for i := len(base); i < size; i++ {
+		b[i] = base[i%len(base)]
+	}
+	return b
 }
 
 func runInteractive() {
@@ -78,7 +109,7 @@ func runInteractive() {
 
 func runBenchmark() {
 	perClient := *total / *clients
-	payload := []byte("hello zynet benchmark")
+	payload := makePayload(*size)
 
 	fmt.Printf("benchmark: %d clients x %d msgs = %d total, payload=%d bytes\n",
 		*clients, perClient, perClient**clients, len(payload))
@@ -104,37 +135,27 @@ func runBenchmark() {
 	fmt.Printf("%d clients connected, sending...\n", len(clientList))
 	start := time.Now()
 
+	msg := &znet.NetMessage{MsgId: 1, Data: payload}
 	for _, client := range clientList {
 		sendWg.Add(1)
 		go func(c ziface.IClient) {
 			defer sendWg.Done()
 			for j := 0; j < perClient; j++ {
-				msg := &znet.NetMessage{MsgId: 1, Data: payload}
 				c.SendMsg(msg)
-				totalSent.Add(1)
 			}
+			totalSent.Add(int64(perClient))
 		}(client)
 	}
 
 	sendWg.Wait()
 	sent := totalSent.Load()
 
-	timeout := time.After(30 * time.Second)
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			if totalRecv.Load() >= sent {
-				goto done
-			}
-		case <-timeout:
-			fmt.Println("WARNING: timeout waiting for responses")
-			goto done
-		}
+	for totalRecv.Load() < sent {
+		<-ticker.C
 	}
 
-done:
 	elapsed := time.Since(start)
 	recv := totalRecv.Load()
 

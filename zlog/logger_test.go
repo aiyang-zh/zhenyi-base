@@ -14,9 +14,9 @@ import (
 
 // 测试辅助函数：创建临时日志配置
 func createTestConfig(t *testing.T) LoggerConfig {
-	tempDir := filepath.Join(os.TempDir(), "zynet_logger_test", t.Name(), time.Now().Format("150405.000"))
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_logger_test", t.Name(), time.Now().Format("150405.000"))
 	// 先清理可能存在的旧目录
-	os.RemoveAll(filepath.Join(os.TempDir(), "zynet_logger_test", t.Name()))
+	os.RemoveAll(filepath.Join(os.TempDir(), "zhenyi_logger_test", t.Name()))
 	os.MkdirAll(tempDir, 0755)
 	t.Cleanup(func() {
 		// 延迟删除，给文件足够时间释放
@@ -795,8 +795,8 @@ func TestLogger_FieldsAndStructured(t *testing.T) {
 // =============================================================================
 
 func createRecoverTestLogger(t *testing.T) *Logger {
-	tempDir := filepath.Join(os.TempDir(), "zynet_logger_test", t.Name(), time.Now().Format("150405.000"))
-	os.RemoveAll(filepath.Join(os.TempDir(), "zynet_logger_test", t.Name()))
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_logger_test", t.Name(), time.Now().Format("150405.000"))
+	os.RemoveAll(filepath.Join(os.TempDir(), "zhenyi_logger_test", t.Name()))
 	os.MkdirAll(tempDir, 0755)
 	t.Cleanup(func() {
 		time.Sleep(100 * time.Millisecond)
@@ -1088,11 +1088,11 @@ func TestRecoverWith_PanicHookCalled(t *testing.T) {
 
 // BenchmarkLogger_Info 基准测试：Info 日志
 func BenchmarkLogger_Info(b *testing.B) {
-	tempDir := filepath.Join(os.TempDir(), "zynet_bench", b.Name())
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_bench", b.Name())
 	os.MkdirAll(tempDir, 0755)
 	b.Cleanup(func() {
 		time.Sleep(100 * time.Millisecond)
-		os.RemoveAll(filepath.Join(os.TempDir(), "zynet_bench"))
+		os.RemoveAll(filepath.Join(os.TempDir(), "zhenyi_bench"))
 	})
 
 	config := LoggerConfig{
@@ -1118,11 +1118,11 @@ func BenchmarkLogger_Info(b *testing.B) {
 
 // BenchmarkLogger_InfoWithFields 基准测试：带字段的 Info 日志
 func BenchmarkLogger_InfoWithFields(b *testing.B) {
-	tempDir := filepath.Join(os.TempDir(), "zynet_bench", b.Name())
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_bench", b.Name())
 	os.MkdirAll(tempDir, 0755)
 	b.Cleanup(func() {
 		time.Sleep(100 * time.Millisecond)
-		os.RemoveAll(filepath.Join(os.TempDir(), "zynet_bench"))
+		os.RemoveAll(filepath.Join(os.TempDir(), "zhenyi_bench"))
 	})
 
 	config := LoggerConfig{
@@ -1151,11 +1151,11 @@ func BenchmarkLogger_InfoWithFields(b *testing.B) {
 
 // BenchmarkLogger_SetLevel 基准测试：动态调整级别
 func BenchmarkLogger_SetLevel(b *testing.B) {
-	tempDir := filepath.Join(os.TempDir(), "zynet_bench", b.Name())
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_bench", b.Name())
 	os.MkdirAll(tempDir, 0755)
 	b.Cleanup(func() {
 		time.Sleep(100 * time.Millisecond)
-		os.RemoveAll(filepath.Join(os.TempDir(), "zynet_bench"))
+		os.RemoveAll(filepath.Join(os.TempDir(), "zhenyi_bench"))
 	})
 
 	config := LoggerConfig{
@@ -1185,11 +1185,11 @@ func BenchmarkLogger_SetLevel(b *testing.B) {
 
 // BenchmarkLogger_CircuitBreaker 基准测试：熔断器性能
 func BenchmarkLogger_CircuitBreaker(b *testing.B) {
-	tempDir := filepath.Join(os.TempDir(), "zynet_bench", b.Name())
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_bench", b.Name())
 	os.MkdirAll(tempDir, 0755)
 	b.Cleanup(func() {
 		time.Sleep(100 * time.Millisecond)
-		os.RemoveAll(filepath.Join(os.TempDir(), "zynet_bench"))
+		os.RemoveAll(filepath.Join(os.TempDir(), "zhenyi_bench"))
 	})
 
 	config := LoggerConfig{
@@ -1218,11 +1218,11 @@ func BenchmarkLogger_CircuitBreaker(b *testing.B) {
 
 // BenchmarkLogger_Sampling 基准测试：采样性能
 func BenchmarkLogger_Sampling(b *testing.B) {
-	tempDir := filepath.Join(os.TempDir(), "zynet_bench", b.Name())
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_bench", b.Name())
 	os.MkdirAll(tempDir, 0755)
 	b.Cleanup(func() {
 		time.Sleep(100 * time.Millisecond)
-		os.RemoveAll(filepath.Join(os.TempDir(), "zynet_bench"))
+		os.RemoveAll(filepath.Join(os.TempDir(), "zhenyi_bench"))
 	})
 
 	config := LoggerConfig{
@@ -1255,7 +1255,7 @@ func BenchmarkLogger_Sampling(b *testing.B) {
 
 // BenchmarkLogger_Info_WithGoroutineID 基准测试：启用 Goroutine ID（Field 方式）
 func BenchmarkLogger_Info_WithGoroutineID(b *testing.B) {
-	tempDir := filepath.Join(os.TempDir(), "zynet_bench", "goid_enabled")
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_bench", "goid_enabled")
 	os.MkdirAll(tempDir, 0755)
 	defer os.RemoveAll(tempDir)
 
@@ -1286,7 +1286,7 @@ func BenchmarkLogger_Info_WithGoroutineID(b *testing.B) {
 
 // BenchmarkLogger_Info_WithoutGoroutineID 基准测试：禁用 Goroutine ID
 func BenchmarkLogger_Info_WithoutGoroutineID(b *testing.B) {
-	tempDir := filepath.Join(os.TempDir(), "zynet_bench", "goid_disabled")
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_bench", "goid_disabled")
 	os.MkdirAll(tempDir, 0755)
 	defer os.RemoveAll(tempDir)
 
@@ -1316,7 +1316,7 @@ func BenchmarkLogger_Info_WithoutGoroutineID(b *testing.B) {
 
 // BenchmarkLogger_Info_WithGoroutineID_StringConcat 基准测试：启用 Goroutine ID（字符串拼接方式）
 func BenchmarkLogger_Info_WithGoroutineID_StringConcat(b *testing.B) {
-	tempDir := filepath.Join(os.TempDir(), "zynet_bench", "goid_string")
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_bench", "goid_string")
 	os.MkdirAll(tempDir, 0755)
 	defer os.RemoveAll(tempDir)
 
@@ -1347,7 +1347,7 @@ func BenchmarkLogger_Info_WithGoroutineID_StringConcat(b *testing.B) {
 
 // BenchmarkLogger_InfoWithFields_WithGoroutineID 基准测试：带字段 + Goroutine ID
 func BenchmarkLogger_InfoWithFields_WithGoroutineID(b *testing.B) {
-	tempDir := filepath.Join(os.TempDir(), "zynet_bench", "goid_fields_enabled")
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_bench", "goid_fields_enabled")
 	os.MkdirAll(tempDir, 0755)
 	defer os.RemoveAll(tempDir)
 
@@ -1381,7 +1381,7 @@ func BenchmarkLogger_InfoWithFields_WithGoroutineID(b *testing.B) {
 
 // BenchmarkLogger_InfoWithFields_WithoutGoroutineID 基准测试：带字段 + 无 Goroutine ID
 func BenchmarkLogger_InfoWithFields_WithoutGoroutineID(b *testing.B) {
-	tempDir := filepath.Join(os.TempDir(), "zynet_bench", "goid_fields_disabled")
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_bench", "goid_fields_disabled")
 	os.MkdirAll(tempDir, 0755)
 	defer os.RemoveAll(tempDir)
 
@@ -1414,7 +1414,7 @@ func BenchmarkLogger_InfoWithFields_WithoutGoroutineID(b *testing.B) {
 
 // BenchmarkLogger_InfoF_WithGoroutineID 基准测试：InfoF + Goroutine ID
 func BenchmarkLogger_InfoF_WithGoroutineID(b *testing.B) {
-	tempDir := filepath.Join(os.TempDir(), "zynet_bench", "goid_infof_enabled")
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_bench", "goid_infof_enabled")
 	os.MkdirAll(tempDir, 0755)
 	defer os.RemoveAll(tempDir)
 
@@ -1444,7 +1444,7 @@ func BenchmarkLogger_InfoF_WithGoroutineID(b *testing.B) {
 
 // BenchmarkLogger_InfoF_WithoutGoroutineID 基准测试：InfoF + 无 Goroutine ID
 func BenchmarkLogger_InfoF_WithoutGoroutineID(b *testing.B) {
-	tempDir := filepath.Join(os.TempDir(), "zynet_bench", "goid_infof_disabled")
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_bench", "goid_infof_disabled")
 	os.MkdirAll(tempDir, 0755)
 	defer os.RemoveAll(tempDir)
 
@@ -1474,7 +1474,7 @@ func BenchmarkLogger_InfoF_WithoutGoroutineID(b *testing.B) {
 
 // BenchmarkLogger_InfoS_WithGoroutineID 基准测试：InfoS + Goroutine ID
 func BenchmarkLogger_InfoS_WithGoroutineID(b *testing.B) {
-	tempDir := filepath.Join(os.TempDir(), "zynet_bench", "goid_infos_enabled")
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_bench", "goid_infos_enabled")
 	os.MkdirAll(tempDir, 0755)
 	defer os.RemoveAll(tempDir)
 
@@ -1504,7 +1504,7 @@ func BenchmarkLogger_InfoS_WithGoroutineID(b *testing.B) {
 
 // BenchmarkLogger_InfoS_WithoutGoroutineID 基准测试：InfoS + 无 Goroutine ID
 func BenchmarkLogger_InfoS_WithoutGoroutineID(b *testing.B) {
-	tempDir := filepath.Join(os.TempDir(), "zynet_bench", "goid_infos_disabled")
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_bench", "goid_infos_disabled")
 	os.MkdirAll(tempDir, 0755)
 	defer os.RemoveAll(tempDir)
 
@@ -1534,7 +1534,7 @@ func BenchmarkLogger_InfoS_WithoutGoroutineID(b *testing.B) {
 
 // BenchmarkLogger_SingleThread_WithVsWithoutGoroutineID 基准测试：单线程对比
 func BenchmarkLogger_SingleThread_WithVsWithoutGoroutineID(b *testing.B) {
-	tempDir := filepath.Join(os.TempDir(), "zynet_bench", "single_thread")
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_bench", "single_thread")
 	os.MkdirAll(tempDir, 0755)
 	defer os.RemoveAll(tempDir)
 
@@ -1586,7 +1586,7 @@ func BenchmarkLogger_SingleThread_WithVsWithoutGoroutineID(b *testing.B) {
 }
 
 func BenchmarkRecover_NoPanic(b *testing.B) {
-	tempDir := filepath.Join(os.TempDir(), "zynet_bench", b.Name())
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_bench", b.Name())
 	os.MkdirAll(tempDir, 0755)
 	b.Cleanup(func() {
 		time.Sleep(100 * time.Millisecond)
@@ -1613,7 +1613,7 @@ func BenchmarkRecover_NoPanic(b *testing.B) {
 }
 
 func BenchmarkRecover_WithPanic(b *testing.B) {
-	tempDir := filepath.Join(os.TempDir(), "zynet_bench", b.Name())
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_bench", b.Name())
 	os.MkdirAll(tempDir, 0755)
 	b.Cleanup(func() {
 		time.Sleep(100 * time.Millisecond)
@@ -1641,7 +1641,7 @@ func BenchmarkRecover_WithPanic(b *testing.B) {
 }
 
 func BenchmarkRecoverWith_NoPanic(b *testing.B) {
-	tempDir := filepath.Join(os.TempDir(), "zynet_bench", b.Name())
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_bench", b.Name())
 	os.MkdirAll(tempDir, 0755)
 	b.Cleanup(func() {
 		time.Sleep(100 * time.Millisecond)
@@ -1671,7 +1671,7 @@ func BenchmarkRecoverWith_NoPanic(b *testing.B) {
 }
 
 func BenchmarkRecoverWith_WithPanic(b *testing.B) {
-	tempDir := filepath.Join(os.TempDir(), "zynet_bench", b.Name())
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_bench", b.Name())
 	os.MkdirAll(tempDir, 0755)
 	b.Cleanup(func() {
 		time.Sleep(100 * time.Millisecond)
@@ -1702,7 +1702,7 @@ func BenchmarkRecoverWith_WithPanic(b *testing.B) {
 }
 
 func BenchmarkRecoverWith_WithPanic_Parallel(b *testing.B) {
-	tempDir := filepath.Join(os.TempDir(), "zynet_bench", b.Name())
+	tempDir := filepath.Join(os.TempDir(), "zhenyi_bench", b.Name())
 	os.MkdirAll(tempDir, 0755)
 	b.Cleanup(func() {
 		time.Sleep(100 * time.Millisecond)

@@ -2,6 +2,7 @@ package zserver
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"github.com/aiyang-zh/zhenyi-base/zgrace"
 	"github.com/aiyang-zh/zhenyi-base/ziface"
@@ -33,6 +34,7 @@ type Server struct {
 
 	workerSize     int
 	directDispatch bool
+	showBanner     bool
 	tlsConfig      *ziface.TLSConfig
 	pool           *ants.PoolWithFunc // 零闭包分配
 	ctx            context.Context
@@ -46,9 +48,10 @@ func New(opts ...Option) *Server {
 	s := &Server{
 		protocol:   znet.TCP,
 		addr:       ":9001",
-		name:       "zynet",
+		name:       "zhenyi",
 		router:     make(map[int32]HandlerFunc),
 		workerSize: runtime.NumCPU(),
+		showBanner: true,
 	}
 	for _, opt := range opts {
 		opt(s)
@@ -105,6 +108,9 @@ func (s *Server) Start() {
 	mode := "worker pool"
 	if s.directDispatch {
 		mode = "direct dispatch"
+	}
+	if s.showBanner {
+		s.printBanner(mode)
 	}
 	fmt.Printf("[%s] server listening on %s (%s, %s)\n", s.name, s.addr, s.protocolName(), mode)
 }
@@ -222,4 +228,17 @@ func (s *Server) protocolName() string {
 	default:
 		return "TCP"
 	}
+}
+
+func (s *Server) printBanner(mode string) {
+	const banner = `
+   #####  #   #  #####  #   #  #   #  #####
+      #   #   #  #      ##  #   # #     #
+     #    # # #  #####  # # #    #      #
+    #     #   #  #      #  ##    #      #
+   #####  #   #  #####  #   #    #    #####
+`
+	fmt.Print(banner)
+	fmt.Printf("  [zhenyi-base] %s | %s | %s\n", s.name, s.protocolName(), mode)
+	fmt.Printf("  [Github] https://github.com/aiyang-zh/zhenyi-base\n\n")
 }
