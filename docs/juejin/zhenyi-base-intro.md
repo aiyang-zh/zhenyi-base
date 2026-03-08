@@ -1,4 +1,4 @@
-# zhenyi-base 开源 | Go 高性能基础库：TCP 77万 QPS，无锁队列 16ns/op，按需引入
+# zhenyi-base 开源 | Go 高性能基础库：TCP 77万 QPS，无锁队列 16ns/op
 
 **标签**：Go、高性能、网络编程、开源、后端、实时应用
 
