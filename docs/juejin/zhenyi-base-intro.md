@@ -127,7 +127,7 @@ func main() {
 }
 ```
 
-`go run main.go` 启动后，用 `nc localhost 9001` 或 ztcp 客户端即可验证。
+`go run main.go` 启动服务端后，另开终端执行 `go run ./examples/echodemo/client/main.go` 即可验证（输入内容会原样回显）。
 
 ---
 
