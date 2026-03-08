@@ -12,7 +12,7 @@
 
 如发现安全漏洞，请**不要**在公开 Issue 中披露，请通过以下方式私下报告：
 
-1. **邮件**：发送至仓库维护者（见 GitHub 仓库 About 或 CONTRIBUTING）
+1. **邮件**：1093993119@qq.com
 2. **GitHub 私密安全建议**：在仓库页面点击 "Security" → "Report a vulnerability"
 
 我们会尽快确认并回复，修复后将致谢（在您同意的前提下）。

@@ -1,12 +1,8 @@
 # Changelog
 
-All notable changes to zhenyi-base will be documented in this file.
+## [0.1.0] - 初始版本
 
-## [Unreleased]
-
-### Added
-
-- 初始版本：zhenyi-util + zhenyi-core 合并为 zhenyi-base
+### 包含内容
 - 网络层：znet、ztcp、zws、zkcp、zserver、ziface
 - 高性能数据结构：zqueue、zpool、zbatch、zcoll
 - 基础工具：zerrs、zlog、zencrypt、zserialize、zbackoff、zlimiter、zpub、zid、zgrace、zrand、ztime、ztimer、zfile
