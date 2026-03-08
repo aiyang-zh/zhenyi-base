@@ -15,23 +15,23 @@ const (
 	UpdateMask     = UpdateInterval - 1
 )
 
-// FastAdaptiveBatcher 极速自适应批处理器（非线程安全，专用于单 Goroutine）
+// FastAdaptiveBatcher 极速自适应批处理器（非线程安全，专用于单 Goroutine）。
 //
 // 设计理念：
-// - 专为 Channel/Actor 的 runSend/Run 等单 Goroutine 热路径设计
-// - 使用滚动和 + 位运算 + 采样更新，将开销降至最低
-// - 牺牲统计功能和线程安全，换取极致性能
+//   - 专为 Channel/Actor 的 runSend/Run 等单 Goroutine 热路径设计
+//   - 使用滚动和 + 位运算 + 采样更新，将开销降至最低
+//   - 牺牲复杂统计能力和线程安全，换取极致性能
 //
 // 性能优化：
-// - O(1) 时间复杂度，无内存分配
-// - 15/16 的调用直接返回，只有 1/16 执行策略计算
-// - 使用位运算代替除法/取模
-// - 使用数组代替切片（栈分配，少一次指针解引用）
-// - 使用滚动和代替遍历求和
+//   - O(1) 时间复杂度，无内存分配
+//   - 15/16 的调用直接返回，只有 1/16 执行策略计算
+//   - 使用位运算代替除法/取模
+//   - 使用数组代替切片（栈分配，少一次指针解引用）
+//   - 使用滚动和代替遍历求和
 //
 // 性能指标：
-// - GetBatchSize: ~3ns/op (快速路径)
-// - RecordLatency: ~2ns/op
+//   - GetBatchSize: ~3ns/op（快速路径）
+//   - RecordLatency: ~2ns/op
 type FastAdaptiveBatcher struct {
 	// 配置参数 (只读)
 	minBatch      int32
@@ -51,14 +51,14 @@ type FastAdaptiveBatcher struct {
 	counter int
 }
 
-// NewFastAdaptiveBatcher 创建极速自适应批处理器
+// NewFastAdaptiveBatcher 创建极速自适应批处理器。
 //
 // 参数:
-//   - minB: 最小批量（推荐 10-20）
-//   - maxB: 最大批量（推荐 200-500）
-//   - targetP99: 目标延迟（推荐 5-10ms）
+//   - minB: 最小批量（推荐 10–20）
+//   - maxB: 最大批量（推荐 200–500）
+//   - targetP99: 目标延迟（推荐 5–10ms）
 //
-// 注意：此版本**非线程安全**，仅适用于单 Goroutine 场景（如 Channel.runSend、Actor.Run）
+// 注意：此版本**非线程安全**，仅适用于单 Goroutine 场景（如 Channel.runSend、Actor.Run）。
 func NewFastAdaptiveBatcher(minB, maxB int, targetP99 time.Duration) *FastAdaptiveBatcher {
 	if minB <= 0 {
 		minB = 10
@@ -75,7 +75,7 @@ func NewFastAdaptiveBatcher(minB, maxB int, targetP99 time.Duration) *FastAdapti
 	}
 }
 
-// GetBatchSize 获取批量大小
+// GetBatchSize 获取批量大小。
 //
 // 参数:
 //   - lastFetchCount: 上一轮实际抓取的数量（非全局队列长度）
@@ -143,10 +143,7 @@ func (b *FastAdaptiveBatcher) GetBatchSize(lastFetchCount int64) int {
 	return int(b.currentBatch)
 }
 
-// RecordLatency 记录延迟
-//
-// 参数:
-//   - d: 本次批处理的耗时
+// RecordLatency 记录一次批处理的耗时。
 //
 // 算法：
 //  1. 从 totalLatency 中减去即将被覆盖的旧值
@@ -154,7 +151,7 @@ func (b *FastAdaptiveBatcher) GetBatchSize(lastFetchCount int64) int {
 //  3. 更新环形缓冲区
 //  4. 使用位运算更新索引 (等价于 (idx + 1) % 16)
 //
-// 关键路径：复杂度 O(1)，无锁，无内存分配
+// 关键路径：复杂度 O(1)，无锁，无内存分配。
 func (b *FastAdaptiveBatcher) RecordLatency(d time.Duration) {
 	val := int64(d)
 
@@ -173,12 +170,12 @@ func (b *FastAdaptiveBatcher) RecordLatency(d time.Duration) {
 	}
 }
 
-// GetCurrentBatch 获取当前批量大小（只读）
+// GetCurrentBatch 获取当前批量大小（只读）。
 func (b *FastAdaptiveBatcher) GetCurrentBatch() int {
 	return int(b.currentBatch)
 }
 
-// GetAvgLatency 获取平均延迟（用于监控）
+// GetAvgLatency 获取平均延迟（用于监控）。
 func (b *FastAdaptiveBatcher) GetAvgLatency() time.Duration {
 	if b.count == 0 {
 		return 0
@@ -186,7 +183,7 @@ func (b *FastAdaptiveBatcher) GetAvgLatency() time.Duration {
 	return time.Duration(b.totalLatency / int64(b.count))
 }
 
-// Reset 重置状态（用于测试）
+// Reset 重置内部状态（用于测试）。
 func (b *FastAdaptiveBatcher) Reset() {
 	b.currentBatch = (b.minBatch + b.maxBatch) / 2
 	b.totalLatency = 0

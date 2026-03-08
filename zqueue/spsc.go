@@ -10,6 +10,12 @@ const (
 	maxCapacity = 1 << 30
 )
 
+// SPSCQueue 是一个有界、无锁、单生产者单消费者（SPSC）的环形队列。
+//
+// 特点：
+//   - Producer/Consumer 字段严格分离，避免伪共享
+//   - 使用自旋 + 退避策略实现阻塞写/读，适合高频场景
+//   - 支持阻塞 / Try* 两种 API，满足不同延迟/丢包需求
 type SPSCQueue[T any] struct {
 	// --- 生产者独占字段 ---
 	head      atomic.Uint64
@@ -34,6 +40,8 @@ type SPSCQueue[T any] struct {
 	buffer []T
 }
 
+// NewSPSCQueue 创建一个有界 SPSC 队列。
+// capacity 会自动向上调整为 [2, maxCapacity] 范围内的 2 的幂。
 func NewSPSCQueue[T any](capacity int) *SPSCQueue[T] {
 	if capacity < 2 {
 		capacity = 2
@@ -51,10 +59,13 @@ func NewSPSCQueue[T any](capacity int) *SPSCQueue[T] {
 	}
 }
 
+// Close 关闭队列，后续写入立即失败。
+// 已在队列中的数据仍可被读取。
 func (q *SPSCQueue[T]) Close() {
 	atomic.StoreInt32(&q.closed, 1)
 }
 
+// IsClosed 返回队列是否已被关闭。
 func (q *SPSCQueue[T]) IsClosed() bool {
 	return atomic.LoadInt32(&q.closed) == 1
 }
@@ -63,7 +74,8 @@ func (q *SPSCQueue[T]) IsClosed() bool {
 // Producer Methods
 // ==========================================
 
-// EnqueueBatch 阻塞批量写入
+// EnqueueBatch 阻塞批量写入。
+// 队列空间不足时会自旋等待，直到全部写入或队列被关闭。
 func (q *SPSCQueue[T]) EnqueueBatch(items []T) bool {
 	if atomic.LoadInt32(&q.closed) == 1 {
 		return false
@@ -111,7 +123,8 @@ func (q *SPSCQueue[T]) EnqueueBatch(items []T) bool {
 	return true
 }
 
-// TryEnqueueBatch 非阻塞批量写入 (新增)
+// TryEnqueueBatch 非阻塞批量写入。
+// 在空间不足时立即返回 false，不做阻塞等待。
 func (q *SPSCQueue[T]) TryEnqueueBatch(items []T) bool {
 	if atomic.LoadInt32(&q.closed) == 1 {
 		return false
@@ -149,7 +162,8 @@ func (q *SPSCQueue[T]) TryEnqueueBatch(items []T) bool {
 	return true
 }
 
-// Enqueue 阻塞单个写入
+// Enqueue 阻塞单个写入。
+// 如果队列已关闭则返回 false。
 func (q *SPSCQueue[T]) Enqueue(item T) bool {
 	if atomic.LoadInt32(&q.closed) == 1 {
 		return false
@@ -183,7 +197,8 @@ func (q *SPSCQueue[T]) Enqueue(item T) bool {
 	return true
 }
 
-// TryEnqueue 非阻塞单个写入 (新增)
+// TryEnqueue 非阻塞单个写入。
+// 队列空间不足时立即返回 false。
 func (q *SPSCQueue[T]) TryEnqueue(item T) bool {
 	if atomic.LoadInt32(&q.closed) == 1 {
 		return false
@@ -211,11 +226,11 @@ func (q *SPSCQueue[T]) TryEnqueue(item T) bool {
 // Consumer Methods
 // ==========================================
 
-// DequeueBatch 阻塞批量读取
+// DequeueBatch 阻塞批量读取。
 // 返回 (n, ok):
-// - n > 0: 成功读取 n 条数据
-// - n == 0, ok == true: 暂时无数据（理论上阻塞模式不应发生，除非 limit=0）
-// - n == 0, ok == false: 队列已关闭且无剩余数据
+//   - n > 0: 成功读取 n 条数据
+//   - n == 0, ok == true: 暂时无数据（仅在 limit=0 时出现）
+//   - n == 0, ok == false: 队列已关闭且无剩余数据
 func (q *SPSCQueue[T]) DequeueBatch(limit []T) (int, bool) {
 	if len(limit) == 0 {
 		return 0, true
@@ -252,11 +267,11 @@ func (q *SPSCQueue[T]) DequeueBatch(limit []T) (int, bool) {
 	return q.consumeBatch(tail, batchSize, limit), true
 }
 
-// TryDequeueBatch 非阻塞批量读取
+// TryDequeueBatch 非阻塞批量读取。
 // 返回 (n, ok):
-// - n > 0: 成功读取 n 条
-// - n == 0, ok == true: 队列为空，未关闭
-// - n == 0, ok == false: 队列已关闭且空
+//   - n > 0: 成功读取 n 条
+//   - n == 0, ok == true: 队列为空，未关闭
+//   - n == 0, ok == false: 队列已关闭且空
 func (q *SPSCQueue[T]) TryDequeueBatch(limit []T) (int, bool) {
 	if len(limit) == 0 {
 		return 0, true
@@ -283,7 +298,8 @@ func (q *SPSCQueue[T]) TryDequeueBatch(limit []T) (int, bool) {
 	return q.consumeBatch(tail, batchSize, limit), true
 }
 
-// Dequeue 单个阻塞读取
+// Dequeue 单个阻塞读取。
+// 当队列空且未关闭时会自旋等待；关闭且无剩余数据时返回 (零值, false)。
 func (q *SPSCQueue[T]) Dequeue() (T, bool) {
 	tail := q.tail.Load()
 	var zero T
@@ -356,6 +372,8 @@ func (q *SPSCQueue[T]) consumeBatch(tail, batchSize uint64, limit []T) int {
 	return int(batchSize)
 }
 
+// Len 返回当前队列中的元素数量（近似值）。
+// 在单生产者/单消费者模型下等价于真实长度。
 func (q *SPSCQueue[T]) Len() int {
 	tail := q.tail.Load()
 	head := q.head.Load()

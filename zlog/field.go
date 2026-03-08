@@ -5,33 +5,33 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// FastInt64 快速创建 int64 Field（内联优化）
-// 相比 zap.Int64，这个版本避免了类型转换
+// FastInt64 快速创建 int64 Field（内联优化）。
+// 相比 zap.Int64，这个版本避免了额外的类型转换。
 func FastInt64(key string, val int64) zap.Field {
 	return zap.Field{Key: key, Type: zapcore.Int64Type, Integer: val}
 }
 
-// FastUInt64 快速创建 int Field（内联优化）
+// FastUInt64 快速创建 uint64 Field（内联优化）。
 func FastUInt64(key string, val uint64) zap.Field {
 	return zap.Field{Key: key, Type: zapcore.Uint64Type, Integer: int64(val)}
 }
 
-// FastInt 快速创建 int Field（内联优化）
+// FastInt 快速创建 int Field（内联优化）。
 func FastInt(key string, val int) zap.Field {
 	return zap.Field{Key: key, Type: zapcore.Int64Type, Integer: int64(val)}
 }
 
-// FastInt32 快速创建 int Field（内联优化）
+// FastInt32 快速创建 int32 Field（内联优化）。
 func FastInt32(key string, val int32) zap.Field {
 	return zap.Field{Key: key, Type: zapcore.Int32Type, Integer: int64(val)}
 }
 
-// FastString 快速创建 string Field（内联优化）
+// FastString 快速创建 string Field（内联优化）。
 func FastString(key string, val string) zap.Field {
 	return zap.Field{Key: key, Type: zapcore.StringType, String: val}
 }
 
-// FastBool 快速创建 bool Field（内联优化）
+// FastBool 快速创建 bool Field（内联优化）。
 func FastBool(key string, val bool) zap.Field {
 	var i int64
 	if val {
@@ -40,12 +40,12 @@ func FastBool(key string, val bool) zap.Field {
 	return zap.Field{Key: key, Type: zapcore.BoolType, Integer: i}
 }
 
-// FastDuration 快速创建 duration Field（内联优化）
+// FastDuration 快速创建 duration Field（以纳秒表示的 int64，内联优化）。
 func FastDuration(key string, val int64) zap.Field {
 	return zap.Field{Key: key, Type: zapcore.DurationType, Integer: val}
 }
 
-// AppendCommonFields 批量追加常用字段（减少函数调用）
+// AppendCommonFields 批量追加常用字段（减少函数调用与分配）。
 // 使用示例：
 //
 //	fields := AppendCommonFields(fields[:0], sessionId, userId, msgId)
@@ -58,7 +58,7 @@ func AppendCommonFields(fields []zap.Field, sessionId, userId int64, msgId int32
 	return fields
 }
 
-// AppendSessionFields 追加 session 相关字段
+// AppendSessionFields 追加 session 相关字段。
 func AppendSessionFields(fields []zap.Field, sessionId, authId int64) []zap.Field {
 	fields = append(fields,
 		FastInt64("sid", sessionId),
@@ -67,7 +67,7 @@ func AppendSessionFields(fields []zap.Field, sessionId, authId int64) []zap.Fiel
 	return fields
 }
 
-// AppendErrorFields 追加错误相关字段
+// AppendErrorFields 追加错误相关字段。
 func AppendErrorFields(fields []zap.Field, err error, code int32) []zap.Field {
 	fields = append(fields,
 		zap.Error(err),
@@ -76,7 +76,7 @@ func AppendErrorFields(fields []zap.Field, err error, code int32) []zap.Field {
 	return fields
 }
 
-// FieldArray 预分配的 Field 数组结构（栈上分配）
+// FieldArray 预分配的 Field 数组结构（栈上分配）。
 // 使用示例：
 //
 //	var fa FieldArray4
@@ -87,7 +87,7 @@ type FieldArray4 [4]zap.Field
 type FieldArray8 [8]zap.Field
 type FieldArray16 [16]zap.Field
 
-// ToSlice 转换为 slice（零分配）
+// ToSlice 将 FieldArray4 的前 n 个元素转换为切片（零分配）。
 func (fa *FieldArray4) ToSlice(n int) []zap.Field {
 	return fa[:n]
 }
@@ -96,6 +96,7 @@ func (fa *FieldArray8) ToSlice(n int) []zap.Field {
 	return fa[:n]
 }
 
+// ToSlice 将 FieldArray16 的前 n 个元素转换为切片（零分配）。
 func (fa *FieldArray16) ToSlice(n int) []zap.Field {
 	return fa[:n]
 }

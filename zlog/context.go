@@ -6,7 +6,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// TraceFields 存储在 context 中的链路追踪元数据（值类型，零分配传递）
+// TraceFields 存储在 context 中的链路追踪元数据（值类型，零分配传递）。
 type TraceFields struct {
 	TraceIdHi uint64
 	TraceIdLo uint64

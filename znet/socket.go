@@ -14,6 +14,7 @@ type BaseSocket struct {
 	config SocketConfig
 }
 
+// NewBaseSocket 创建协议解析器；不传 config 时使用 DefaultSocketConfig。
 func NewBaseSocket(config ...SocketConfig) *BaseSocket {
 	cfg := DefaultSocketConfig()
 	if len(config) > 0 {
@@ -28,6 +29,14 @@ const (
 	headerSize   = 12 // alias for backward compatibility
 )
 
+// HeaderLen 返回当前协议头长度（字节），依 ProtocolVersion 为 12 或 13。
+func (base *BaseSocket) HeaderLen() int {
+	if base.config.ProtocolVersion >= 1 {
+		return headerSizeV1
+	}
+	return headerSizeV0
+}
+
 // ParseFromRingBuffer 从 RingBuffer 零拷贝解析协议（主要方法）
 //
 // 返回值：
@@ -37,13 +46,6 @@ const (
 //
 // ⚠️ 零拷贝注意：返回的 message.Data 可能直接引用 RingBuffer 内存
 // 调用方必须在下次写入 RingBuffer 前完成数据处理
-func (base *BaseSocket) HeaderLen() int {
-	if base.config.ProtocolVersion >= 1 {
-		return headerSizeV1
-	}
-	return headerSizeV0
-}
-
 func (base *BaseSocket) ParseFromRingBuffer(rb *RingBuffer, parseData *ParseData) (parsed bool, err error) {
 	hLen := base.HeaderLen()
 	if rb.Len() < hLen {

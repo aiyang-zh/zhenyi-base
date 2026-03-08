@@ -2,10 +2,7 @@ package znet
 
 import "github.com/aiyang-zh/zhenyi-base/zpool"
 
-// ================================================================
-// ParseData — 协议解析结果容器
-// ================================================================
-
+// ParseData 是单次协议解析的结果容器，持有消息与可能跨边界的临时 Buffer。
 type ParseData struct {
 	Message      *NetMessage
 	Error        error
@@ -18,7 +15,9 @@ func (p *ParseData) ResetForReuse() {
 		buf.Release()
 	}
 	p.OwnedBuffers = p.OwnedBuffers[:0]
-	p.Message.Reset()
+	if p.Message != nil {
+		p.Message.Reset()
+	}
 	p.Error = nil
 }
 

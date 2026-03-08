@@ -19,22 +19,35 @@ import (
 	"time"
 )
 
+// defaultLog 是包级便捷函数使用的全局 Logger 实例。
+// 通过 NewDefaultLogger* 系列函数进行初始化。
 var defaultLog *Logger
 
+// panicHook 在发生 panic 并被 Recover 系列函数捕获时触发，用于上报 metrics 等。
 var panicHook atomic.Pointer[func()]
 
-// SetPanicHook 注册 panic 回调（用于 metrics 等外部模块，避免循环依赖）
+// SetPanicHook 注册 panic 回调（用于 metrics 等外部模块，避免循环依赖）。
+// Recover/RecoverWith 在记录 panic 日志后会尝试调用该回调。
 func SetPanicHook(fn func()) {
 	panicHook.Store(&fn)
 }
 
+// GetDefaultLog 返回当前的默认 Logger。
+// 若尚未初始化默认 Logger，则返回 nil。
 func GetDefaultLog() *Logger {
 	return defaultLog
 }
+
+// CloneDefaultLog 基于默认 Logger 克隆一个带前缀名称的新 Logger（共享底层配置）。
 func CloneDefaultLog(name string) *Logger {
 	return defaultLog.CloneLogger(name)
 }
 
+// Logger 封装 zap.Logger 并提供：
+//   - 多文件/级别路由
+//   - 异步写入与缓冲
+//   - 可选 Goroutine ID、链路追踪字段
+//   - 采样与熔断防护等能力。
 type Logger struct {
 	log            *zap.Logger
 	logSugar       *zap.SugaredLogger
@@ -49,6 +62,8 @@ type Logger struct {
 	closeOnce      sync.Once             // 确保 Close 操作只执行一次（并发安全）
 }
 
+// NewLogger 按给定配置创建一个新的 Logger。
+// 通常通过 NewDefaultLogger* 或 NewLoggerWithOptions 进行封装使用。
 func NewLogger(logConfig LoggerConfig) *Logger {
 	l := &Logger{
 		config:   logConfig,
@@ -68,11 +83,13 @@ func NewLogger(logConfig LoggerConfig) *Logger {
 	return l
 }
 
+// NewDefaultLogger 使用默认配置初始化包级默认 Logger。
+// 一般在进程启动阶段调用一次。
 func NewDefaultLogger() {
 	defaultLog = NewLogger(NewDefaultLoggerConfig())
 }
 
-// NewLoggerWithOptions 使用基础配置和可选的 Options 创建 Logger
+// NewLoggerWithOptions 使用基础配置和一组 Option 创建 Logger。
 func NewLoggerWithOptions(baseConfig LoggerConfig, opts ...Option) *Logger {
 	// 应用所有 Options
 	for _, opt := range opts {
@@ -81,11 +98,12 @@ func NewLoggerWithOptions(baseConfig LoggerConfig, opts ...Option) *Logger {
 	return NewLogger(baseConfig)
 }
 
+// NewDefaultLoggerWithConfig 使用指定配置初始化包级默认 Logger。
 func NewDefaultLoggerWithConfig(logConfig LoggerConfig) {
 	defaultLog = NewLogger(logConfig)
 }
 
-// NewDefaultLoggerWithOptions 使用默认配置和可选的 Options 创建默认 Logger
+// NewDefaultLoggerWithOptions 使用默认配置和一组 Option 初始化默认 Logger。
 func NewDefaultLoggerWithOptions(opts ...Option) {
 	config := NewDefaultLoggerConfig()
 	for _, opt := range opts {
@@ -94,6 +112,8 @@ func NewDefaultLoggerWithOptions(opts ...Option) {
 	NewDefaultLoggerWithConfig(config)
 }
 
+// CloneLogger 基于当前 Logger 克隆一个带名称前缀的新 Logger。
+// 底层写入器与配置均共享，仅改变日志前缀。
 func (l *Logger) CloneLogger(name string) *Logger {
 	prefix := ""
 	if name != "" {
@@ -229,6 +249,8 @@ func (l *Logger) getLogger() {
 }
 
 // 编码配置
+// encoderConfig 构造 zapcore.EncoderConfig。
+// 主要用于控制时间格式、级别格式以及 caller 展示方式。
 func (l *Logger) encoderConfig() zapcore.EncoderConfig {
 	encoderConfig := zapcore.EncoderConfig{
 		MessageKey:       "msg",
@@ -246,6 +268,9 @@ func (l *Logger) encoderConfig() zapcore.EncoderConfig {
 	}
 	return encoderConfig
 }
+
+// Write 实现 io.Writer 接口，便于将标准库日志重定向到 Logger。
+// 末尾换行会被自动去除。
 func (l *Logger) Write(p []byte) (n int, err error) {
 	// 去掉末尾的换行符（标准库 logger 往往自带 \n）
 	str := strings.TrimSuffix(string(p), "\n")
@@ -258,7 +283,7 @@ func (l *Logger) getLogName(logName string) string {
 	return filepath.Join(l.config.PathName, l.config.Filename+".%Y%m%d."+logName+".log")
 }
 
-// 创建日志
+// addLogCore 为单个文件配置创建 zapcore.Core，并附加到 Logger 上。
 func (l *Logger) addLogCore(logName string, configLevel zapcore.Level) zapcore.Core {
 	fileWriter, _ := zaprotatelogs.New(
 		l.getLogName(logName),
@@ -298,6 +323,8 @@ func (l *Logger) addLogCore(logName string, configLevel zapcore.Level) zapcore.C
 	return zapcore.NewCore(l.encoder, writeSyncer, levelEnabler)
 }
 
+// addConsoleCore 创建输出到标准输出的 Core。
+// 控制台输出同样受 atomicLevel 动态控制。
 func (l *Logger) addConsoleCore() zapcore.Core {
 	// 控制台输出也使用 atomicLevel 动态控制
 	levelEnabler := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
@@ -309,6 +336,7 @@ func (l *Logger) addConsoleCore() zapcore.Core {
 	return zapcore.NewCore(l.encoder, consoleSyncer, levelEnabler)
 }
 
+// InfoF 按模板输出 Info 级别日志（格式化参数）。
 func (l *Logger) InfoF(template string, args ...interface{}) {
 	if l.config.EnableGoroutineID {
 		l.logSugar.Infof(l.buildMessage(template), args...)
@@ -316,6 +344,8 @@ func (l *Logger) InfoF(template string, args ...interface{}) {
 		l.logSugar.Infof(template, args...)
 	}
 }
+
+// DebugF 按模板输出 Debug 级别日志（格式化参数）。
 func (l *Logger) DebugF(template string, args ...interface{}) {
 	if l.config.EnableGoroutineID {
 		l.logSugar.Debugf(l.buildMessage(template), args...)
@@ -323,6 +353,8 @@ func (l *Logger) DebugF(template string, args ...interface{}) {
 		l.logSugar.Debugf(template, args...)
 	}
 }
+
+// WarnF 按模板输出 Warn 级别日志（格式化参数）。
 func (l *Logger) WarnF(template string, args ...interface{}) {
 	if l.config.EnableGoroutineID {
 		l.logSugar.Warnf(l.buildMessage(template), args...)
@@ -330,6 +362,8 @@ func (l *Logger) WarnF(template string, args ...interface{}) {
 		l.logSugar.Warnf(template, args...)
 	}
 }
+
+// ErrorF 按模板输出 Error 级别日志（带 caller，格式化参数）。
 func (l *Logger) ErrorF(template string, args ...interface{}) {
 	if l.config.EnableGoroutineID {
 		l.logSugarCaller.Errorf(l.buildMessage(template), args...)
@@ -337,6 +371,8 @@ func (l *Logger) ErrorF(template string, args ...interface{}) {
 		l.logSugarCaller.Errorf(template, args...)
 	}
 }
+
+// FatalF 按模板输出 Fatal 级别日志（写盘后退出进程）。
 func (l *Logger) FatalF(template string, args ...interface{}) {
 	// Fatal 前强制刷盘
 	defer l.Sync()
@@ -346,6 +382,8 @@ func (l *Logger) FatalF(template string, args ...interface{}) {
 		l.logSugarCaller.Fatalf(template, args...)
 	}
 }
+
+// PanicF 按模板输出 Panic 级别日志（写盘后 panic）。
 func (l *Logger) PanicF(template string, args ...interface{}) {
 	// Panic 前强制刷盘
 	defer l.Sync()
@@ -356,7 +394,7 @@ func (l *Logger) PanicF(template string, args ...interface{}) {
 	}
 }
 
-// 优化：使用 sync.Pool 复用 slice，减少内存分配
+// InfoS 使用 key-value 风格输出 Info 日志（Sugar 风格，args 成对出现）。
 func (l *Logger) InfoS(args ...interface{}) {
 	if !l.config.EnableGoroutineID {
 		l.logSugar.Info(args...)
@@ -373,6 +411,8 @@ func (l *Logger) InfoS(args ...interface{}) {
 		slicePool.Put(newArgs)
 	}
 }
+
+// DebugS 使用 key-value 风格输出 Debug 日志（Sugar 风格）。
 func (l *Logger) DebugS(args ...interface{}) {
 	if !l.config.EnableGoroutineID {
 		l.logSugar.Debug(args...)
@@ -388,6 +428,8 @@ func (l *Logger) DebugS(args ...interface{}) {
 		slicePool.Put(newArgs)
 	}
 }
+
+// WarnS 使用 key-value 风格输出 Warn 日志（Sugar 风格）。
 func (l *Logger) WarnS(args ...interface{}) {
 	if !l.config.EnableGoroutineID {
 		l.logSugar.Warn(args...)
@@ -403,6 +445,8 @@ func (l *Logger) WarnS(args ...interface{}) {
 		slicePool.Put(newArgs)
 	}
 }
+
+// ErrorS 使用 key-value 风格输出 Error 日志（带 caller，Sugar 风格）。
 func (l *Logger) ErrorS(args ...interface{}) {
 	if !l.config.EnableGoroutineID {
 		l.logSugarCaller.Error(args...)
@@ -418,6 +462,8 @@ func (l *Logger) ErrorS(args ...interface{}) {
 		slicePool.Put(newArgs)
 	}
 }
+
+// FatalS 使用 key-value 风格输出 Fatal 日志（写盘后退出进程）。
 func (l *Logger) FatalS(args ...interface{}) {
 	// Fatal 前强制刷盘
 	defer l.Sync()
@@ -437,6 +483,7 @@ func (l *Logger) FatalS(args ...interface{}) {
 	}
 }
 
+// PanicS 使用 key-value 风格输出 Panic 日志（写盘后 panic）。
 func (l *Logger) PanicS(args ...interface{}) {
 	// Panic 前强制刷盘
 	defer l.Sync()
@@ -478,6 +525,7 @@ var fieldPool = zpool.NewPool(func() []zap.Field {
 	return make([]zap.Field, 0, 4) // 预分配容量4
 })
 
+// Info 输出 Info 级别日志，可附带 zap.Field。
 func (l *Logger) Info(msg string, fields ...zap.Field) {
 	if !l.config.EnableGoroutineID {
 		// 不启用 Goroutine ID，直接输出
@@ -505,6 +553,8 @@ func (l *Logger) Info(msg string, fields ...zap.Field) {
 		l.log.Info(l.buildMessage(msg), fields...)
 	}
 }
+
+// Debug 输出 Debug 级别日志，可附带 zap.Field。
 func (l *Logger) Debug(msg string, fields ...zap.Field) {
 	if !l.config.EnableGoroutineID {
 		l.log.Debug(msg, fields...)
@@ -530,6 +580,8 @@ func (l *Logger) Debug(msg string, fields ...zap.Field) {
 		l.log.Debug(l.buildMessage(msg), fields...)
 	}
 }
+
+// Warn 输出 Warn 级别日志，可附带 zap.Field。
 func (l *Logger) Warn(msg string, fields ...zap.Field) {
 	if !l.config.EnableGoroutineID {
 		l.log.Warn(msg, fields...)
@@ -555,6 +607,8 @@ func (l *Logger) Warn(msg string, fields ...zap.Field) {
 		l.log.Warn(l.buildMessage(msg), fields...)
 	}
 }
+
+// Error 输出 Error 级别日志（带 caller/stack），可附带 zap.Field。
 func (l *Logger) Error(msg string, fields ...zap.Field) {
 	// 如果配置了CallerOnlyError，这里会自动获取调用栈（通过zap配置）
 	if !l.config.EnableGoroutineID {
@@ -581,6 +635,8 @@ func (l *Logger) Error(msg string, fields ...zap.Field) {
 		l.logWithCaller.Error(l.buildMessage(msg), fields...)
 	}
 }
+
+// Fatal 输出 Fatal 级别日志（写盘后退出进程），可附带 zap.Field。
 func (l *Logger) Fatal(msg string, fields ...zap.Field) {
 	// Fatal 前强制刷盘，防止进程退出时日志丢失
 	defer l.Sync()
@@ -610,6 +666,7 @@ func (l *Logger) Fatal(msg string, fields ...zap.Field) {
 	}
 }
 
+// Panic 输出 Panic 级别日志（写盘后 panic），可附带 zap.Field。
 func (l *Logger) Panic(msg string, fields ...zap.Field) {
 	// Panic 前强制刷盘，防止崩溃时最后一条日志丢失
 	defer l.Sync()
@@ -644,18 +701,16 @@ var recoverFieldsPool = zpool.NewPool(func() []zap.Field {
 	return make([]zap.Field, 0, 4) // 基础 3 个 + 额外
 })
 
-// Recover panic 恢复方法（使用对象池优化，零分配）
-// 注意：必须作为 defer 的直接调用才能生效，即 defer logger.Recover(...)
-// 不可在 defer func() { logger.Recover(...) }() 中使用，否则 recover() 返回 nil
+// Recover 捕获 panic 并记录日志（使用对象池，零分配）。
+// 必须作为 defer 的直接调用：defer logger.Recover("xxx")，否则 recover 无效。
 func (l *Logger) Recover(msg string, extra ...zap.Field) {
 	if err := recover(); err != nil {
 		l.logPanic(err, msg, extra...)
 	}
 }
 
-// RecoverWith 带 cleanup 回调的 panic 恢复方法
-// cleanup 无论是否发生 panic 都会执行，适用于需要在同一个 defer 中做清理工作的场景
-// 用法：defer logger.RecoverWith("msg", func() { /* metrics/cleanup */ }, extraFields...)
+// RecoverWith 带 cleanup 回调的 panic 恢复；cleanup 无论是否 panic 都会执行。
+// 用法：defer logger.RecoverWith("msg", func() { /* 清理 */ }, extra...)
 func (l *Logger) RecoverWith(msg string, cleanup func(), extra ...zap.Field) {
 	err := recover()
 
@@ -786,8 +841,7 @@ func (b *bufferedWriteSyncer) Close() error {
 	return nil
 }
 
-// Sync 刷新所有缓冲的日志到磁盘
-// 在服务停止前调用此方法，确保所有日志都已写入磁盘
+// Sync 将当前 Logger 所有缓冲的日志刷新到磁盘；停止服务前应调用。
 func (l *Logger) Sync() error {
 	if l.log != nil {
 		// 先调用 zap 的 Sync，这会刷新所有 core
@@ -804,8 +858,7 @@ func (l *Logger) Sync() error {
 	return nil
 }
 
-// Close 关闭 logger，刷新所有缓冲的日志
-// 在服务停止时调用此方法，确保所有日志都已写入磁盘
+// Close 关闭 Logger（刷盘并关闭底层写入器）；幂等，并发安全。
 func (l *Logger) Close() error {
 	// 使用 sync.Once 确保关闭操作只执行一次
 	// 无论是串行多次调用还是并发调用，都绝对安全
@@ -838,7 +891,7 @@ func (l *Logger) Close() error {
 	return closeErr
 }
 
-// SyncDefaultLog 同步默认 logger 的所有缓冲日志
+// SyncDefaultLog 同步默认 Logger 的所有缓冲日志到磁盘。
 func SyncDefaultLog() error {
 	if defaultLog != nil {
 		return defaultLog.Sync()
@@ -846,7 +899,7 @@ func SyncDefaultLog() error {
 	return nil
 }
 
-// CloseDefaultLog 关闭默认 logger，刷新所有缓冲的日志
+// CloseDefaultLog 关闭默认 Logger 并刷盘。
 func CloseDefaultLog() error {
 	if defaultLog != nil {
 		return defaultLog.Close()
@@ -937,17 +990,17 @@ func (c *circuitBreakerCore) GetCurrentCount() int64 {
 	return atomic.LoadInt64(&c.state.counter)
 }
 
-// SetLevel 动态设置日志级别
+// SetLevel 动态设置当前 Logger 的最低输出级别。
 func (l *Logger) SetLevel(level zapcore.Level) {
 	l.atomicLevel.SetLevel(level)
 }
 
-// GetLevel 获取当前日志级别
+// GetLevel 返回当前 Logger 的最低输出级别。
 func (l *Logger) GetLevel() zapcore.Level {
 	return l.atomicLevel.Level()
 }
 
-// SetLevelByString 通过字符串设置日志级别
+// SetLevelByString 通过字符串（如 "debug"/"info"）设置当前 Logger 级别。
 func (l *Logger) SetLevelByString(level string) error {
 	var lvl zapcore.Level
 	if err := lvl.UnmarshalText([]byte(level)); err != nil {
@@ -957,14 +1010,14 @@ func (l *Logger) SetLevelByString(level string) error {
 	return nil
 }
 
-// SetDefaultLogLevel 设置默认 logger 的级别
+// SetDefaultLogLevel 设置默认 Logger 的级别。
 func SetDefaultLogLevel(level zapcore.Level) {
 	if defaultLog != nil {
 		defaultLog.SetLevel(level)
 	}
 }
 
-// SetDefaultLogLevelByString 通过字符串设置默认 logger 的级别
+// SetDefaultLogLevelByString 通过字符串设置默认 Logger 的级别。
 func SetDefaultLogLevelByString(level string) error {
 	if defaultLog != nil {
 		return defaultLog.SetLevelByString(level)

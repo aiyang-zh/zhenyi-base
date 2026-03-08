@@ -85,10 +85,7 @@ func NewMPSCQueue[T any](capacity int) *MPSCQueue[T] {
 // 通过 over-allocate 使每个逻辑 slot 占满整条 cache line，
 // 保证相邻 slot 的 sequence 不在同一 cache line，消除 false sharing。
 //
-// 内存开销：capacity × max(cacheLineSize, sizeof(slot))
-//
-//	T = int:  1024 → 128 KB,  8192 → 1 MB
-//	T = *Msg: 1024 → 128 KB,  8192 → 1 MB
+// 内存开销：capacity × max(cacheLineSize, sizeof(slot))。
 func NewMPSCQueuePadded[T any](capacity int) *MPSCQueue[T] {
 	capacity = nextPowerOfTwo(capacity)
 

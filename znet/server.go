@@ -25,6 +25,8 @@ type ServerHandlers struct {
 	OnRead   func(ziface.IChannel, ziface.IWireMessage) // 必须：收到消息时调用（消息为线协议解析产物）
 }
 
+// BaseServer 是网络层通用服务端基类，负责连接管理、TLS、心跳与认证映射。
+// 具体协议（TCP/WebSocket/KCP）由子包嵌入并实现 Server(ctx) 与 listen。
 type BaseServer struct {
 	idGen            uint64
 	handlers         ServerHandlers
@@ -42,6 +44,8 @@ type BaseServer struct {
 	tlsConfig        *ziface.TLSConfig // TLS 配置（nil = 不启用 TLS）
 }
 
+// NewBaseServer 创建网络层服务端基类。
+// addr 为监听地址，handlers 必须同时提供 OnAccept 与 OnRead。
 func NewBaseServer(addr string, handlers ServerHandlers) *BaseServer {
 	if handlers.OnAccept == nil {
 		panic("network: ServerHandlers.OnAccept must not be nil")
@@ -78,10 +82,12 @@ func (b *BaseServer) GetTLSConfig() *ziface.TLSConfig {
 	return b.tlsConfig
 }
 
+// GetListener 返回当前使用的 net.Listener（启动后由具体协议设置）。
 func (b *BaseServer) GetListener() net.Listener {
 	return b.listener
 }
 
+// SetListener 设置或替换底层 listener（供 TCP/WebSocket/KCP 在 start 时注入）。
 func (b *BaseServer) SetListener(l net.Listener) {
 	b.listener = l
 }
@@ -95,27 +101,40 @@ func (b *BaseServer) GetAddr() string {
 	return b.addr
 }
 
+// SetMaxConnections 设置最大连接数；0 表示不限制。
 func (b *BaseServer) SetMaxConnections(max int64) {
 	b.maxConn = max
 }
+
+// SetEncrypt 设置加解密实现，nil 表示不加密。
 func (b *BaseServer) SetEncrypt(iEncrypt ziface.IEncrypt) {
 	b.iEncrypt = iEncrypt
 }
+
+// SetMetrics 设置连接级指标收集器（可选）。
 func (b *BaseServer) SetMetrics(iMetrics ziface.IMetrics) {
 	b.iMetrics = iMetrics
 }
+
+// AcceptAllowed 返回当前是否允许接受新连接（未超 maxConn 时为 true）。
 func (b *BaseServer) AcceptAllowed() bool {
 	if b.maxConn <= 0 {
 		return true
 	}
 	return b.connCount.Load() < b.maxConn
 }
+
+// GetClose 返回关闭信号通道，收到信号后具体协议应停止 Accept 并调用 Close。
 func (b *BaseServer) GetClose() chan struct{} {
 	return b.closeCh
 }
+
+// OnceDo 执行一次给定的函数（用于关闭时只执行一次的逻辑）。
 func (b *BaseServer) OnceDo(f func()) {
 	b.Once.Do(f)
 }
+
+// AddChannel 将新连接加入管理并递增连接计数；会应用心跳超时与指标。
 func (b *BaseServer) AddChannel(channel ziface.IChannel) {
 	if b.heartbeatTimeout > 0 {
 		if hc, ok := channel.(heartbeatConfigurable); ok {
@@ -132,10 +151,12 @@ func (b *BaseServer) GetEncrypt() ziface.IEncrypt {
 	return b.iEncrypt
 }
 
+// NextId 生成并返回下一个全局唯一的 ChannelID。
 func (b *BaseServer) NextId() uint64 {
 	return atomic.AddUint64(&b.idGen, 1)
 }
 
+// HandleAccept 在 Accept 后调用，执行 OnAccept 并检查 maxConn；返回 false 表示拒绝连接。
 func (b *BaseServer) HandleAccept(channel ziface.IChannel) bool {
 	if !b.AcceptAllowed() {
 		if b.iMetrics != nil {
@@ -145,22 +166,24 @@ func (b *BaseServer) HandleAccept(channel ziface.IChannel) bool {
 	}
 	if b.handlers.OnAccept != nil {
 		if b.handlers.OnAccept(channel) {
-			if b.iMetrics != nil {
-				b.iMetrics.ConnRejectedInc()
-			}
 			return true
+		}
+		if b.iMetrics != nil {
+			b.iMetrics.ConnRejectedInc()
 		}
 		return false
 	}
 	return false
 }
 
+// HandleRead 将收到的消息分发给 OnRead 回调。
 func (b *BaseServer) HandleRead(channel ziface.IChannel, message ziface.IWireMessage) {
 	if b.handlers.OnRead != nil {
 		b.handlers.OnRead(channel, message)
 	}
 }
 
+// GetChannel 根据 ChannelID 返回对应连接，不存在则返回 nil。
 func (b *BaseServer) GetChannel(channelId uint64) ziface.IChannel {
 	channel, ok := b.channels.Load(channelId)
 	if !ok {
@@ -173,9 +196,7 @@ func (b *BaseServer) GetChannel(channelId uint64) ziface.IChannel {
 	return ch
 }
 
-// RemoveChannel 从 map 中移除 channel（私有方法）
-// ⚠️ 注意：此方法不调用 channel.Close()，避免循环依赖
-// channel.Close() 会自动调用此方法
+// RemoveChannel 从连接表中移除指定 Channel（由 channel.Close() 内部调用，业务勿直接调用）。
 func (b *BaseServer) RemoveChannel(channelId uint64) {
 	ch, ok := b.channels.LoadAndDelete(channelId)
 	if !ok {
@@ -196,6 +217,7 @@ func (b *BaseServer) RemoveChannel(channelId uint64) {
 	}
 }
 
+// SetChannelAuth 将指定 Channel 绑定到业务侧认证 ID，便于通过 GetChannelByAuthId 查询。
 func (b *BaseServer) SetChannelAuth(channelId uint64, authId int64) {
 	channel := b.GetChannel(channelId)
 	if channel == nil {
@@ -205,6 +227,7 @@ func (b *BaseServer) SetChannelAuth(channelId uint64, authId int64) {
 	b.authChannels.Store(authId, channel)
 }
 
+// GetChannelByAuthId 根据业务侧认证 ID 查找对应连接，不存在则返回 nil。
 func (b *BaseServer) GetChannelByAuthId(authId int64) ziface.IChannel {
 	ch, ok := b.authChannels.Load(authId)
 	if !ok {
@@ -217,6 +240,7 @@ func (b *BaseServer) GetChannelByAuthId(authId int64) ziface.IChannel {
 	return channel
 }
 
+// BaseClose 关闭 listener 并关闭所有已管理的 Channel（由具体协议的 Close 调用）。
 func (b *BaseServer) BaseClose() {
 	if b.listener == nil {
 		return

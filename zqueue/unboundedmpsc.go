@@ -16,12 +16,14 @@ type mpscNode[T any] struct {
 	val  T              // 直接存储值，不用 any
 }
 
-// UnboundedMPSC 是无界、多生产者、单消费者、无锁队列
-// 使用哨兵节点 + 双端对象池，性能高、GC 压力低
+// UnboundedMPSC 是无界、多生产者、单消费者、无锁队列。
+//
+// 使用哨兵节点 + 双端对象池，性能高、GC 压力低，适合作为 Actor mailbox、
+// 日志队列等突发流量场景的基础数据结构。
 //
 // 安全性约束：
-// - Enqueue: 可多线程并发调用（wait-free）
-// - Dequeue / DequeueBatch / Empty: 仅限单消费者调用
+//   - Enqueue / EnqueueBatch: 可多线程并发调用（wait-free）
+//   - Dequeue / DequeueBatch / Empty / Shrink / Close: 仅限单消费者调用
 type UnboundedMPSC[T any] struct {
 	// head 指向最新插入的节点（生产者原子交换）
 	head unsafe.Pointer // *mpscNode[T]
@@ -40,7 +42,8 @@ type UnboundedMPSC[T any] struct {
 	recycleCap   int
 }
 
-// NewUnboundedMPSC 创建新队列（使用双端对象池）
+// NewUnboundedMPSC 创建新的无界 MPSC 队列。
+// 内部使用双端对象池减少 GC 压力。
 func NewUnboundedMPSC[T any]() *UnboundedMPSC[T] {
 	q := &UnboundedMPSC[T]{
 		recycleCap: 256,
@@ -58,7 +61,7 @@ func NewUnboundedMPSC[T any]() *UnboundedMPSC[T] {
 	return q
 }
 
-// Enqueue 添加元素到队列（wait-free，多生产者安全）
+// Enqueue 添加元素到队列（wait-free，多生产者安全）。
 func (q *UnboundedMPSC[T]) Enqueue(v T) {
 	n := q.nodePool.Get() // 从对象池获取节点
 	n.val = v
@@ -68,7 +71,7 @@ func (q *UnboundedMPSC[T]) Enqueue(v T) {
 	atomic.StorePointer(&prev.next, unsafe.Pointer(n))
 }
 
-// EnqueueBatch 批量入队 (Wait-Free, 多生产者安全)
+// EnqueueBatch 批量入队（wait-free，多生产者安全）。
 func (q *UnboundedMPSC[T]) EnqueueBatch(elements []T) {
 	if len(elements) == 0 {
 		return
@@ -90,7 +93,8 @@ func (q *UnboundedMPSC[T]) EnqueueBatch(elements []T) {
 	atomic.StorePointer(&prevHead.next, unsafe.Pointer(first))
 }
 
-// Dequeue 出队一个元素（非阻塞，单消费者）
+// Dequeue 出队一个元素（非阻塞，单消费者）。
+// 返回 (值, true) 或 (零值, false)。
 func (q *UnboundedMPSC[T]) Dequeue() (T, bool) {
 	tail := (*mpscNode[T])(atomic.LoadPointer(&q.tail))
 	next := (*mpscNode[T])(atomic.LoadPointer(&tail.next))
@@ -122,7 +126,8 @@ func (q *UnboundedMPSC[T]) Dequeue() (T, bool) {
 	return v, true
 }
 
-// DequeueBatch 批量出队（单消费者）
+// DequeueBatch 批量出队（单消费者）。
+// buffer 的长度决定单次最多出队多少元素，返回实际出队数量。
 func (q *UnboundedMPSC[T]) DequeueBatch(buffer []T) int {
 	if len(buffer) == 0 {
 		return 0
@@ -166,14 +171,14 @@ func (q *UnboundedMPSC[T]) DequeueBatch(buffer []T) int {
 	return count
 }
 
-// Empty 检查队列是否为空
+// Empty 检查队列是否为空（仅消费者调用）。
 func (q *UnboundedMPSC[T]) Empty() bool {
 	tail := (*mpscNode[T])(atomic.LoadPointer(&q.tail))
 	return atomic.LoadPointer(&tail.next) == nil
 }
 
-// Shrink 缩容：清空消费者本地缓存，让 GC 回收 sync.Pool 中多余的对象
-// 适合在空闲时定期调用，降低长期运行后的内存驻留
+// Shrink 缩容：清空消费者本地缓存，让 GC 回收 sync.Pool 中多余的对象。
+// 适合在空闲时定期调用，降低长期运行后的内存驻留。
 func (q *UnboundedMPSC[T]) Shrink() {
 	for _, node := range q.recycleCache {
 		if node != nil {
@@ -183,7 +188,8 @@ func (q *UnboundedMPSC[T]) Shrink() {
 	q.recycleCache = q.recycleCache[:0]
 }
 
-// Close 关闭队列并清理本地缓存
+// Close 关闭队列并清理本地缓存。
+// 关闭后不再使用队列，适合进程退出或 Actor 停止时调用。
 func (q *UnboundedMPSC[T]) Close() {
 	for _, node := range q.recycleCache {
 		if node != nil {

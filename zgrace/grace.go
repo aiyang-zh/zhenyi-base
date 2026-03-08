@@ -3,10 +3,12 @@ package zgrace
 import (
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 )
 
 type Grace struct {
+	mu sync.RWMutex
 	ch chan os.Signal
 	fs []func()
 }
@@ -22,7 +24,11 @@ func New() *Grace {
 func (g *Grace) Wait() {
 	signal.Notify(g.ch, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
 	<-g.ch
-	for _, f := range g.fs {
+	g.mu.RLock()
+	runFs := make([]func(), len(g.fs))
+	copy(runFs, g.fs)
+	g.mu.RUnlock()
+	for _, f := range runFs {
 		f()
 	}
 }
@@ -34,7 +40,9 @@ func (g *Grace) Stop() {
 
 // Register 注册一个关闭时执行的函数
 func (g *Grace) Register(f func()) {
+	g.mu.Lock()
 	g.fs = append(g.fs, f)
+	g.mu.Unlock()
 }
 
 type customSignal struct {

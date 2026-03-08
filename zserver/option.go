@@ -5,20 +5,26 @@ import (
 	"github.com/aiyang-zh/zhenyi-base/znet"
 )
 
+// Option 是配置 Server 行为的可选项函数。
 type Option func(*Server)
 
+// WithAddr 设置服务器监听地址，例如 ":9001" 或 "127.0.0.1:9001"。
 func WithAddr(addr string) Option {
 	return func(s *Server) { s.addr = addr }
 }
 
+// WithProtocol 设置网络协议（TCP / WebSocket / KCP），默认使用 TCP。
 func WithProtocol(p znet.ConnProtocol) Option {
 	return func(s *Server) { s.protocol = p }
 }
 
+// WithWorkers 设置 worker pool 大小。
+// 仅在未启用 WithDirectDispatch 时生效；默认值为 runtime.NumCPU()。
 func WithWorkers(n int) Option {
 	return func(s *Server) { s.workerSize = n }
 }
 
+// WithMaxConnections 设置最大连接数上限；为 0 或负数时不限制连接数。
 func WithMaxConnections(n int64) Option {
 	return func(s *Server) { s.maxConn = n }
 }

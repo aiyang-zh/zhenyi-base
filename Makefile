@@ -3,13 +3,13 @@
 # 默认跑测试
 all: test
 
-# 统一测试入口：功能、基准、覆盖率，封装在脚本里
+# 统一测试入口：功能、基准、覆盖率
 test:
-	./run_tests.sh
+	bash run_tests.sh
 
 # Echo 压测入口
 bench:
-	./run_echo_bench.sh
+	bash run_echo_bench.sh
 
 # go fmt 全部包
 fmt:

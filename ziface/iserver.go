@@ -10,24 +10,47 @@ type heartbeatConfigurable interface {
 	setHeartbeatTimeout(d time.Duration)
 }
 
-type (
-	IServer interface {
-		Server(ctx context.Context) // 服务启动
-		Close()                     // 关闭连接
-		GetEncrypt() IEncrypt
-		HandleRead(channel IChannel, message IWireMessage) // 收包分发（由 channel 内部调用）
-		GetChannel(channelId uint64) IChannel
-		GetAddr() string             // 返回实际监听地址
-		SetMaxConnections(max int64) // 设置最大连接数（0 = 不限）
-		SetTLSConfig(cfg *TLSConfig) // 配置 TLS/GM-TLS（nil = 不启用）
+// IServer 网络服务器抽象接口。
+//
+// 代表一类通用的服务器实现（TCP/WebSocket/KCP 等），由 znet/ztcp/zws/zkcp 具体实现。
+// 业务侧通常不直接实现该接口，而是通过 zserver 进行封装和使用。
+type IServer interface {
+	// Server 启动服务主循环，阻塞直至上下文被取消。
+	Server(ctx context.Context)
 
-		// 认证管理（原 SessionManager 职责）
-		SetChannelAuth(channelId uint64, authId int64) // 绑定认证 ID
-		GetChannelByAuthId(authId int64) IChannel      // 通过认证 ID 获取 Channel
+	// Close 关闭服务器并断开所有连接。
+	Close()
 
-		// 内部方法：由 channel.Close() 自动调用，外部不应直接使用
-		RemoveChannel(channelId uint64)
+	// GetEncrypt 返回当前启用的加密实现（如有）。
+	GetEncrypt() IEncrypt
 
-		SetEncrypt(iEncrypt IEncrypt)
-	}
-)
+	// HandleRead 收包分发回调，由底层 channel 在读取到完整消息后调用。
+	HandleRead(channel IChannel, message IWireMessage)
+
+	// GetChannel 根据 ChannelID 获取连接。
+	GetChannel(channelId uint64) IChannel
+
+	// GetAddr 返回实际监听地址（可能不同于配置的 :0）。
+	GetAddr() string
+
+	// SetMaxConnections 设置最大连接数（0 表示不限制）。
+	SetMaxConnections(max int64)
+
+	// SetTLSConfig 配置 TLS/GM-TLS（传入 nil 表示不启用加密）。
+	SetTLSConfig(cfg *TLSConfig)
+
+	// 认证管理（原 SessionManager 职责）
+
+	// SetChannelAuth 为指定 Channel 绑定业务侧的认证 ID。
+	SetChannelAuth(channelId uint64, authId int64)
+
+	// GetChannelByAuthId 通过业务侧认证 ID 查找对应 Channel。
+	GetChannelByAuthId(authId int64) IChannel
+
+	// RemoveChannel 从服务器管理中移除一个 Channel。
+	// 该方法由 channel.Close() 内部自动调用，业务侧不应直接使用。
+	RemoveChannel(channelId uint64)
+
+	// SetEncrypt 设置当前服务器使用的加密实现。
+	SetEncrypt(iEncrypt IEncrypt)
+}

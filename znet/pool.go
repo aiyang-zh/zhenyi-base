@@ -11,14 +11,14 @@ var parseDataPool = zpool.NewPool(func() *ParseData {
 	}
 })
 
-// GetParseData 从池获取
+// GetParseData 从池中获取 ParseData，用于协议解析时复用，避免每次分配。
 func GetParseData() *ParseData {
 	p := parseDataPool.Get()
 	p.Message = GetNetMessage()
 	return p
 }
 
-// PutParseData 归还（自动清理所有持有的 buffer 和消息）
+// PutParseData 将 ParseData 归还到池，并释放其持有的 Buffer 与 Message。
 func PutParseData(p *ParseData) {
 	if p == nil {
 		return

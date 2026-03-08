@@ -16,16 +16,16 @@ type spscNode[T any] struct {
 	val  T              // 直接存储值，不用 any
 }
 
-// UnboundedSPSC 是无界、单生产者、单消费者、无锁队列
+// UnboundedSPSC 是无界、单生产者、单消费者、无锁队列。
 //
 // 性能特征：
-// - 极致性能：无任何原子 RMW/CAS，只有 Store/Load
-// - 缓存友好：生产者/消费者字段严格隔离
-// - 泛型节点池：避免装箱，每个队列独立池
+//   - 极致性能：无任何原子 RMW/CAS，只有 Store/Load
+//   - 缓存友好：生产者/消费者字段严格隔离
+//   - 泛型节点池：避免装箱，每个队列独立池
 //
 // 使用约束：
-// - Enqueue: **仅限单生产者线程** 调用（非并发安全）
-// - Dequeue/Empty: **仅限单消费者线程** 调用（非并发安全）
+//   - Enqueue / EnqueueBatch: 仅限单生产者 Goroutine 调用（非并发安全）
+//   - Dequeue / DequeueBatch / Empty / Close: 仅限单消费者 Goroutine 调用
 type UnboundedSPSC[T any] struct {
 	// 生产者专用区
 	head *spscNode[T]
@@ -44,7 +44,7 @@ type UnboundedSPSC[T any] struct {
 	recycleCap   int
 }
 
-// NewUnboundedSPSC 创建 SPSC 队列（使用泛型节点池）
+// NewUnboundedSPSC 创建 SPSC 无界队列（使用泛型节点池）。
 func NewUnboundedSPSC[T any]() *UnboundedSPSC[T] {
 	q := &UnboundedSPSC[T]{
 		recycleCap: 256,
@@ -63,7 +63,7 @@ func NewUnboundedSPSC[T any]() *UnboundedSPSC[T] {
 	return q
 }
 
-// Enqueue 入队（仅单生产者，wait-free）
+// Enqueue 入队（仅单生产者，wait-free）。
 func (q *UnboundedSPSC[T]) Enqueue(v T) {
 	n := q.nodePool.Get() // 从对象池获取节点
 	n.val = v
@@ -73,7 +73,8 @@ func (q *UnboundedSPSC[T]) Enqueue(v T) {
 	q.head = n
 }
 
-// EnqueueBatch 批量入队（仅单生产者，Wait-Free）
+// EnqueueBatch 批量入队（仅单生产者，wait-free）。
+// 返回实际入队的元素数量。
 func (q *UnboundedSPSC[T]) EnqueueBatch(elements []T) int {
 	if len(elements) == 0 {
 		return 0
@@ -99,7 +100,8 @@ func (q *UnboundedSPSC[T]) EnqueueBatch(elements []T) int {
 	return len(elements)
 }
 
-// Dequeue 出队（仅单消费者，wait-free）
+// Dequeue 出队一个元素（仅单消费者，wait-free）。
+// 返回 (值, true) 或 (零值, false)。
 func (q *UnboundedSPSC[T]) Dequeue() (T, bool) {
 	tail := q.tail
 	next := (*spscNode[T])(atomic.LoadPointer(&tail.next))
@@ -132,7 +134,8 @@ func (q *UnboundedSPSC[T]) Dequeue() (T, bool) {
 	return zero, false
 }
 
-// DequeueBatch 批量出队（仅单消费者，Wait-Free）
+// DequeueBatch 批量出队（仅单消费者，wait-free）。
+// buffer 的长度决定单次最多出队多少元素，返回实际出队数量。
 func (q *UnboundedSPSC[T]) DequeueBatch(buffer []T) int {
 	if len(buffer) == 0 {
 		return 0
@@ -175,12 +178,13 @@ func (q *UnboundedSPSC[T]) DequeueBatch(buffer []T) int {
 	return count
 }
 
-// Empty 检查是否为空（仅消费者调用）
+// Empty 检查是否为空（仅消费者调用）。
 func (q *UnboundedSPSC[T]) Empty() bool {
 	return atomic.LoadPointer(&q.tail.next) == nil
 }
 
-// Close 关闭队列并清理本地缓存
+// Close 关闭队列并清理本地缓存。
+// 关闭后不应再入队/出队。
 func (q *UnboundedSPSC[T]) Close() {
 	// 归还本地缓存到 sync.Pool
 	for _, node := range q.recycleCache {

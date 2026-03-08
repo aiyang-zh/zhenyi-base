@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// AdaptiveBatcher 自适应批量处理器（非线程安全，适用于单 Goroutine）
+// AdaptiveBatcher 自适应批量处理器（非线程安全，适用于单 Goroutine）。
 //
 // 设计理念：
 // - 适用于 Channel/Actor 的单 Goroutine 场景（如 runSend、Run）
@@ -29,7 +29,7 @@ type AdaptiveBatcher struct {
 	count        int // 记录缓冲区填了多少数据
 }
 
-// Config 配置
+// Config 为 AdaptiveBatcher 的配置项。
 type Config struct {
 	// 延迟目标
 	TargetP99 time.Duration // 目标延迟（如 5ms）
@@ -49,7 +49,7 @@ type Config struct {
 	OverloadThreshold int64 // 严重超载阈值（默认 5000）
 }
 
-// DefaultConfig 默认配置
+// DefaultConfig 返回一份适用于通用网络场景的默认配置。
 func DefaultConfig() Config {
 	return Config{
 		TargetP99:         5 * time.Millisecond,
@@ -62,9 +62,9 @@ func DefaultConfig() Config {
 	}
 }
 
-// NewAdaptiveBatcher 创建自适应批量处理器
+// NewAdaptiveBatcher 创建自适应批量处理器。
 //
-// 注意：此版本**非线程安全**，适用于单 Goroutine 场景（如 Channel.runSend、Actor.Run）
+// 注意：此版本**非线程安全**，适用于单 Goroutine 场景（如 Channel.runSend、Actor.Run）。
 func NewAdaptiveBatcher(config Config) *AdaptiveBatcher {
 	// 参数校验和默认值
 	if config.MinBatch <= 0 {
@@ -96,19 +96,10 @@ func NewAdaptiveBatcher(config Config) *AdaptiveBatcher {
 	}
 }
 
-// GetBatchSize 获取当前推荐的批量大小
+// GetBatchSize 根据当前队列长度与历史延迟，返回推荐的批量大小。
 //
-// 参数:
-//   - queueLen: 当前队列长度
-//
-// 策略：
-//  1. 优先策略：队列积压 > OverloadThreshold → 使用 MaxBatch（最大化吞吐）
-//  2. 优先策略：队列空闲 < EmptyThreshold → 平滑降低到 MinBatch（降低延迟）
-//  3. 延迟反馈：基于平均延迟动态调整
-//     - 延迟 > 目标 → 减小 batch（减少 HoL 阻塞）
-//     - 延迟 < 目标/2 → 增大 batch（提升吞吐）
-//
-// 性能：O(1)，无锁，无内存分配
+// queueLen 通常为当前待处理任务数。
+// 性能：O(1)，无锁，无内存分配。
 func (ab *AdaptiveBatcher) GetBatchSize(queueLen int64) int {
 	// 1. 优先策略：队列积压策略
 	// 如果队列很长，说明生产速度 > 消费速度
@@ -165,17 +156,14 @@ func (ab *AdaptiveBatcher) GetBatchSize(queueLen int64) int {
 	return ab.currentBatch
 }
 
-// RecordLatency 记录一次批处理的延迟
-//
-// 参数:
-//   - d: 本次批处理的耗时
+// RecordLatency 记录一次批处理的延迟。
 //
 // 算法：
 //  1. 减去即将被覆盖的旧值（从 totalLatency 中）
 //  2. 将新值加入 totalLatency
 //  3. 更新环形缓冲区
 //
-// 性能：O(1)，无锁，无内存分配
+// 性能：O(1)，无锁，无内存分配。
 func (ab *AdaptiveBatcher) RecordLatency(d time.Duration) {
 	// ✅ 滚动和优化：先减去旧值，再加上新值
 	oldVal := ab.latencies[ab.idx]
@@ -188,12 +176,12 @@ func (ab *AdaptiveBatcher) RecordLatency(d time.Duration) {
 	}
 }
 
-// GetCurrentBatch 获取当前批量大小（只读）
+// GetCurrentBatch 获取当前批量大小（只读）。
 func (ab *AdaptiveBatcher) GetCurrentBatch() int {
 	return ab.currentBatch
 }
 
-// GetAvgLatency 获取平均延迟（用于监控）
+// GetAvgLatency 获取最近窗口内的平均延迟（用于监控）。
 func (ab *AdaptiveBatcher) GetAvgLatency() time.Duration {
 	if ab.count == 0 {
 		return 0
@@ -201,15 +189,15 @@ func (ab *AdaptiveBatcher) GetAvgLatency() time.Duration {
 	return ab.calculateAvgLatency()
 }
 
-// calculateAvgLatency 计算平均延迟，无内存分配
+// calculateAvgLatency 计算平均延迟，无内存分配。
 //
-// 性能：O(1)，直接使用滚动和，避免循环
+// 性能：O(1)，直接使用滚动和，避免循环。
 func (ab *AdaptiveBatcher) calculateAvgLatency() time.Duration {
 	// ✅ O(1) 计算，直接使用滚动和
 	return ab.totalLatency / time.Duration(ab.count)
 }
 
-// Reset 重置状态（用于测试）
+// Reset 重置内部状态（主要用于测试场景）。
 func (ab *AdaptiveBatcher) Reset() {
 	ab.currentBatch = ab.config.InitialBatch
 	ab.totalLatency = 0

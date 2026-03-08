@@ -10,20 +10,19 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/aiyang-zh/zhenyi-base/zerrs"
-	"github.com/aiyang-zh/zhenyi-base/zsafe"
 )
 
-/*tcp连接管理器*/
-
+// Server 为 TCP 协议的服务端实现，嵌入 BaseServer 并完成 Listen/Accept 与 TLS 包装。
 type Server struct {
 	*znet.BaseServer
 }
 
+// NewServer 创建 TCP 服务端；addr 为监听地址，handlers 必须提供 OnAccept 与 OnRead。
 func NewServer(addr string, handlers znet.ServerHandlers) *Server {
 	return &Server{BaseServer: znet.NewBaseServer(addr, handlers)}
 }
 
-// 监听
+// start 在 goroutine 中执行：绑定端口、可选 TLS、然后进入 listen 循环。
 func (ser *Server) start(ctx context.Context) {
 	listener, err := net.Listen("tcp", ser.GetAddr())
 	if err != nil {
@@ -71,7 +70,7 @@ func (ser *Server) listen(ctx context.Context) {
 
 		// ✅ Accept 后立即启动 goroutine，避免阻塞 Accept 循环
 		go func(c net.Conn) {
-			defer zsafe.Recover("TServer handler recover")
+			defer zlog.Recover("TServer handler recover")
 
 			channelId := ser.NextId()
 			channel := NewChannel(channelId, c, ser)
@@ -92,14 +91,15 @@ func (ser *Server) listen(ctx context.Context) {
 	}
 }
 
-// Server 开启服务
+// Server 实现 ziface.IServer：启动监听并阻塞直至 ctx 取消或 Close。
 func (ser *Server) Server(ctx context.Context) {
 	go func() {
-		defer zsafe.Recover("TServer Server recover")
+		defer zlog.Recover("TServer Server recover")
 		ser.start(ctx)
 	}()
 }
 
+// Close 关闭 TCP 服务（关闭 listener 与所有连接）。
 func (ser *Server) Close() {
 	ser.OnceDo(func() {
 		close(ser.GetClose())

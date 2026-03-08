@@ -287,7 +287,7 @@ func Wrap(err error, typ ErrorType, message string) error {
 	}
 }
 
-// WrapFWrapf 是 [Wrap] 的格式化版本。err 为 nil 时返回 nil。
+// Wrapf 是 [Wrap] 的格式化版本。err 为 nil 时返回 nil。
 func Wrapf(err error, typ ErrorType, format string, args ...interface{}) error {
 	if err == nil {
 		return nil

@@ -16,13 +16,10 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.26.0'   # 使用最新稳定版 Go
-
-      - name: Make script executable
-        run: chmod +x ./run_tests.sh
+          go-version: '1.24'     # 最小支持版本，与 go.mod 一致
 
       - name: Run tests
-        run: ./run_tests.sh
+        run: make test
 
       - name: Upload test results
         uses: actions/upload-artifact@v4

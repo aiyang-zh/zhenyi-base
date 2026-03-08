@@ -4,24 +4,31 @@ import (
 	"sync"
 )
 
-// 1. 去掉 index 字段，因为如果不出于更新优先级的需求，它是多余的开销
-// 2. 直接存储值结构体，不再存指针
+// queueItem 是优先队列中的内部节点。
+// 直接存储值结构体，避免指针和装箱开销。
 type queueItem[T any] struct {
 	value    T
 	priority int
 }
 
+// PriorityQueue 是一个基于二叉堆实现的泛型优先队列（最大堆）。
+//
+// priority 数值越大，元素优先级越高。线程安全，通过内部互斥锁保护。
 type PriorityQueue[T any] struct {
 	items []queueItem[T] // 连续内存，缓存更友好
 	lock  sync.Mutex
 }
 
+// NewPriorityQueue 创建一个预分配容量为 capacity 的优先队列。
+// capacity 仅用于初始分配，并不会限制队列最大长度。
 func NewPriorityQueue[T any](capacity int) *PriorityQueue[T] {
 	return &PriorityQueue[T]{
 		items: make([]queueItem[T], 0, capacity), // 预分配容量，减少切片扩容开销
 	}
 }
 
+// Enqueue 按给定优先级入队。
+// priority 越大，元素越早被 Dequeue 取出。
 func (q *PriorityQueue[T]) Enqueue(v T, priority int) {
 	q.lock.Lock()
 
@@ -34,6 +41,8 @@ func (q *PriorityQueue[T]) Enqueue(v T, priority int) {
 	q.lock.Unlock()
 }
 
+// Dequeue 取出当前队列中优先级最高的元素。
+// 队列为空时返回 (零值, false)。
 func (q *PriorityQueue[T]) Dequeue() (T, bool) {
 	q.lock.Lock()
 	n := len(q.items)
@@ -102,6 +111,8 @@ func (q *PriorityQueue[T]) down(i0, n int) {
 	}
 }
 
+// Len 返回当前队列中的元素数量。
+// 内部加锁，适合监控或调试使用。
 func (q *PriorityQueue[T]) Len() int {
 	q.lock.Lock()
 	defer q.lock.Unlock()

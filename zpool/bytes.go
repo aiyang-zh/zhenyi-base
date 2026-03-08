@@ -5,28 +5,28 @@ import (
 	"sync/atomic"
 )
 
-// Buffer 封装 []byte 切片，用指针存入 sync.Pool 避免 interface{} 转换分配
+// Buffer 封装 []byte 切片，用指针存入 sync.Pool 避免 interface{} 装箱分配。
 type Buffer struct {
 	B []byte
 }
 
-// Reset 重置长度但保留底层容量
+// Reset 重置有效长度但保留底层容量。
 func (b *Buffer) Reset() {
 	b.B = b.B[:0]
 }
 
-// Len 返回有效数据长度
+// Len 返回有效数据长度。
 func (b *Buffer) Len() int {
 	return len(b.B)
 }
 
-// Write 追加数据（实现 io.Writer 语义）
+// Write 追加数据（实现 io.Writer 接口语义）。
 func (b *Buffer) Write(p []byte) (int, error) {
 	b.B = append(b.B, p...)
 	return len(p), nil
 }
 
-// Release 归还到对应的分级池
+// Release 将缓冲区归还到分级池。
 func (b *Buffer) Release() {
 	PutBytesBuffer(b)
 }
@@ -56,7 +56,8 @@ func init() {
 	}
 }
 
-// GetBytesBuffer 从分级池获取 *Buffer，buf.B 长度设为 size
+// GetBytesBuffer 从分级池获取 *Buffer，buf.B 长度设为 size。
+// size 超过 maxSize（64KB）时会直接分配，不回收到池中。
 func GetBytesBuffer(size int) *Buffer {
 	if size > maxSize {
 		directAllocCount.Add(1)
@@ -74,14 +75,15 @@ func GetBytesBuffer(size int) *Buffer {
 	return buf
 }
 
-// GetBytesBufferZero 获取 *Buffer 并清零
+// GetBytesBufferZero 获取 *Buffer 并将内容清零。
 func GetBytesBufferZero(size int) *Buffer {
 	b := GetBytesBuffer(size)
 	clear(b.B)
 	return b
 }
 
-// PutBytesBuffer 归还 *Buffer 到对应的分级池
+// PutBytesBuffer 归还 *Buffer 到对应的分级池。
+// 对于容量过小或超大的缓冲区将直接丢弃，由 GC 回收。
 func PutBytesBuffer(b *Buffer) {
 	if b == nil {
 		return
@@ -109,7 +111,7 @@ func getIndex(n int) int {
 	return bits.Len32(uint32(n-1)) - minShift
 }
 
-// GetStats 获取统计信息（供 GM 命令和监控使用）
+// GetStats 获取全局字节缓冲池的统计信息（供监控使用）。
 func GetStats() BufferPoolStats {
 	stats := BufferPoolStats{
 		DirectAllocs: directAllocCount.Load(),
@@ -130,16 +132,18 @@ func GetStats() BufferPoolStats {
 	return stats
 }
 
+// BufferPoolStats 为字节缓冲池的统计快照（各档位 Get/Put 与直接分配次数）。
 type BufferPoolStats struct {
 	BucketStats  [poolCount]BucketStat
 	DirectAllocs uint64
 }
 
+// BucketStat 表示某一档位缓冲区的统计项。
 type BucketStat struct {
-	BucketSize  int
-	GetRequests uint64
-	PutReturns  uint64
-	ReuseRate   float64
+	BucketSize  int     // 该档位缓冲区容量（字节）
+	GetRequests uint64  // 该档位 Get 请求次数
+	PutReturns  uint64  // 该档位 Put 归还次数
+	ReuseRate   float64 // 复用率（Put/Get 百分比）
 }
 
 func calcRate(put, get uint64) float64 {

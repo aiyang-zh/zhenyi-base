@@ -4,57 +4,93 @@ import (
 	"context"
 )
 
-// ITransport 传输层接口（纯网络 I/O）
+// ITransport 传输层接口（纯网络 I/O）。
 //
 // 负责底层连接的读写和生命周期管理。
-// 实现者：znet.BaseChannel（通过 ztcp/zws/zkcp 的具体 Channel 嵌入）
+// 实现者：znet.BaseChannel（通过 ztcp/zws/zkcp 的具体 Channel 嵌入）。
 type ITransport interface {
-	Start()                           // 启动读取循环（阻塞）
-	SendBatchMsg(messages []IMessage) // 批量发送（同步，直接写入网络，writev）
-	Close()                           // 关闭连接
-	GetChannelId() uint64             // 获取通道 ID
-	IsOpen() bool                     // 是否打开
-	Flush() error                     // 刷新缓冲区
-	GetWriterTier() BufferTier        // 获取 writer 等级（用于监控）
-	GetBuffered() int                 // 获取缓冲区已写入但未刷新的字节数
+	// Start 启动读取循环（阻塞当前 goroutine）。
+	Start()
+
+	// SendBatchMsg 批量发送多条消息（同步，直接写入网络，内部可能使用 writev）。
+	SendBatchMsg(messages []IMessage)
+
+	// Close 关闭连接。
+	Close()
+
+	// GetChannelId 返回通道 ID。
+	GetChannelId() uint64
+
+	// IsOpen 返回连接是否仍然打开。
+	IsOpen() bool
+
+	// Flush 刷新写缓冲区，将积压数据推送到网络。
+	Flush() error
+
+	// GetWriterTier 返回当前 writer 的缓冲等级，用于监控。
+	GetWriterTier() BufferTier
+
+	// GetBuffered 返回写缓冲区中已写入但尚未刷新的字节数。
+	GetBuffered() int
 }
 
-// ISession 会话层接口（业务状态管理）
+// ISession 会话层接口（业务状态管理）。
 //
 // 负责认证、心跳、限流、异步发送等会话级逻辑。
-// 实现者：znet.BaseChannel
+// 实现者：znet.BaseChannel。
 type ISession interface {
 	// 认证管理
-	GetAuthId() int64       // 获取认证 ID（用户 ID）
-	SetAuthId(authId int64) // 设置认证 ID
+
+	// GetAuthId 获取当前会话绑定的认证 ID（例如用户 ID）。
+	GetAuthId() int64
+
+	// SetAuthId 设置会话的认证 ID。
+	SetAuthId(authId int64)
 
 	// RPC 管理
-	GetRpcId() uint64 // 获取并递增 RPC ID
+
+	// GetRpcId 获取并递增 RPC ID，用于请求追踪。
+	GetRpcId() uint64
 
 	// 限流
-	SetLimit(rate ILimit) // 设置限流器
-	Allow() bool          // 检查是否允许通过（限流检查）
+
+	// SetLimit 设置限流器。
+	SetLimit(rate ILimit)
+
+	// Allow 检查当前请求是否允许通过（限流检查）。
+	Allow() bool
 
 	// 心跳检测
-	UpdateLastRecTime() // 更新最后接收时间
-	Check() bool        // 检查是否超时
+
+	// UpdateLastRecTime 更新最后一次接收数据的时间。
+	UpdateLastRecTime()
+
+	// Check 检查是否发生心跳超时。
+	Check() bool
 
 	// 关闭回调
-	SetCloseCall(closeCall func(IChannel)) // 设置关闭回调
 
-	// 异步发送（入队列，由 runSend goroutine 处理）
-	Send(msg IMessage) // 异步发送单条消息
+	// SetCloseCall 设置连接关闭时的回调。
+	SetCloseCall(closeCall func(IChannel))
+
+	// 异步发送（入队列，由内部 goroutine 处理）
+
+	// Send 异步发送单条消息。
+	Send(msg IMessage)
 
 	// 启动发送 goroutine
-	StartSend(ctx context.Context) // 启动异步发送循环
 
+	// StartSend 启动异步发送循环，通常在单独 goroutine 中调用。
+	StartSend(ctx context.Context)
+
+	// RecordRecv 记录一次接收的字节数（用于统计）。
 	RecordRecv(dataLen int)
 }
 
-// IChannel 通道接口 = 传输层 + 会话层
+// IChannel 通道接口 = 传输层 + 会话层。
 //
 // 代表一个客户端连接的完整抽象，组合了网络 I/O 和会话管理。
-// 实现者：znet.BaseChannel
+// 实现者：znet.BaseChannel。
 type IChannel interface {
 	ITransport
 	ISession

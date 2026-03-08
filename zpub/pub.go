@@ -2,7 +2,7 @@ package zpub
 
 import (
 	"fmt"
-	"github.com/aiyang-zh/zhenyi-base/zsafe"
+	"github.com/aiyang-zh/zhenyi-base/zlog"
 	"reflect"
 	"sync"
 )
@@ -52,6 +52,9 @@ func (e *EventBus) UnSubscribe(topic string, o ObServer) {
 }
 
 func (e *EventBus) Publish(event *Event) {
+	if event == nil {
+		return
+	}
 	e.lock.RLock()
 	originalMap, ok := e.obServers[event.Topic]
 	if !ok || len(originalMap) == 0 {
@@ -84,12 +87,12 @@ func (e *EventBus) AsyncPublish(event *Event) {
 	for _, o := range subscribers {
 		ob := o
 		go func() {
-			defer zsafe.Recover("EventBus: AsyncPublish panic recovered")
+			defer zlog.Recover("EventBus: AsyncPublish panic recovered")
 			ob.OnChange(event)
 		}()
 	}
 }
 func (e *EventBus) safeCall(o ObServer, event *Event) {
-	defer zsafe.Recover("EventBus: observer panic recovered")
+	defer zlog.Recover("EventBus: observer panic recovered")
 	o.OnChange(event)
 }

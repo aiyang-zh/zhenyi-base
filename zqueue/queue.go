@@ -4,16 +4,22 @@ import (
 	"sync"
 )
 
-// FullPolicy 定义队列满时的行为策略
+// FullPolicy 定义有限队列在写满时的处理策略。
 type FullPolicy int
 
 const (
-	// FullPolicyResize 队列满时自动扩容（默认）
+	// FullPolicyResize 队列满时自动扩容（默认行为）。
 	FullPolicyResize FullPolicy = 0
-	// FullPolicyDrop 队列满时丢弃新元素
+	// FullPolicyDrop 队列满时丢弃新元素（不扩容），适合限内存场景。
 	FullPolicyDrop FullPolicy = 1
 )
 
+// Queue 是基于环形数组实现的通用有界队列。
+//
+// 特点：
+//   - 使用切片 + 位运算实现环形缓冲区，内存布局连续，缓存友好
+//   - 支持自动扩容或丢弃新元素两种策略（见 FullPolicy）
+//   - 使用互斥锁保护，适合中等并发场景
 type Queue[T any] struct {
 	items      []T        // 使用切片替代链表
 	head       int        // 队列头部指针
@@ -37,6 +43,11 @@ func nextPowerOfTwo(n int) int {
 	n |= n >> 16
 	return n + 1
 }
+
+// NewQueue 创建一个带策略控制的有界队列。
+//
+// initialSize 为初始容量，maxSize 为最大容量（0 表示不限制），
+// policy 决定写满时的行为（自动扩容或丢弃）。
 func NewQueue[T any](initialSize int, maxSize int, policy FullPolicy) *Queue[T] {
 	capacity := nextPowerOfTwo(initialSize)
 	// 如果设置了上限，且初始容量已经比上限大，这通常是配置错误，但也兼容处理
@@ -52,6 +63,8 @@ func NewQueue[T any](initialSize int, maxSize int, policy FullPolicy) *Queue[T] 
 	}
 }
 
+// GetDefaultQueue 创建一个默认策略（可扩容）的队列。
+// 等价于 NewQueue(size, 0, FullPolicyResize)。
 func GetDefaultQueue[T any](size int) *Queue[T] {
 	capacity := nextPowerOfTwo(size)
 	q := &Queue[T]{
@@ -62,6 +75,8 @@ func GetDefaultQueue[T any](size int) *Queue[T] {
 	return q
 }
 
+// Count 返回当前队列中的元素个数。
+// 内部加锁获取一致性快照。
 func (q *Queue[T]) Count() int {
 	q.lock.Lock() // 必须加锁才能获取准确快照
 	c := q.count
@@ -69,6 +84,8 @@ func (q *Queue[T]) Count() int {
 	return c
 }
 
+// Enqueue 入队一个元素。
+// 返回 true 表示成功，false 表示队列已满且策略不允许扩容。
 func (q *Queue[T]) Enqueue(item T) bool {
 	q.lock.Lock()
 	// 计算下一个位置
@@ -96,7 +113,8 @@ func (q *Queue[T]) Enqueue(item T) bool {
 	return true
 }
 
-// EnqueueBatch 批量入队（原子操作：要么全进，要么全不进）
+// EnqueueBatch 批量入队（原子语义：要么整批成功，要么整批失败）。
+// 返回 true 表示整批入队成功，false 表示空间不足且策略不允许扩容。
 func (q *Queue[T]) EnqueueBatch(items []T) bool {
 	if len(items) == 0 {
 		return true
@@ -161,6 +179,9 @@ func (q *Queue[T]) EnqueueBatch(items []T) bool {
 	q.count += requiredSpace
 	return true
 }
+
+// Front 返回队首元素但不出队。
+// 第二个返回值为 false 表示队列为空。
 func (q *Queue[T]) Front() (T, bool) {
 	q.lock.Lock()
 	if q.count == 0 {
@@ -187,6 +208,10 @@ func (q *Queue[T]) resize() {
 	q.tail = q.count
 	q.mask = newSize - 1
 }
+
+// DequeueBatch 批量出队，结果写入 buf 中。
+// 返回实际写入的切片视图以及出队后的剩余元素个数。
+// buf 的容量决定单次最多出队多少元素。
 func (q *Queue[T]) DequeueBatch(buf []T) ([]T, int) {
 	q.lock.Lock()
 	defer q.lock.Unlock() // 🔴 只加一次锁

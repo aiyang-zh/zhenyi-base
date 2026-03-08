@@ -5,7 +5,6 @@ import (
 	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"github.com/aiyang-zh/zhenyi-base/zlog"
 	"github.com/aiyang-zh/zhenyi-base/zpool"
-	"github.com/aiyang-zh/zhenyi-base/zsafe"
 	"io"
 	"net"
 	"strings"
@@ -33,6 +32,7 @@ type BaseClient struct {
 	writeLock sync.Mutex // 写入锁，保护并发写入
 }
 
+// NewBaseClient 创建网络层客户端基类（零拷贝读、协议解析复用、可选加密）。
 func NewBaseClient() *BaseClient {
 	client := &BaseClient{
 		readBuffer:   GetRingBuffer(), // 从池获取
@@ -49,26 +49,33 @@ func NewBaseClient() *BaseClient {
 
 	return client
 }
+
+// SetReadCall 设置收到完整消息时的回调（在 Read 循环中同步调用）。
 func (b *BaseClient) SetReadCall(readCall func(ziface.IWireMessage)) {
 	b.readCall = readCall
 }
 
+// SetEncrypt 设置加解密实现，nil 表示不加密。
 func (b *BaseClient) SetEncrypt(iEncrypt ziface.IEncrypt) {
 	b.iEncrypt = iEncrypt
 }
 
+// IsOpen 返回连接是否仍处于打开状态。
 func (b *BaseClient) IsOpen() bool {
 	return b.state.Load()
 }
 
+// SetConn 注入底层连接（由 ztcp/zws/zkcp 的 Connect 内部调用）。
 func (b *BaseClient) SetConn(conn net.Conn) {
 	b.conn = conn
 }
 
+// GetConn 返回底层 net.Conn，一般仅用于调试或特殊场景。
 func (b *BaseClient) GetConn() net.Conn {
 	return b.conn
 }
 
+// Close 关闭连接并释放 RingBuffer/ParseData 等资源；幂等。
 func (b *BaseClient) Close() error {
 	if !b.state.CompareAndSwap(true, false) {
 		return nil // 已关闭
@@ -93,6 +100,7 @@ func (b *BaseClient) Close() error {
 	return nil
 }
 
+// SendMsg 发送一条消息（会加密、组包、writev 写入）；连接已关闭时静默忽略。
 func (b *BaseClient) SendMsg(message ziface.IMessage) {
 	if !b.IsOpen() {
 		zlog.Debug("SendMsg: client is closed")
@@ -140,9 +148,11 @@ func (b *BaseClient) SendMsg(message ziface.IMessage) {
 		return
 	}
 }
+
+// Read 在单独 goroutine 中启动读循环，直至连接关闭；应在 Connect 后调用。
 func (b *BaseClient) Read() {
 	go func() {
-		defer zsafe.Recover("BaseClient Read recover")
+		defer zlog.Recover("BaseClient Read recover")
 		defer b.Close()
 		for {
 			n1 := b.read()

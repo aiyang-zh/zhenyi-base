@@ -270,25 +270,25 @@ func (c *BaseChannel) Start() {
 }
 
 // Flush 刷新缓冲区
-// 零拷贝模式下使用 writev 直接发送，无应用层缓冲，直接返回 nil
+// Flush 刷新写缓冲；零拷贝模式下无应用层缓冲，直接返回 nil。
 func (c *BaseChannel) Flush() error {
 	return nil
 }
 
 // GetWriterTier 获取 writer 当前等级
-// 零拷贝模式下无缓冲层，返回 TierNone
+// GetWriterTier 返回写缓冲层级；零拷贝模式下为 TierNone。
 func (c *BaseChannel) GetWriterTier() ziface.BufferTier {
 	return ziface.TierNone
 }
 
 // GetBuffered 获取缓冲区中已写入但未刷新的字节数
-// 零拷贝模式下无缓冲层，返回 0
+// GetBuffered 返回当前未刷写的字节数；零拷贝模式下为 0。
 func (c *BaseChannel) GetBuffered() int {
 	return 0
 }
 
 // SendBatchMsg 批量发送消息（实现 IChannel 接口）
-// ✅ 零拷贝优化：使用 ISocketV2.PreparePacket + net.Buffers (writev)
+// SendBatchMsg 批量发送消息（零拷贝 writev）；调用方不应再使用 messages 或 Release。
 func (c *BaseChannel) SendBatchMsg(messages []ziface.IMessage) {
 	if messages == nil || len(messages) == 0 {
 		return

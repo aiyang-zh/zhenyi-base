@@ -6,20 +6,30 @@ import (
 	"net"
 )
 
-// TLSMode 标识 TLS 模式
+// TLSMode 标识 TLS 模式。
 type TLSMode int
 
 const (
-	TLSModeNone     TLSMode = iota // 不启用 TLS
-	TLSModeStandard                // 标准 TLS（RSA/ECDSA）
-	TLSModeGM                      // 国密 GM-TLS（SM2）
+	// TLSModeNone 表示不启用 TLS。
+	TLSModeNone TLSMode = iota
+
+	// TLSModeStandard 表示标准 TLS（RSA/ECDSA）。
+	TLSModeStandard
+
+	// TLSModeGM 表示国密 GM-TLS（SM2）。
+	TLSModeGM
 )
 
-// TLSConfig 统一的 TLS 配置（支持标准 TLS 和 GM-TLS）
+// TLSConfig 统一的 TLS 配置（支持标准 TLS 和 GM-TLS）。
 type TLSConfig struct {
-	Mode      TLSMode
-	StdConfig *tls.Config   // 标准 TLS 配置（Mode=TLSModeStandard 时使用）
-	GMConfig  *gmtls.Config // GM-TLS 配置（Mode=TLSModeGM 时使用）
+	// Mode 指定当前 TLS 模式。
+	Mode TLSMode
+
+	// StdConfig 为标准 TLS 配置（Mode=TLSModeStandard 时使用）。
+	StdConfig *tls.Config
+
+	// GMConfig 为 GM-TLS 配置（Mode=TLSModeGM 时使用）。
+	GMConfig *gmtls.Config
 }
 
 // WrapListener 将 net.Listener 包装为 TLS listener。

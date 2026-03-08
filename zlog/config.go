@@ -2,6 +2,8 @@ package zlog
 
 import "go.uber.org/zap/zapcore"
 
+// LoggerConfig 描述 Logger 的完整配置项。
+// 一般通过 NewDefaultLoggerConfig + Option 组合方式构造。
 type LoggerConfig struct {
 	Level                   zapcore.Level  `json:"level" toml:"level"`                                     // 全局最低级别（可动态调整），低于此级别的日志会被直接丢弃
 	PathName                string         `json:"pathName" toml:"pathName" `                              // 日志文件路径
@@ -23,6 +25,8 @@ type LoggerConfig struct {
 	EnableAsync             bool           `json:"enableAsync" toml:"enableAsync"`                         // 是否启用异步写入（极大提升性能，但在崩坏时可能丢失少量日志）
 }
 
+// NewDefaultLoggerConfig 返回一份适合大多数服务场景的默认配置。
+// 可在此基础上通过 Option 进行微调。
 func NewDefaultLoggerConfig() LoggerConfig {
 	return LoggerConfig{
 		Level:                   zapcore.DebugLevel,
@@ -51,6 +55,8 @@ func NewDefaultLoggerConfig() LoggerConfig {
 	}
 }
 
+// WithOptions 在 LoggerConfig 上应用一组 Option。
+// 便于在构造时链式组合配置。
 func (l *LoggerConfig) WithOptions(opts ...Option) {
 	for _, opt := range opts {
 		opt.apply(l)

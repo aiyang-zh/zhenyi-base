@@ -65,3 +65,27 @@ s.Handle(1, func(req *server.Request) {
 // 3. 启动
 s.Run()
 ```
+
+## 参考测试结果（Apple M3 · Go 1.24+）
+
+运行 `./run_echo_bench.sh` 在本机得到的一组示例数据（单位：msg/s，仅供参考，具体数值会随机器和环境变化）：
+
+```text
+  [tcp] 23B/20c   QPS: 631612 msg/s
+  [tcp] 1KB/20c   QPS: 608256 msg/s
+  [tcp] 23B/100c  QPS: 734168 msg/s
+  [tcp] 23B/1000c QPS: 746883 msg/s
+  [tcp] 1KB/1000c QPS: 189504 msg/s
+
+  [ws]  23B/20c   QPS: 523084 msg/s
+  [ws]  1KB/20c   QPS: 541585 msg/s
+  [ws]  23B/100c  QPS: 670934 msg/s
+  [ws]  23B/1000c QPS: 679756 msg/s
+  [ws]  1KB/1000c QPS: 160856 msg/s
+
+  [kcp] 23B/20c   QPS: 35361 msg/s
+  [kcp] 1KB/20c   QPS: 32522 msg/s
+  [kcp] 23B/100c  QPS: 49434 msg/s
+  [kcp] 23B/1000c QPS: 32488 msg/s
+  [kcp] 1KB/1000c QPS: 12992 msg/s
+```

@@ -9,12 +9,13 @@ import (
 	"go.uber.org/zap"
 )
 
+// Client 为 KCP 协议客户端，嵌入 BaseClient 并实现 Connect。
 type Client struct {
 	*znet.BaseClient
 }
 
+// NewClient 创建 KCP 客户端并连接 addr；失败返回错误。
 func NewClient(addr string) (ziface.IClient, error) {
-	// 创建连接
 	client := &Client{
 		BaseClient: znet.NewBaseClient(),
 	}
@@ -25,8 +26,8 @@ func NewClient(addr string) (ziface.IClient, error) {
 	return client, nil
 }
 
+// Connect 使用 KCP 连接到指定地址（FEC 关闭，与 Server 一致）。
 func (n *Client) Connect(addr string) error {
-	// 开始连接
 	conn, err := kcp.DialWithOptions(addr, nil, 0, 0)
 	if err != nil {
 		zlog.Error("Failed to dial KCP server",

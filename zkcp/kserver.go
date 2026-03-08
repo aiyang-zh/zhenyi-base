@@ -5,25 +5,24 @@ import (
 	"github.com/aiyang-zh/zhenyi-base/zerrs"
 	"github.com/aiyang-zh/zhenyi-base/zlog"
 	"github.com/aiyang-zh/zhenyi-base/znet"
-	"github.com/aiyang-zh/zhenyi-base/zsafe"
 	"github.com/xtaci/kcp-go/v5"
 	"net"
 
 	"go.uber.org/zap"
 )
 
-/*kcp连接管理器*/
-
+// Server 为 KCP 协议的服务端实现，嵌入 BaseServer 并完成 KCP Listen/Accept。
 type Server struct {
 	*znet.BaseServer
 	kcpListener *kcp.Listener
 }
 
+// NewServer 创建 KCP 服务端；addr 为监听地址，handlers 必须提供 OnAccept 与 OnRead。
 func NewServer(addr string, handlers znet.ServerHandlers) *Server {
 	return &Server{BaseServer: znet.NewBaseServer(addr, handlers)}
 }
 
-// 监听
+// start 启动 KCP 监听并进入 accept 循环（FEC 已关闭，与 Client 一致）。
 func (ser *Server) start(ctx context.Context) {
 	// 启动kcp连接
 	zlog.Info("Starting KCP server", zap.String("addr", ser.GetAddr()))
@@ -44,67 +43,64 @@ func (ser *Server) start(ctx context.Context) {
 }
 
 func (ser *Server) listen(ctx context.Context) {
-	for {
+	go func() {
 		select {
 		case <-ctx.Done():
-			ser.Close()
-			return
 		case <-ser.GetClose():
-			ser.Close()
-			return
-		default:
-			// 等待客户端连接
-			conn, err1 := ser.kcpListener.AcceptKCP()
-			if err1 != nil {
-				var opError *net.OpError
-				if zerrs.As(err1, &opError) {
-					zlog.Info("KCP server listener closed")
-					return
-				}
-				zlog.Warn("Failed to accept KCP connection",
-					zap.Error(zerrs.Wrap(err1, zerrs.ErrTypeNetwork, "accept failed")))
-				continue
-			}
-
-			// ✅ Accept 后立即启动 goroutine，避免阻塞 Accept 循环
-			go func(c *kcp.UDPSession) {
-				defer zsafe.Recover("KServer handler recover")
-				// KCP 参数设置
-				c.SetNoDelay(1, 20, 2, 1)
-				c.SetWindowSize(128, 128)
-				c.SetACKNoDelay(true)
-				c.SetMtu(1200)
-				c.SetReadBuffer(4 * 1024 * 1024)
-				c.SetWriteBuffer(4 * 1024 * 1024)
-
-				channelId := ser.NextId()
-				channel := NewChannel(channelId, c, ser)
-
-				if !ser.HandleAccept(channel) {
-					err := c.Close()
-					if err != nil {
-						zlog.Warn("Failed to close KCP connection", zap.Error(err))
-					}
-					zlog.Warn("KServer OnAccept rejected", zap.Uint64("channelId", channelId))
-					return
-				}
-				ser.AddChannel(channel)
-				defer channel.Close() // ✅ 自动清理（从 map 中移除 + 触发回调）
-				channel.StartSend(ctx)
-				channel.Start()
-			}(conn)
 		}
+		ser.Close()
+	}()
+	for {
+		conn, err1 := ser.kcpListener.AcceptKCP()
+		if err1 != nil {
+			var opError *net.OpError
+			if zerrs.As(err1, &opError) {
+				zlog.Info("KCP server listener closed")
+				return
+			}
+			zlog.Warn("Failed to accept KCP connection",
+				zap.Error(zerrs.Wrap(err1, zerrs.ErrTypeNetwork, "accept failed")))
+			continue
+		}
+
+		go func(c *kcp.UDPSession) {
+			defer zlog.Recover("KServer handler recover")
+			// KCP 参数设置
+			c.SetNoDelay(1, 20, 2, 1)
+			c.SetWindowSize(128, 128)
+			c.SetACKNoDelay(true)
+			c.SetMtu(1200)
+			c.SetReadBuffer(4 * 1024 * 1024)
+			c.SetWriteBuffer(4 * 1024 * 1024)
+
+			channelId := ser.NextId()
+			channel := NewChannel(channelId, c, ser)
+
+			if !ser.HandleAccept(channel) {
+				err := c.Close()
+				if err != nil {
+					zlog.Warn("Failed to close KCP connection", zap.Error(err))
+				}
+				zlog.Warn("KServer OnAccept rejected", zap.Uint64("channelId", channelId))
+				return
+			}
+			ser.AddChannel(channel)
+			defer channel.Close() // ✅ 自动清理（从 map 中移除 + 触发回调）
+			channel.StartSend(ctx)
+			channel.Start()
+		}(conn)
 	}
 }
 
-// Server 开启服务
+// Server 实现 ziface.IServer：启动 KCP 监听，直至 ctx 取消或 Close。
 func (ser *Server) Server(ctx context.Context) {
 	go func() {
-		defer zsafe.Recover("KServer Server recover")
+		defer zlog.Recover("KServer Server recover")
 		ser.start(ctx)
 	}()
 }
 
+// Close 关闭 KCP 服务（关闭 listener 与所有连接）。
 func (ser *Server) Close() {
 	ser.OnceDo(func() {
 		close(ser.GetClose())
