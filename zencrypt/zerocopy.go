@@ -10,7 +10,7 @@ import (
 )
 
 // ZeroCopyAesGcmEncrypt 零拷贝版本的 AES-GCM 加密器
-// 适用于对性能要求极高的场景（高频交易、实时游戏）
+// 适用于对性能要求极高的场景（高频交易、实时应用）
 //
 // ⚠️ 注意：调用方必须在使用完毕后调用 buf.Release()
 type ZeroCopyAesGcmEncrypt struct {
@@ -117,7 +117,7 @@ func (a *ZeroCopyAesGcmEncrypt) DecryptZeroCopy(data []byte) (*zpool.Buffer, err
 //
 // 适用场景：
 //   - ✅ 高频交易系统（微秒级延迟要求）
-//   - ✅ 实时游戏（每秒百万级包）
+//   - ✅ 实时应用（每秒百万级包）
 //   - ✅ 流式数据处理
 //   - ❌ 低频场景（不值得增加复杂度）
 //

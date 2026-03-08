@@ -79,7 +79,7 @@ func (a *AesGcmEncrypt) BatchDecrypt(ciphertexts [][]byte) ([][]byte, error) {
 }
 
 // BatchEncryptPooled 使用 goroutine 池的批量加密（更高效）
-// 适用于大量小包场景（如游戏服务器）
+// 适用于大量小包场景（如实时应用服务器）
 func (a *AesGcmEncrypt) BatchEncryptPooled(plaintexts [][]byte, poolSize int) ([][]byte, error) {
 	count := len(plaintexts)
 	if count == 0 {
@@ -139,6 +139,6 @@ func (a *AesGcmEncrypt) BatchEncryptPooled(plaintexts [][]byte, poolSize int) ([
 //   - 提升：6-7倍
 //
 // 适用场景：
-//   - ✅ 批量消息打包（如 MMO 游戏的广播）
+//   - ✅ 批量消息打包（如 MMO 实时广播）
 //   - ✅ 文件分块加密
 //   - ❌ 单个小包（不值得并行开销）
