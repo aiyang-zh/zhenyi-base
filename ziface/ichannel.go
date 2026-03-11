@@ -2,6 +2,7 @@ package ziface
 
 import (
 	"context"
+	"time"
 )
 
 // ITransport 传输层接口（纯网络 I/O）。
@@ -32,6 +33,9 @@ type ITransport interface {
 
 	// GetBuffered 返回写缓冲区中已写入但尚未刷新的字节数。
 	GetBuffered() int
+
+	// WriteImmediate 读协程内同步直写，sync/RPC 场景使用，直接写出降低延迟。
+	WriteImmediate(msg IWireMessage) error
 }
 
 // ISession 会话层接口（业务状态管理）。
@@ -61,6 +65,9 @@ type ISession interface {
 	Allow() bool
 
 	// 心跳检测
+
+	// SetHeartbeatTimeout 设置心跳超时（0 表示禁用），由 Server.AddChannel 调用。
+	SetHeartbeatTimeout(d time.Duration)
 
 	// UpdateLastRecTime 更新最后一次接收数据的时间。
 	UpdateLastRecTime()

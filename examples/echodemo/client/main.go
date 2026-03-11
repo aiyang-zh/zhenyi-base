@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"github.com/aiyang-zh/zhenyi-base/znet"
 	"github.com/aiyang-zh/zhenyi-base/ztcp"
 )
@@ -19,11 +18,6 @@ func main() {
 	}
 	defer client.Close()
 
-	client.SetReadCall(func(msg ziface.IWireMessage) {
-		fmt.Printf("echo: %s\n", string(msg.GetMessageData()))
-	})
-	go client.Read()
-
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Println("输入任意内容，服务端会原样回显（Ctrl+D 退出）")
 	for scanner.Scan() {
@@ -31,6 +25,11 @@ func main() {
 		if len(line) == 0 {
 			continue
 		}
-		client.SendMsg(&znet.NetMessage{MsgId: 1, Data: bytes.Clone(line)})
+		resp, err := client.Request(&znet.NetMessage{MsgId: 1, Data: bytes.Clone(line)})
+		if err != nil {
+			fmt.Printf("request failed: %v\n", err)
+			break
+		}
+		fmt.Printf("echo: %s\n", string(resp.GetMessageData()))
 	}
 }

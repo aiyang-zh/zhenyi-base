@@ -2,8 +2,10 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
+	"github.com/aiyang-zh/zhenyi-base/zlog"
 	"os"
 	"strings"
 	"sync"
@@ -29,7 +31,15 @@ var (
 
 func main() {
 	flag.Parse()
-
+	logConfig := zlog.NewDefaultLoggerConfig()
+	logConfig.WithOptions(
+		zlog.WithProduction(),
+		zlog.WithFilename("client"),
+	)
+	zlog.NewDefaultLoggerWithConfig(logConfig)
+	defer func() {
+		_ = zlog.CloseDefaultLog()
+	}()
 	if *bench {
 		runBenchmark()
 	} else {
@@ -40,11 +50,11 @@ func main() {
 func newClient() (ziface.IClient, error) {
 	switch parseProtocol(*protocol) {
 	case znet.TCP:
-		return ztcp.NewClient(*addr)
+		return ztcp.NewClient(*addr, znet.WithAsyncMode())
 	case znet.WebSocket:
-		return zws.NewClient(*addr)
+		return zws.NewClient(*addr, znet.WithAsyncMode())
 	case znet.KCP:
-		return zkcp.NewClient(*addr)
+		return zkcp.NewClient(*addr, znet.WithAsyncMode())
 	default:
 		return nil, zerrs.New(zerrs.ErrTypeNetwork, "protocol error: use tcp|ws|kcp")
 	}
@@ -133,7 +143,26 @@ func runBenchmark() {
 	}
 
 	fmt.Printf("%d clients connected, sending...\n", len(clientList))
+	os.Stdout.Sync()
 	start := time.Now()
+
+	// 进度输出：1k1k 等场景可能跑 1～2 分钟，避免误以为卡住
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		tick := time.NewTicker(2 * time.Second)
+		defer tick.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-tick.C:
+				s, r := totalSent.Load(), totalRecv.Load()
+				fmt.Printf("\r  progress: sent %d  recv %d (waiting for responses...)  ", s, r)
+				os.Stdout.Sync()
+			}
+		}
+	}()
 
 	msg := &znet.NetMessage{MsgId: 1, Data: payload}
 	for _, client := range clientList {
@@ -145,16 +174,48 @@ func runBenchmark() {
 			}
 			totalSent.Add(int64(perClient))
 		}(client)
+		time.Sleep(1 * time.Millisecond)
 	}
 
-	sendWg.Wait()
+	// 发送阶段最多等 5 分钟，避免服务端过载时 Write 永久阻塞
+	sendDone := make(chan struct{})
+	go func() { sendWg.Wait(); close(sendDone) }()
+	select {
+	case <-sendDone:
+		// 正常
+	case <-time.After(5 * time.Minute):
+		fmt.Printf("\ntimeout: sends did not finish in 5 min (server overloaded? try fewer clients)\n")
+		cancel()
+		for _, c := range clientList {
+			c.Close()
+		}
+		return
+	}
 	sent := totalSent.Load()
 
+	// 等收齐回包，带超时与无进展检测，避免无限卡住
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
+	recvDeadline := time.Now().Add(5 * time.Minute)
+	lastRecv := totalRecv.Load()
+	lastProgress := time.Now()
 	for totalRecv.Load() < sent {
 		<-ticker.C
+		now := time.Now()
+		if now.After(recvDeadline) {
+			fmt.Printf("\ntimeout: did not receive all responses within 5 min (recv %d / sent %d)\n", totalRecv.Load(), sent)
+			break
+		}
+		r := totalRecv.Load()
+		if r > lastRecv {
+			lastRecv = r
+			lastProgress = now
+		} else if now.Sub(lastProgress) > 5*time.Minute {
+			fmt.Printf("\nstuck: recv unchanged at %d for 5 min (sent %d), aborting\n", r, sent)
+			break
+		}
 	}
+	cancel() // 停止进度 goroutine
 
 	elapsed := time.Since(start)
 	recv := totalRecv.Load()
@@ -163,9 +224,15 @@ func runBenchmark() {
 		c.Close()
 	}
 
+	pct := float64(recv) / float64(max(sent, 1)) * 100
 	fmt.Printf("\n--- benchmark result ---\n")
 	fmt.Printf("elapsed:  %v\n", elapsed)
 	fmt.Printf("sent:     %d\n", sent)
-	fmt.Printf("recv:     %d (%.1f%%)\n", recv, float64(recv)/float64(max(sent, 1))*100)
+	fmt.Printf("recv:     %d (%.1f%%)\n", recv, pct)
+	if recv < sent {
+		fmt.Printf("warning:  %d responses not received (possible loss)\n", sent-recv)
+	} else {
+		fmt.Printf("loss:     none (recv == sent)\n")
+	}
 	fmt.Printf("qps:      %.0f msg/s\n", float64(recv)/elapsed.Seconds())
 }

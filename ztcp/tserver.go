@@ -85,8 +85,7 @@ func (ser *Server) listen(ctx context.Context) {
 			}
 			ser.AddChannel(channel)
 			defer channel.Close() // ✅ 自动清理（从 map 中移除 + 触发回调）
-			channel.StartSend(ctx)
-			channel.Start()
+			ser.RunChannel(ctx, channel)
 		}(conn)
 	}
 }

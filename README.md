@@ -159,6 +159,17 @@ func main() {
 }
 ```
 
+### Echo 客户端（默认 Request 模式）
+
+```go
+client, _ := ztcp.NewClient("127.0.0.1:9001")
+resp, err := client.Request(&znet.NetMessage{MsgId: 1, Data: []byte("hello")})
+if err == nil {
+    fmt.Printf("echo: %s\n", string(resp.GetMessageData()))
+}
+// 流式收包需用 ztcp.NewClient(addr, znet.WithAsyncMode())，见 examples/echobench
+```
+
 ### 单独使用无锁队列（零外部依赖）
 
 ```go

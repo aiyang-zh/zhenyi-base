@@ -15,9 +15,10 @@ type Client struct {
 }
 
 // NewClient 创建 KCP 客户端并连接 addr；失败返回错误。
-func NewClient(addr string) (ziface.IClient, error) {
+// 默认 sync（Request）；可选 znet.WithAsyncMode() 启用 async（Read），与 ziface.ModeAsync 对应。
+func NewClient(addr string, opts ...znet.ClientOption) (ziface.IClient, error) {
 	client := &Client{
-		BaseClient: znet.NewBaseClient(),
+		BaseClient: znet.NewBaseClient(opts...),
 	}
 	err := client.Connect(addr)
 	if err != nil {

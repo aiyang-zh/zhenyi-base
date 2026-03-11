@@ -5,11 +5,6 @@ import (
 	"time"
 )
 
-// heartbeatConfigurable 内部接口，用于设置 channel 的心跳超时
-type heartbeatConfigurable interface {
-	setHeartbeatTimeout(d time.Duration)
-}
-
 // IServer 网络服务器抽象接口。
 //
 // 代表一类通用的服务器实现（TCP/WebSocket/KCP 等），由 znet/ztcp/zws/zkcp 具体实现。
@@ -39,6 +34,9 @@ type IServer interface {
 	// SetTLSConfig 配置 TLS/GM-TLS（传入 nil 表示不启用加密）。
 	SetTLSConfig(cfg *TLSConfig)
 
+	// SetHeartbeatTimeout 配置心跳超时（基于 conn.SetReadDeadline）。<=0 表示禁用；不调用则使用默认 30s。
+	SetHeartbeatTimeout(timeout time.Duration)
+
 	// 认证管理（原 SessionManager 职责）
 
 	// SetChannelAuth 为指定 Channel 绑定业务侧的认证 ID。
@@ -53,4 +51,7 @@ type IServer interface {
 
 	// SetEncrypt 设置当前服务器使用的加密实现。
 	SetEncrypt(iEncrypt IEncrypt)
+
+	// SyncMode 是否同步模式（无发送队列，handler 用 ReplyImmediate 直写）。
+	SyncMode() bool
 }

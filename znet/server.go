@@ -1,28 +1,25 @@
 package znet
 
 import (
-	"github.com/aiyang-zh/zhenyi-base/zencrypt"
-	"github.com/aiyang-zh/zhenyi-base/ziface"
+	"context"
 	"net"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/aiyang-zh/zhenyi-base/zencrypt"
+	"github.com/aiyang-zh/zhenyi-base/ziface"
 
 	"go.uber.org/zap"
 
 	"github.com/aiyang-zh/zhenyi-base/zlog"
 )
 
-// heartbeatConfigurable 内部接口，用于设置 channel 的心跳超时
-type heartbeatConfigurable interface {
-	setHeartbeatTimeout(d time.Duration)
-}
-
 // ServerHandlers 服务器事件处理器，所有字段必须设置
-// 将来扩展新的必须/可选回调只需在此添加字段，构造函数签名不变
 type ServerHandlers struct {
 	OnAccept func(ziface.IChannel) bool                 // 必须：连接建立时调用，返回 false 拒绝连接
 	OnRead   func(ziface.IChannel, ziface.IWireMessage) // 必须：收到消息时调用（消息为线协议解析产物）
+	SyncMode bool                                       // 可选：sync 模式，原生支持；不建发送队列，handler 用 ReplyImmediate 直写
 }
 
 // BaseServer 是网络层通用服务端基类，负责连接管理、TLS、心跳与认证映射。
@@ -116,6 +113,26 @@ func (b *BaseServer) SetMetrics(iMetrics ziface.IMetrics) {
 	b.iMetrics = iMetrics
 }
 
+// SyncMode 返回是否使用 sync 模式（原生支持：无发送队列，ReplyImmediate 直写）
+func (b *BaseServer) SyncMode() bool {
+	return b.handlers.SyncMode
+}
+
+// ChannelRunner 启动 channel 需实现此接口（StartSend + Start）
+type ChannelRunner interface {
+	StartSend(ctx context.Context)
+	Start()
+}
+
+// RunChannel 启动 channel 读写循环。SyncMode 时无 runSend（无发送队列）。
+// ztcp/zws/zkcp 统一调用此方法，避免各协议重复判断。
+func (b *BaseServer) RunChannel(ctx context.Context, ch ChannelRunner) {
+	if !b.SyncMode() {
+		ch.StartSend(ctx)
+	}
+	ch.Start()
+}
+
 // AcceptAllowed 返回当前是否允许接受新连接（未超 maxConn 时为 true）。
 func (b *BaseServer) AcceptAllowed() bool {
 	if b.maxConn <= 0 {
@@ -135,12 +152,9 @@ func (b *BaseServer) OnceDo(f func()) {
 }
 
 // AddChannel 将新连接加入管理并递增连接计数；会应用心跳超时与指标。
+// heartbeatTimeout 由 SetHeartbeatTimeout 设置；0 表示禁用（覆盖 channel 默认 30s）。
 func (b *BaseServer) AddChannel(channel ziface.IChannel) {
-	if b.heartbeatTimeout > 0 {
-		if hc, ok := channel.(heartbeatConfigurable); ok {
-			hc.setHeartbeatTimeout(b.heartbeatTimeout)
-		}
-	}
+	channel.SetHeartbeatTimeout(b.heartbeatTimeout)
 	b.channels.Store(channel.GetChannelId(), channel)
 	b.connCount.Add(1)
 	if b.iMetrics != nil {

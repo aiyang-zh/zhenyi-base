@@ -55,6 +55,32 @@ func TestNetMessage_Reset(t *testing.T) {
 	}
 }
 
+// TestNetMessage_Reset_AfterSetDataCopy_NoLeak 回归：Reset 必须释放 ownedBuf，否则先 SetDataCopy 再 Reset 会泄漏。
+func TestNetMessage_Reset_AfterSetDataCopy_NoLeak(t *testing.T) {
+	data := []byte("payload")
+	msg := GetNetMessage()
+	msg.SetDataCopy(data)
+	msg.Reset()
+	// Reset 后 Data 应为 nil，且 ownedBuf 已归还池，无泄漏
+	if msg.Data != nil {
+		t.Errorf("after Reset: expected Data=nil, got %v", msg.Data)
+	}
+	// 再次 SetDataCopy 再 Release，不应 double-free，且 0 分配
+	msg.SetDataCopy([]byte("second"))
+	msg.Release()
+	// 多轮 Get -> SetDataCopy -> Reset -> SetDataCopy -> Release 验证无泄漏、无 panic
+	allocs := testing.AllocsPerRun(100, func() {
+		m := GetNetMessage()
+		m.SetDataCopy(data)
+		m.Reset()
+		m.SetDataCopy(data)
+		m.Release()
+	})
+	if allocs > 0 {
+		t.Errorf("GetNetMessage+SetDataCopy+Reset+SetDataCopy+Release: got %.0f allocs/op, want 0", allocs)
+	}
+}
+
 func TestNetMessage_Clone_WithData(t *testing.T) {
 	original := &NetMessage{
 		MsgId: 1001,
@@ -114,6 +140,27 @@ func TestNetMessage_Clone_ZeroLengthData(t *testing.T) {
 // ================================================================
 // Message Pool 单元测试
 // ================================================================
+
+func TestNetMessage_SetDataCopy_ZeroAlloc(t *testing.T) {
+	data := make([]byte, 128)
+	for i := range data {
+		data[i] = byte(i)
+	}
+	for i := 0; i < 100; i++ {
+		msg := GetNetMessage()
+		msg.SetDataCopy(data)
+		msg.Release()
+	}
+	allocs := testing.AllocsPerRun(1000, func() {
+		msg := GetNetMessage()
+		msg.SetMsgId(100)
+		msg.SetDataCopy(data)
+		msg.Release()
+	})
+	if allocs > 0 {
+		t.Errorf("SetDataCopy(128B): got %.0f allocs/op, want 0", allocs)
+	}
+}
 
 func TestMessagePool_GetPut(t *testing.T) {
 	msg := GetNetMessage()

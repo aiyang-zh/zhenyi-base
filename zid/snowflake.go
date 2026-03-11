@@ -17,11 +17,12 @@ var (
 func Init(machineId uint16) {
 	once.Do(func() {
 		var st sonyflake.Settings
-
-		// 如果传入了有效的 machineId，使用传入的
+		// 始终提供 MachineID，避免 sonyflake 默认读网卡在无网络/沙盒环境失败
 		if machineId > 0 {
+			st.MachineID = func() (uint16, error) { return machineId, nil }
+		} else {
 			st.MachineID = func() (uint16, error) {
-				return machineId, nil
+				return uint16(os.Getpid() & 0xFFFF), nil
 			}
 		}
 		sf = sonyflake.NewSonyflake(st)

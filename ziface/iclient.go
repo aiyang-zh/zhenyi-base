@@ -17,6 +17,10 @@ type IClient interface {
 	// SendMsg 发送一条消息。
 	SendMsg(message IMessage)
 
+	// Request 同步请求：发送消息并阻塞直到收到一条响应。
+	// 适用于 sync/RPC 场景。与 Read() 互斥，二者只能选其一。
+	Request(message IMessage) (IWireMessage, error)
+
 	// Read 启动读循环，从服务器持续接收消息。
 	// 通常应在单独 goroutine 中调用。
 	Read()

@@ -2,9 +2,6 @@ package znet
 
 import (
 	"context"
-	"github.com/aiyang-zh/zhenyi-base/ziface"
-	"github.com/aiyang-zh/zhenyi-base/zlog"
-	"github.com/aiyang-zh/zhenyi-base/zqueue"
 	"io"
 	"net"
 	"strings"
@@ -12,6 +9,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/aiyang-zh/zhenyi-base/ziface"
+	"github.com/aiyang-zh/zhenyi-base/zlog"
+	"github.com/aiyang-zh/zhenyi-base/zqueue"
 	"go.uber.org/zap"
 
 	"github.com/aiyang-zh/zhenyi-base/zbackoff"
@@ -81,9 +81,12 @@ type BaseChannel struct {
 }
 
 // NewBaseChannel 创建基础通道（已合并 Session 职责）
+// 两种原生模式：async（默认，有发送队列+runSend） / sync（无队列，ReplyImmediate 直写）
 func NewBaseChannel(channelId uint64, conn net.Conn, server ziface.IServer) *BaseChannel {
 	state := &atomic.Bool{}
 	state.Store(true)
+
+	syncMode := server.SyncMode()
 
 	c := &BaseChannel{
 		// 网络层
@@ -92,14 +95,13 @@ func NewBaseChannel(channelId uint64, conn net.Conn, server ziface.IServer) *Bas
 		addr:         conn.RemoteAddr().String(),
 		conn:         conn,
 		state:        state,
-		readBuffer:   GetRingBuffer(), // ✅ 从池中获取，减少内存分配
+		readBuffer:   GetRingBuffer(),
 		socketParser: NewBaseSocket(),
 
 		// 会话层（原 Session 字段）
 		lastRecTime:      ztime.ServerNowUnixMilli(),
 		heartbeatTimeout: 30 * time.Second.Milliseconds(), // 默认 30 秒
 		closeChan:        make(chan struct{}, 1),
-		mailBoxQueue:     zqueue.NewUnboundedMPSC[ziface.IMessage](),
 
 		// ✅ 极速自适应批量处理器（网络场景配置）
 		batcher: zbatch.NewFastAdaptiveBatcher(
@@ -109,16 +111,22 @@ func NewBaseChannel(channelId uint64, conn net.Conn, server ziface.IServer) *Bas
 		),
 	}
 
+	// async 模式：创建发送队列；sync 模式：无队列，ReplyImmediate 直写
+	if !syncMode {
+		c.mailBoxQueue = zqueue.NewUnboundedMPSC[ziface.IMessage]()
+	}
+
 	// ✅ 初始化复用的 ParseData（避免每条消息 pool Get/Put）
 	c.parseData = ParseData{
 		Message:      &c.parseMsg,
 		OwnedBuffers: make([]*zpool.Buffer, 0, 2),
 	}
 
-	// 设置 TCP 缓冲区
+	// 设置 TCP 缓冲区（适度大小，避免 1k1k 等场景下 ENOBUFS / no buffer space available）
 	if tcpConn, ok := conn.(*net.TCPConn); ok {
-		_ = tcpConn.SetWriteBuffer(64 * 1024)
-		_ = tcpConn.SetReadBuffer(64 * 1024)
+		const tcpBufSize = 64 * 1024 // 64KB，多连接时降低内核缓冲占用
+		_ = tcpConn.SetWriteBuffer(tcpBufSize)
+		_ = tcpConn.SetReadBuffer(tcpBufSize)
 		_ = tcpConn.SetNoDelay(true) // 禁用 Nagle 算法，减少延迟
 	}
 
@@ -141,41 +149,63 @@ func (c *BaseChannel) read() int {
 		c.resetReadDeadline()
 	}
 	if err != nil {
-		// 缓冲区满：背压机制，先处理已有数据
 		if err == ErrBufferFull {
-			// 不返回错误，继续处理已有数据
-			// 下次读取时如果还是满的，说明消费者处理不过来
-			zlog.Warn("Read buffer full, applying backpressure",
-				zap.Uint64("channelId", c.channelId),
-				zap.Int("bufLen", c.readBuffer.Len()))
-		} else if err == io.EOF {
-			return 1
-		} else if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-			if c.metrics != nil {
-				c.metrics.ConnHeartbeatTimeoutInc()
+			// 尝试扩容，避免连接卡死（RingBuffer 支持 Grow 且有 MaxSize 限制，调用安全）
+			if c.readBuffer.Grow(65536) {
+				var n2 int
+				n2, err = c.readBuffer.WriteFromReader(c.conn, 0)
+				if n2 > 0 {
+					if c.metrics != nil {
+						c.metrics.BytesRecAdd(int64(n2))
+					}
+					c.resetReadDeadline()
+				}
+				if err != nil && err != ErrBufferFull {
+					// 重试时出现其他错误，交给下方统一处理
+				} else {
+					err = nil // 成功或仍满则进入解析循环消费以腾出空间，不断开连接
+					if n2 == 0 && c.readBuffer.IsFull() {
+						zlog.Warn("Read buffer full after grow, draining",
+							zap.Uint64("channelId", c.channelId),
+							zap.Int("bufLen", c.readBuffer.Len()))
+					}
+				}
+			} else {
+				zlog.Warn("Read buffer full (at MaxSize), draining",
+					zap.Uint64("channelId", c.channelId),
+					zap.Int("bufLen", c.readBuffer.Len()))
+				err = nil // 已达上限则仅靠解析循环消费，不断开
 			}
-			zlog.Warn("Connection heartbeat timeout, closing",
-				zap.Uint64("channelId", c.channelId),
-				zap.Int64("authId", c.GetAuthId()),
-				zap.String("addr", c.addr))
-			return 1
-		} else if !c.isNormalCloseError(err) {
-			if c.metrics != nil {
-				c.metrics.ConnErrorsInc()
+		}
+		if err != nil {
+			if err == io.EOF {
+				return 1
+			} else if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+				if c.metrics != nil {
+					c.metrics.ConnHeartbeatTimeoutInc()
+				}
+				zlog.Warn("Connection heartbeat timeout, closing",
+					zap.Uint64("channelId", c.channelId),
+					zap.Int64("authId", c.GetAuthId()),
+					zap.String("addr", c.addr))
+				return 1
+			} else if !c.isNormalCloseError(err) {
+				if c.metrics != nil {
+					c.metrics.ConnErrorsInc()
+				}
+				zlog.Warn("Read error",
+					zap.Uint64("channelId", c.channelId),
+					zap.Error(err))
+				return 1
+			} else {
+				return 1
 			}
-			zlog.Warn("Read error",
-				zap.Uint64("channelId", c.channelId),
-				zap.Error(err))
-			return 1
-		} else {
-			return 1
 		}
 	}
 
-	// 2. 循环解析所有完整的消息（复用 c.parseData，零池化开销）
+	// 2. 循环解析所有完整消息
 	for {
 		c.parseData.ResetForReuse()
-
 		parsed, parseErr := c.socketParser.ParseFromRingBuffer(c.readBuffer, &c.parseData)
 		if parseErr != nil {
 			if c.metrics != nil {
@@ -186,9 +216,7 @@ func (c *BaseChannel) read() int {
 				zap.Error(parseErr))
 			return 1
 		}
-
 		if !parsed {
-			// ⚠️ 防止死循环：Buffer 满了却解析不出包，说明单个包超过 Buffer 容量
 			if c.readBuffer.IsFull() {
 				zlog.Error("Single packet exceeds buffer capacity, disconnecting",
 					zap.Uint64("channelId", c.channelId),
@@ -196,29 +224,29 @@ func (c *BaseChannel) read() int {
 					zap.Int("bufferLen", c.readBuffer.Len()))
 				return 1
 			}
-
 			break
 		}
-
-		// 3. 解密（如果需要）
-		netNessage := c.parseData.Message
-		if encryptedData := netNessage.GetMessageData(); len(encryptedData) > 0 {
-			decryptedData, err1 := c.server.GetEncrypt().Decrypt(encryptedData)
-			if err1 != nil {
-				zlog.Error("Decrypt error",
-					zap.Uint64("channelId", c.channelId),
-					zap.Int32("msgId", netNessage.GetMsgId()),
-					zap.Error(err1))
-				return 0
-			}
-			netNessage.SetMessageData(decryptedData)
-		}
-
-		// 4. 处理消息（✅ 直接传 channel，避免 map 查找）
-		c.server.HandleRead(c, netNessage)
+		c.handleParsedMessage()
 	}
 
 	return 0
+}
+
+// handleParsedMessage 解密并分派已解析的消息（提取公共逻辑）
+func (c *BaseChannel) handleParsedMessage() {
+	netMsg := c.parseData.Message
+	if encryptedData := netMsg.GetMessageData(); len(encryptedData) > 0 {
+		decryptedData, err1 := c.server.GetEncrypt().Decrypt(encryptedData)
+		if err1 != nil {
+			zlog.Error("Decrypt error",
+				zap.Uint64("channelId", c.channelId),
+				zap.Int32("msgId", netMsg.GetMsgId()),
+				zap.Error(err1))
+			return
+		}
+		netMsg.SetMessageData(decryptedData)
+	}
+	c.server.HandleRead(c, netMsg)
 }
 
 // isNormalCloseError 判断是否是正常的连接关闭错误
@@ -353,6 +381,22 @@ func (c *BaseChannel) SendBatchMsg(messages []ziface.IMessage) {
 	}
 }
 
+// WriteImmediate 读协程内同步直写，sync 场景原生支持，直接写出
+func (c *BaseChannel) WriteImmediate(msg ziface.IWireMessage) error {
+	if !c.IsOpen() {
+		return zerrs.New(zerrs.ErrTypeNetwork, "channel not open")
+	}
+	var header [13]byte
+	hdrLen, body := c.socketParser.PreparePacketFromWire(msg, header[:])
+	var bufs net.Buffers
+	if len(body) > 0 {
+		bufs = net.Buffers{header[:hdrLen], body}
+	} else {
+		bufs = net.Buffers{header[:hdrLen]}
+	}
+	return c.writeBuffers(bufs)
+}
+
 // writeBuffers 使用 net.Buffers 批量写入 (writev 系统调用)
 func (c *BaseChannel) writeBuffers(buffers net.Buffers) error {
 	if !c.IsOpen() {
@@ -482,8 +526,8 @@ func (c *BaseChannel) Check() bool {
 	return elapsed <= timeout
 }
 
-// setHeartbeatTimeout 设置心跳超时（由 BaseServer.AddChannel 内部调用）
-func (c *BaseChannel) setHeartbeatTimeout(d time.Duration) {
+// SetHeartbeatTimeout 设置心跳超时（由 Server.AddChannel 调用），0 表示禁用。
+func (c *BaseChannel) SetHeartbeatTimeout(d time.Duration) {
 	atomic.StoreInt64(&c.heartbeatTimeout, d.Milliseconds())
 }
 
@@ -511,6 +555,10 @@ func (c *BaseChannel) Send(msg ziface.IMessage) {
 	if !c.IsOpen() {
 		msg.Release()
 		return
+	}
+	// sync 模式：无发送队列，使用 ReplyImmediate
+	if c.mailBoxQueue == nil {
+		panic("sync mode: use ReplyImmediate in handlers, not Send")
 	}
 	c.mailBoxQueue.Enqueue(msg)
 	// ✅ 无锁设计：无需通知，无需计数，runSend 轮询队列（消费结果驱动）

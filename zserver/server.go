@@ -4,15 +4,16 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"runtime"
+	"sync"
+	"time"
+
 	"github.com/aiyang-zh/zhenyi-base/zgrace"
 	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"github.com/aiyang-zh/zhenyi-base/zkcp"
 	"github.com/aiyang-zh/zhenyi-base/znet"
 	"github.com/aiyang-zh/zhenyi-base/ztcp"
 	"github.com/aiyang-zh/zhenyi-base/zws"
-	"runtime"
-	"sync"
-
 	"github.com/panjf2000/ants/v2"
 )
 
@@ -32,15 +33,18 @@ type Server struct {
 	onConnect    func(*Conn)
 	onDisconnect func(*Conn)
 
-	workerSize     int
-	directDispatch bool
-	showBanner     bool
-	tlsConfig      *ziface.TLSConfig
-	pool           *ants.PoolWithFunc // 零闭包分配
-	ctx            context.Context
-	cancel         context.CancelFunc
-	connCache      sync.Map // channelId → *Conn，实例级缓存
-	stopOnce       sync.Once
+	workerSize        int
+	directDispatch    bool
+	directDispatchRef bool            // 为 true 时 directDispatch 下 req.data 直接引用，不 copy；默认 false 会 copy
+	mode              ziface.ConnMode // 默认 ModeSync（与 client 一致）；WithAsyncMode 为 ModeAsync
+	heartbeatTimeout  *time.Duration  // nil=使用底层默认 30s；非 nil 则 Start 时设置
+	showBanner        bool
+	tlsConfig         *ziface.TLSConfig
+	pool              *ants.PoolWithFunc // 零闭包分配
+	ctx               context.Context
+	cancel            context.CancelFunc
+	connCache         sync.Map // channelId → *Conn，实例级缓存
+	stopOnce          sync.Once
 }
 
 // New 创建轻量服务器
@@ -51,6 +55,7 @@ func New(opts ...Option) *Server {
 		name:       "zhenyi",
 		router:     make(map[int32]HandlerFunc),
 		workerSize: runtime.NumCPU(),
+		mode:       ziface.ModeSync,
 		showBanner: true,
 	}
 	for _, opt := range opts {
@@ -79,6 +84,10 @@ func (s *Server) OnDisconnect(fn func(conn *Conn)) {
 func (s *Server) Start() {
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 
+	// sync 模式必须 directDispatch（handler 在读协程内才能 ReplyImmediate）
+	if s.mode == ziface.ModeSync {
+		s.directDispatch = true
+	}
 	if !s.directDispatch {
 		size := s.workerSize
 		if size <= 0 {
@@ -101,6 +110,9 @@ func (s *Server) Start() {
 	}
 	if s.tlsConfig != nil {
 		s.net.SetTLSConfig(s.tlsConfig)
+	}
+	if s.heartbeatTimeout != nil {
+		s.net.SetHeartbeatTimeout(*s.heartbeatTimeout)
 	}
 
 	s.net.Server(s.ctx)
@@ -194,7 +206,11 @@ func (s *Server) handleRead(ch ziface.IChannel, msg ziface.IWireMessage) {
 	req.conn = conn
 	req.msgId = msgId
 	req.seqId = msg.GetSeqId()
-	req.data = append(req.data[:0], msg.GetMessageData()...)
+	if s.directDispatch && s.directDispatchRef {
+		req.data = msg.GetMessageData()
+	} else {
+		req.data = append(req.data[:0], msg.GetMessageData()...)
+	}
 
 	if s.directDispatch {
 		handler(req)
@@ -208,7 +224,7 @@ func (s *Server) handleRead(ch ziface.IChannel, msg ziface.IWireMessage) {
 }
 
 func (s *Server) createServer(onAccept func(ziface.IChannel) bool, onRead func(ziface.IChannel, ziface.IWireMessage)) ziface.IServer {
-	handlers := znet.ServerHandlers{OnAccept: onAccept, OnRead: onRead}
+	handlers := znet.ServerHandlers{OnAccept: onAccept, OnRead: onRead, SyncMode: s.mode == ziface.ModeSync}
 	switch s.protocol {
 	case znet.WebSocket:
 		return zws.NewServer(s.addr, handlers)

@@ -72,6 +72,48 @@ func TestRequest_Fields(t *testing.T) {
 	}
 }
 
+func TestEchoRequestMode(t *testing.T) {
+	s := New(WithAddr("127.0.0.1:0"))
+
+	s.Handle(1, func(req *Request) {
+		req.Reply(1, req.Data())
+	})
+
+	s.Start()
+	time.Sleep(100 * time.Millisecond)
+	defer s.Stop()
+
+	addr := s.Addr()
+	client, err := ztcp.NewClient(addr) // 默认 Request 模式
+	if err != nil {
+		t.Fatalf("connect to %s failed: %v", addr, err)
+	}
+	defer client.Close()
+
+	// 单次 Request
+	resp, err := client.Request(&znet.NetMessage{MsgId: 1, Data: []byte("ping")})
+	if err != nil {
+		t.Fatalf("Request failed: %v", err)
+	}
+	if resp == nil {
+		t.Fatal("expected response, got nil")
+	}
+	if string(resp.GetMessageData()) != "ping" {
+		t.Errorf("echo data: got %s, want ping", string(resp.GetMessageData()))
+	}
+
+	// 多次 Request
+	for _, payload := range [][]byte{[]byte("a"), []byte("b"), []byte("c")} {
+		resp, err = client.Request(&znet.NetMessage{MsgId: 1, Data: payload})
+		if err != nil {
+			t.Fatalf("Request %s failed: %v", string(payload), err)
+		}
+		if string(resp.GetMessageData()) != string(payload) {
+			t.Errorf("Request: got %s, want %s", string(resp.GetMessageData()), string(payload))
+		}
+	}
+}
+
 func TestEchoIntegration(t *testing.T) {
 	s := New(WithAddr("127.0.0.1:0"))
 
@@ -84,7 +126,7 @@ func TestEchoIntegration(t *testing.T) {
 	defer s.Stop()
 
 	addr := s.Addr()
-	client, err := ztcp.NewClient(addr)
+	client, err := ztcp.NewClient(addr, znet.WithAsyncMode())
 	if err != nil {
 		t.Fatalf("connect to %s failed: %v", addr, err)
 	}
@@ -125,7 +167,7 @@ func TestEchoMultipleMessages(t *testing.T) {
 	defer s.Stop()
 
 	addr := s.Addr()
-	client, err := ztcp.NewClient(addr)
+	client, err := ztcp.NewClient(addr, znet.WithAsyncMode())
 	if err != nil {
 		t.Fatalf("connect to %s failed: %v", addr, err)
 	}

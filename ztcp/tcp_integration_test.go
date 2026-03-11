@@ -67,7 +67,7 @@ func TestTServer_TClient_FullIntegration(t *testing.T) {
 	addr := waitForListener(server, t)
 	time.Sleep(50 * time.Millisecond)
 
-	client, err := NewClient(addr)
+	client, err := NewClient(addr, znet.WithAsyncMode())
 	if err != nil {
 		t.Fatalf("NewTClient: %v", err)
 	}
@@ -192,7 +192,7 @@ func TestBaseClient_FullOperations(t *testing.T) {
 		t.Fatalf("dial: %v", err)
 	}
 
-	client := znet.NewBaseClient()
+	client := znet.NewBaseClient(znet.WithAsyncMode())
 	client.SetConn(conn)
 	if !client.IsOpen() {
 		t.Error("IsOpen should be true")
@@ -323,7 +323,7 @@ func TestTServer_MultipleChannels(t *testing.T) {
 	addr := waitForListener(server, t)
 	time.Sleep(50 * time.Millisecond)
 
-	c1, err := NewClient(addr)
+	c1, err := NewClient(addr, znet.WithAsyncMode())
 	if err != nil {
 		t.Fatalf("client1: %v", err)
 	}
@@ -331,7 +331,7 @@ func TestTServer_MultipleChannels(t *testing.T) {
 	c1.SetReadCall(func(ziface.IWireMessage) {})
 	c1.Read()
 
-	c2, err := NewClient(addr)
+	c2, err := NewClient(addr, znet.WithAsyncMode())
 	if err != nil {
 		t.Fatalf("client2: %v", err)
 	}
@@ -478,7 +478,7 @@ func TestTServer_SetMaxConnections_Reject(t *testing.T) {
 	addr := waitForListener(server, t)
 	time.Sleep(50 * time.Millisecond)
 
-	c1, err := NewClient(addr)
+	c1, err := NewClient(addr, znet.WithAsyncMode())
 	if err != nil {
 		t.Fatalf("client1: %v", err)
 	}
@@ -488,7 +488,7 @@ func TestTServer_SetMaxConnections_Reject(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	c2, err := NewClient(addr)
+	c2, err := NewClient(addr, znet.WithAsyncMode())
 	if err != nil {
 		t.Fatalf("client2: %v", err)
 	}
@@ -567,7 +567,7 @@ func TestBaseClient_SetEncrypt(t *testing.T) {
 
 func TestBaseClient_Read_ConnectionClosed(t *testing.T) {
 	clientConn, serverConn := net.Pipe()
-	client := znet.NewBaseClient()
+	client := znet.NewBaseClient(znet.WithAsyncMode())
 	client.SetConn(clientConn)
 	client.SetReadCall(func(ziface.IWireMessage) {})
 

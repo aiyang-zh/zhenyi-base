@@ -24,20 +24,20 @@ s.Run()
 
 客户端支持**交互式输入**：输入任意内容，服务端原样回显，Ctrl+D 退出。
 
-## 客户端代码
+## 客户端代码（默认 Request 模式）
 
 ```go
 client, _ := ztcp.NewClient("127.0.0.1:9001")
-client.SetReadCall(func(msg ziface.IWireMessage) {
-    fmt.Printf("echo: %s\n", string(msg.GetMessageData()))
-})
-go client.Read()
-
 scanner := bufio.NewScanner(os.Stdin)
 for scanner.Scan() {
     line := scanner.Bytes()
-    if len(line) > 0 {
-        client.SendMsg(&znet.NetMessage{MsgId: 1, Data: bytes.Clone(line)})
+    if len(line) == 0 {
+        continue
     }
+    resp, err := client.Request(&znet.NetMessage{MsgId: 1, Data: bytes.Clone(line)})
+    if err != nil {
+        break
+    }
+    fmt.Printf("echo: %s\n", string(resp.GetMessageData()))
 }
 ```

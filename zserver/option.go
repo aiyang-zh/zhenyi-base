@@ -1,6 +1,8 @@
 package zserver
 
 import (
+	"time"
+
 	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"github.com/aiyang-zh/zhenyi-base/znet"
 )
@@ -41,8 +43,31 @@ func WithBanner(show bool) Option {
 
 // WithDirectDispatch 直连模式：handler 在读 goroutine 内直接执行，
 // 不经过 worker pool。适用于 handler 极轻量且无阻塞的场景（如 Echo）。
+// 默认会 copy req.Data，保证 handler 内可异步持有；可选 WithDirectDispatchRef 不 copy 以提升性能。
 func WithDirectDispatch() Option {
 	return func(s *Server) { s.directDispatch = true }
+}
+
+// WithDirectDispatchRef directDispatch 下 req.Data 直接引用解析 buffer，不 copy。
+// 仅当 handler 同步完成且不异步持有 Data 时使用；误用会导致数据错乱。
+func WithDirectDispatchRef() Option {
+	return func(s *Server) { s.directDispatchRef = true }
+}
+
+// WithSyncMode 同步模式（默认）：无发送队列，ReplyImmediate 直写。
+func WithSyncMode() Option {
+	return func(s *Server) { s.mode = ziface.ModeSync }
+}
+
+// WithAsyncMode 异步模式：有发送队列，Reply/Send 入队。与 client WithAsyncMode 共用 ziface.ConnMode。
+func WithAsyncMode() Option {
+	return func(s *Server) { s.mode = ziface.ModeAsync }
+}
+
+// WithHeartbeatTimeout 设置心跳超时（conn 在此时长内无读则断开）。<=0 禁用心跳；不设置则默认 30s。
+// 压测或长连接场景可传 0 禁用，避免高负载下调度延迟导致误断。
+func WithHeartbeatTimeout(timeout time.Duration) Option {
+	return func(s *Server) { s.heartbeatTimeout = &timeout }
 }
 
 // WithTLS 配置 GM-TLS（SM2 双证书，信创默认）。

@@ -1,12 +1,10 @@
 #!/bin/bash
 # Echo 压测脚本：支持小字段/大字段、少连接/多连接等场景
-# 用法: ./run_echo_bench.sh [all|small|large|multi|1k|1k1k]
-#   all   - 跑全部场景（默认）
-#   small - 仅小字段 20 连接
-#   large - 仅大字段 20 连接
-#   multi - 仅小字段 100 连接
-#   1k    - 仅小字段 1000 连接
-#   1k1k  - 1KB  payload 1000 连接（与 gnet 同条件对比）
+# 用法: ./run_echo_bench.sh [all|small|large|multi|1k|1k1k] [tcp|ws|kcp|all]
+#   第1参 - 场景：all（默认）| small | large | multi | 1k | 1k1k
+#   第2参 - 协议：all（默认，tcp+ws+kcp）| tcp | ws | kcp
+# 示例：./run_echo_bench.sh 1k tcp   # 仅 TCP 1k 场景，约 1 分钟
+# 若出现 "no buffer space available" (ENOBUFS)，可先执行：ulimit -n 4096
 
 set -e
 
@@ -39,6 +37,7 @@ CONN1K1K_CLIENTS=1000
 CONN1K1K_SIZE=1024
 
 MODE="${1:-all}"
+PROTO="${2:-all}"
 
 get_port() {
 	case "$1" in
@@ -59,6 +58,21 @@ free_ports() {
 		fi
 	done
 	sleep 2
+}
+
+wait_for_port() {
+	local port=$1
+	local max=30
+	local n=0
+	while [ $n -lt $max ]; do
+		if lsof -ti :$port >/dev/null 2>&1; then
+			sleep 1  # 端口占用后还需等待 listen
+			return 0
+		fi
+		sleep 1
+		n=$((n+1))
+	done
+	return 1
 }
 
 run_scenario() {
@@ -92,7 +106,11 @@ run_protocol() {
 	echo ">>> [$proto] 启动服务端 (端口 $port)..."
 	go run ./examples/echobench/server -p "$proto" -addr ":$port" -quiet >/dev/null 2>&1 &
 	server_pid=$!
-	sleep 3
+	if ! wait_for_port $port; then
+		echo ">>> 服务未就绪，跳过 $proto"
+		kill $server_pid 2>/dev/null || true
+		return 0
+	fi
 
 	case "$MODE" in
 		small)
@@ -140,19 +158,28 @@ run_protocol() {
 
 echo "=========================================="
 echo "  zhenyi-base Echo 压测"
-echo "  模式: $MODE"
+echo "  场景: $MODE  协议: $PROTO"
 echo "=========================================="
 
 free_ports
-run_protocol tcp
-run_protocol ws
-run_protocol kcp
+case "$PROTO" in
+	tcp)  run_protocol tcp ;;
+	ws)   run_protocol ws ;;
+	kcp)  run_protocol kcp ;;
+	*)    run_protocol tcp; run_protocol ws; run_protocol kcp ;;
+esac
 
 echo ""
 echo "=========================================="
 echo "  压测完成，结果汇总："
 echo "=========================================="
-for proto in tcp ws kcp; do
+protos="tcp ws kcp"
+case "$PROTO" in
+	tcp)  protos="tcp" ;;
+	ws)   protos="ws" ;;
+	kcp)  protos="kcp" ;;
+esac
+for proto in $protos; do
 	for name in small large multi 1k 1k1k; do
 		log="/tmp/echo_bench_${proto}_${name}.log"
 		if [ -f "$log" ]; then

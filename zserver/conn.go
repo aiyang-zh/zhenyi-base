@@ -26,12 +26,19 @@ func (c *Conn) SetAuthId(id int64) {
 	c.server.net.SetChannelAuth(c.channel.GetChannelId(), id)
 }
 
-// Send 发送消息给该连接。data 是业务层 payload（已编码）。
+// Send 发送消息给该连接。data 是业务层 payload（已编码）。异步入队，由 send 协程写出。
 func (c *Conn) Send(msgId int32, data []byte) {
 	msg := znet.GetNetMessage()
 	msg.MsgId = msgId
-	msg.Data = append(msg.Data[:0], data...)
+	msg.SetDataCopy(data)
 	c.channel.Send(msg)
+}
+
+// SendImmediate 读协程内同步直写，sync/RPC 场景原生支持，直接写出降低延迟。
+// 必须从 OnRead 回调所在的 goroutine 调用（如 DirectDispatch 的 handler 内），否则与 send 协程并发写会出错。
+func (c *Conn) SendImmediate(msgId int32, seqId uint32, data []byte) error {
+	msg := &znet.NetMessage{MsgId: msgId, SeqId: seqId, Data: data}
+	return c.channel.WriteImmediate(msg)
 }
 
 // Close 关闭连接。

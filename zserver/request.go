@@ -1,6 +1,9 @@
 package zserver
 
-import "github.com/aiyang-zh/zhenyi-base/zpool"
+import (
+	"github.com/aiyang-zh/zhenyi-base/ziface"
+	"github.com/aiyang-zh/zhenyi-base/zpool"
+)
 
 // Request 封装一次客户端请求的上下文，包含连接、消息 ID、序号与负载数据。
 type Request struct {
@@ -25,9 +28,19 @@ func (r *Request) Data() []byte { return r.data }
 // Conn 返回本次请求所在的连接封装。
 func (r *Request) Conn() *Conn { return r.conn }
 
-// Reply 向发送方回复消息。
+// Reply 向发送方回复消息。sync 模式下自动直写；async 模式下异步入队。
 func (r *Request) Reply(msgId int32, data []byte) {
+	if r.conn.server.mode == ziface.ModeSync {
+		_ = r.ReplyImmediate(msgId, data)
+		return
+	}
 	r.conn.Send(msgId, data)
+}
+
+// ReplyImmediate 读协程内同步直写回复，sync/RPC 场景原生支持，直接写出降低延迟。
+// 必须配合 WithDirectDispatch 使用，且 handler 内同步完成处理。
+func (r *Request) ReplyImmediate(msgId int32, data []byte) error {
+	return r.conn.SendImmediate(msgId, r.seqId, data)
 }
 
 var requestPool = zpool.NewPool(func() *Request {

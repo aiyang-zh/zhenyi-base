@@ -17,9 +17,10 @@ type TClient struct {
 }
 
 // NewClient 创建 TCP 客户端并连接 addr；失败返回错误。
-func NewClient(addr string) (ziface.IClient, error) {
+// 默认 sync（Request）；可选 znet.WithAsyncMode() 启用 async（Read），与 ziface.ModeAsync 对应。
+func NewClient(addr string, opts ...znet.ClientOption) (ziface.IClient, error) {
 	client := &TClient{
-		BaseClient: znet.NewBaseClient(),
+		BaseClient: znet.NewBaseClient(opts...),
 	}
 	err := client.Connect(addr)
 	if err != nil {
@@ -36,6 +37,12 @@ func (n *TClient) Connect(addr string) error {
 			zap.String("addr", addr),
 			zap.Error(err))
 		return zerrs.Wrap(err, zerrs.ErrTypeNetwork, "failed to dial TCP server")
+	}
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
+		const tcpBufSize = 64 * 1024 // 64KB，多连接时降低 ENOBUFS / no buffer space available 风险
+		_ = tcpConn.SetReadBuffer(tcpBufSize)
+		_ = tcpConn.SetWriteBuffer(tcpBufSize)
+		_ = tcpConn.SetNoDelay(true) // 禁用 Nagle，降低 sync/RPC 场景延迟
 	}
 	n.SetConn(conn)
 

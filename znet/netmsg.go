@@ -49,10 +49,31 @@ func (b *NetMessage) SetSeqId(seqId uint32)      { b.SeqId = seqId }
 func (b *NetMessage) GetMessageData() []byte     { return b.Data }
 func (b *NetMessage) SetMessageData(data []byte) { b.Data = data }
 
+// SetDataCopy 将 data 拷贝到池化 buffer，用于发送路径，实现 0 分配。
+// Release 时自动归还 buffer。len(data)==0 时 Data 置为 nil。
+func (b *NetMessage) SetDataCopy(data []byte) {
+	if len(data) == 0 {
+		b.Data = nil
+		return
+	}
+	if b.ownedBuf != nil {
+		b.ownedBuf.Release()
+		b.ownedBuf = nil
+	}
+	buf := zpool.GetBytesBuffer(len(data))
+	copy(buf.B, data)
+	b.ownedBuf = buf
+	b.Data = buf.B
+}
+
 func (b *NetMessage) Reset() {
 	b.MsgId = 0
-	b.Data = nil
 	b.SeqId = 0
+	b.Data = nil
+	if b.ownedBuf != nil {
+		b.ownedBuf.Release()
+		b.ownedBuf = nil
+	}
 }
 
 // ---- IMessage 实现 ----

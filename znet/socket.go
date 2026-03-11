@@ -1,8 +1,12 @@
 package znet
 
 import (
+	"bufio"
 	"encoding/binary"
+	"io"
+
 	"github.com/aiyang-zh/zhenyi-base/zerrs"
+	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"github.com/aiyang-zh/zhenyi-base/zpool"
 )
 
@@ -114,6 +118,98 @@ func (base *BaseSocket) ParseFromRingBuffer(rb *RingBuffer, parseData *ParseData
 	return true, nil
 }
 
+// ParseFromBufio 从 bufio.Reader 直接解析，无 RingBuffer 拷贝，适合 echo 等高吞吐场景。
+// 返回 (true, nil) 表示成功解析；(false, nil) 表示数据不足；(false, err) 表示协议错误。
+func (base *BaseSocket) ParseFromBufio(r *bufio.Reader, parseData *ParseData) (parsed bool, err error) {
+	hLen := base.HeaderLen()
+	if r.Buffered() < hLen {
+		return false, nil
+	}
+	peeked, e := r.Peek(hLen)
+	if e != nil || len(peeked) < hLen {
+		return false, e
+	}
+	off := 0
+	if base.config.ProtocolVersion >= 1 {
+		if peeked[0] != base.config.ProtocolVersion {
+			return false, zerrs.Newf(zerrs.ErrTypeValidation, "protocol version mismatch")
+		}
+		off = 1
+	}
+	msgId := binary.BigEndian.Uint32(peeked[off : off+4])
+	seqId := binary.BigEndian.Uint32(peeked[off+4 : off+8])
+	dataLen := binary.BigEndian.Uint32(peeked[off+8 : off+12])
+	msgIdInt := int32(msgId)
+	if int(msgIdInt) < -base.config.MaxMsgId || int(msgIdInt) > base.config.MaxMsgId {
+		return false, zerrs.Newf(zerrs.ErrTypeValidation, "invalid msgId: %d", msgIdInt)
+	}
+	dataLength := int(dataLen)
+	if dataLength > base.config.MaxDataLength {
+		return false, zerrs.Newf(zerrs.ErrTypeValidation, "invalid data length: %d", dataLength)
+	}
+	totalLen := hLen + dataLength
+	if r.Buffered() < totalLen {
+		return false, nil
+	}
+	parseData.Message.SetMsgId(msgIdInt)
+	parseData.Message.SetSeqId(seqId)
+	if dataLength == 0 {
+		parseData.Message.SetMessageData(nil)
+	} else {
+		full, _ := r.Peek(totalLen)
+		// 引用 bufio 内部 buffer，调用方必须在下次 r.Read/Discard 前完成处理
+		parseData.Message.SetMessageData(full[hLen:totalLen])
+	}
+	_, _ = r.Discard(totalLen)
+	return true, nil
+}
+
+// ReadOneFromBufio 从 bufio 读取并解析一条消息（使用 io.ReadFull，无 Peek 引用）。
+// 适用于需要独立 body 副本的场景，body 从 pool 获取。
+func (base *BaseSocket) ReadOneFromBufio(r *bufio.Reader, parseData *ParseData) (parsed bool, err error) {
+	hLen := base.HeaderLen()
+	var header [13]byte
+	if _, e := io.ReadFull(r, header[:hLen]); e != nil {
+		if e == io.EOF {
+			return false, nil
+		}
+		return false, e
+	}
+	off := 0
+	if base.config.ProtocolVersion >= 1 {
+		if header[0] != base.config.ProtocolVersion {
+			return false, zerrs.Newf(zerrs.ErrTypeValidation, "protocol version mismatch")
+		}
+		off = 1
+	}
+	msgId := binary.BigEndian.Uint32(header[off : off+4])
+	seqId := binary.BigEndian.Uint32(header[off+4 : off+8])
+	dataLen := binary.BigEndian.Uint32(header[off+8 : off+12])
+	msgIdInt := int32(msgId)
+	if int(msgIdInt) < -base.config.MaxMsgId || int(msgIdInt) > base.config.MaxMsgId {
+		return false, zerrs.Newf(zerrs.ErrTypeValidation, "invalid msgId: %d", msgIdInt)
+	}
+	dataLength := int(dataLen)
+	if dataLength > base.config.MaxDataLength {
+		return false, zerrs.Newf(zerrs.ErrTypeValidation, "invalid data length: %d", dataLength)
+	}
+	parseData.Message.SetMsgId(msgIdInt)
+	parseData.Message.SetSeqId(seqId)
+	if dataLength == 0 {
+		parseData.Message.SetMessageData(nil)
+		return true, nil
+	}
+	buf := zpool.GetBytesBuffer(dataLength)
+	parseData.OwnedBuffers = append(parseData.OwnedBuffers, buf)
+	if _, e := io.ReadFull(r, buf.B[:dataLength]); e != nil {
+		buf.Release()
+		parseData.OwnedBuffers = parseData.OwnedBuffers[:len(parseData.OwnedBuffers)-1]
+		return false, e
+	}
+	parseData.Message.SetMessageData(buf.B[:dataLength])
+	return true, nil
+}
+
 // PreparePacket 准备发送数据包（主要方法，配合 net.Buffers 使用）
 //
 // 参数:
@@ -131,9 +227,14 @@ func (base *BaseSocket) ParseFromRingBuffer(rb *RingBuffer, parseData *ParseData
 //	buffers := net.Buffers{header[:hdrLen], body}
 //	buffers.WriteTo(conn)  // writev 系统调用
 func (base *BaseSocket) PreparePacket(message *NetMessage, headerBuf []byte) (hdrLen int, body []byte) {
-	msgId := message.GetMsgId()
-	seqId := message.GetSeqId()
-	body = message.GetMessageData()
+	return base.PreparePacketFromWire(message, headerBuf)
+}
+
+// PreparePacketFromWire 从 IWireMessage 构建发送包（供 WriteImmediate 等直写场景）
+func (base *BaseSocket) PreparePacketFromWire(msg ziface.IWireMessage, headerBuf []byte) (hdrLen int, body []byte) {
+	msgId := msg.GetMsgId()
+	seqId := msg.GetSeqId()
+	body = msg.GetMessageData()
 
 	off := 0
 	if base.config.ProtocolVersion >= 1 {

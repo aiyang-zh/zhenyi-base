@@ -667,6 +667,28 @@ func TestBaseChannel_Send_NotOpen(t *testing.T) {
 	ch.Send(msg)
 }
 
+func TestBaseChannel_Send_SyncMode_Panics(t *testing.T) {
+	bs := NewBaseServer("test:0", ServerHandlers{
+		OnAccept: func(ziface.IChannel) bool { return true },
+		OnRead:   func(ziface.IChannel, ziface.IWireMessage) {},
+		SyncMode: true,
+	})
+	ts := &testServer{BaseServer: bs}
+	ch, serverConn := newTestChannelWithServer(t, ts)
+	defer serverConn.Close()
+	defer ch.Close()
+
+	msg := GetNetMessage()
+	msg.MsgId = 1
+	msg.Data = []byte("x")
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic when Send in sync mode")
+		}
+	}()
+	ch.Send(msg)
+}
+
 func TestBaseChannel_GetReadBufferStats_NilBuffer(t *testing.T) {
 	ch, serverConn, _ := newTestChannel(t)
 	defer serverConn.Close()
@@ -682,7 +704,7 @@ func TestBaseChannel_Check_WithTimeout_Expired(t *testing.T) {
 	ch, serverConn, _ := newTestChannel(t)
 	defer serverConn.Close()
 
-	ch.setHeartbeatTimeout(100 * time.Millisecond)
+	ch.SetHeartbeatTimeout(100 * time.Millisecond)
 	ch.UpdateLastRecTime()
 	time.Sleep(150 * time.Millisecond)
 
@@ -695,7 +717,7 @@ func TestBaseChannel_resetReadDeadline_WithTimeout(t *testing.T) {
 	ch, serverConn, _ := newTestChannel(t)
 	defer serverConn.Close()
 
-	ch.setHeartbeatTimeout(5 * time.Second)
+	ch.SetHeartbeatTimeout(5 * time.Second)
 	ch.resetReadDeadline()
 }
 

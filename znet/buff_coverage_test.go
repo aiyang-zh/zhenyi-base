@@ -6,6 +6,7 @@ import (
 	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"io"
 	"net"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -655,6 +656,32 @@ func TestBaseClient_ReadLoop_FullMessage(t *testing.T) {
 	}
 	if received[0].GetMsgId() != 100 {
 		t.Errorf("expected msgId 100, got %d", received[0].GetMsgId())
+	}
+}
+
+func TestBaseClient_Read_WithoutAsyncMode_Panics(t *testing.T) {
+	client := NewBaseClient()
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic when calling Read() without WithAsyncMode")
+		}
+	}()
+	client.Read()
+}
+
+func TestBaseClient_Request_WithAsyncMode_ReturnsError(t *testing.T) {
+	clientConn, serverConn := net.Pipe()
+	defer serverConn.Close()
+	client := NewBaseClient(WithAsyncMode())
+	client.SetConn(clientConn)
+	defer client.Close()
+
+	_, err := client.Request(&NetMessage{MsgId: 1, Data: []byte("x")})
+	if err == nil {
+		t.Fatal("expected error when calling Request() with WithAsyncMode")
+	}
+	if !strings.Contains(err.Error(), "WithAsyncMode") {
+		t.Errorf("expected error about WithAsyncMode, got %v", err)
 	}
 }
 

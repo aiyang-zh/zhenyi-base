@@ -54,7 +54,7 @@ func TestKServer_KClient_FullIntegration(t *testing.T) {
 	_ = waitForKListener(server, t)
 	time.Sleep(100 * time.Millisecond)
 
-	client, err := NewClient(addr)
+	client, err := NewClient(addr, znet.WithAsyncMode())
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
@@ -158,7 +158,7 @@ func TestKCPServer_Client_SendReceive(t *testing.T) {
 	_ = waitForKListener(server, t)
 	time.Sleep(100 * time.Millisecond)
 
-	client, err := NewClient(addr)
+	client, err := NewClient(addr, znet.WithAsyncMode())
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}

@@ -95,9 +95,8 @@ func (ser *Server) handler(ctx context.Context, w http.ResponseWriter, r *http.R
 		return
 	}
 	ser.AddChannel(channel)
-	defer channel.Close() // ✅ 自动清理（从 map 中移除 + 触发回调）
-	channel.StartSend(ctx)
-	channel.Start() // 阻塞直到 WebSocket 连接关闭
+	defer channel.Close()        // ✅ 自动清理（从 map 中移除 + 触发回调）
+	ser.RunChannel(ctx, channel) // 阻塞直到 WebSocket 连接关闭
 }
 
 // Server 实现 ziface.IServer：启动 HTTP 监听，收到 WebSocket 后按连接处理直至 ctx 取消或 Close。

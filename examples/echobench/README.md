@@ -30,14 +30,35 @@ hello
 
 ## 压测模式
 
+### 方式一：用脚本跑（推荐）
+
+在项目根目录执行，脚本会起服务端、跑多场景、汇总 QPS：
+
 ```bash
-go run ./examples/echobench/client -bench -n 100000 -c 10
+cd /path/to/zhenyi-base
+./run_echo_bench.sh 1k1k tcp    # 只跑 TCP 1k1k
+./run_echo_bench.sh all tcp     # TCP 全场景
+./run_echo_bench.sh             # 默认 all + 全协议 (tcp/ws/kcp)
+```
+
+1k1k 可能跑 1～3 分钟，等 `recv: 100000 (100.0%)` 即跑通。若曾出现 "no buffer space available"，当前每连接 TCP 缓冲为 64KB；仍遇 ENOBUFS 时可先执行 `ulimit -n 4096`。
+
+### 方式二：手动起服务端 + 客户端
+
+```bash
+# 终端 1：起服务端
+go run ./examples/echobench/server -p tcp -addr :9001
+
+# 终端 2：压测客户端
+go run ./examples/echobench/client -bench -p tcp -addr 127.0.0.1:9001 -n 100000 -c 1000 -size 1024
 ```
 
 参数：
 - `-n` 总消息数（默认 10000）
 - `-c` 并发客户端数（默认 1）
+- `-size` 每条消息 payload 字节数（默认 23）
 - `-addr` 服务端地址（默认 127.0.0.1:9001）
+- `-p` 协议：tcp | ws | kcp
 
 输出示例：
 ```
@@ -55,10 +76,10 @@ latency:  0.01 ms/msg (avg)
 
 ```go
 // 1. 创建
-s := server.New(server.WithAddr(":9001"))
+s := zserver.New(zserver.WithAddr(":9001"))
 
 // 2. 路由
-s.Handle(1, func(req *server.Request) {
+s.Handle(1, func(req *zserver.Request) {
     req.Reply(1, req.Data())
 })
 

@@ -41,7 +41,7 @@ func TestWServer_WClient_FullIntegration(t *testing.T) {
 	server.Server(ctx)
 	time.Sleep(200 * time.Millisecond)
 
-	client, err := NewClient(addr)
+	client, err := NewClient(addr, znet.WithAsyncMode())
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
@@ -165,7 +165,7 @@ func TestWServer_Client_SendReceive(t *testing.T) {
 
 	time.Sleep(200 * time.Millisecond)
 
-	client, err := NewClient(addr)
+	client, err := NewClient(addr, znet.WithAsyncMode())
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
