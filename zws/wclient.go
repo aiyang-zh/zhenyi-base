@@ -3,13 +3,13 @@ package zws
 import (
 	"crypto/tls"
 	"fmt"
+	"github.com/aiyang-zh/zhenyi-base/znet"
 	"net"
 
 	"github.com/aiyang-zh/zhenyi-base/zerrs"
 
 	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"github.com/aiyang-zh/zhenyi-base/zlog"
-	"github.com/aiyang-zh/zhenyi-base/zerrs"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
