@@ -1,4 +1,4 @@
-.PHONY: all test bench fmt vet tidy
+.PHONY: all test test-unit bench fmt vet tidy
 
 # 默认跑测试
 all: test
@@ -6,6 +6,10 @@ all: test
 # 统一测试入口：功能、基准、覆盖率
 test:
 	bash run_tests.sh
+
+# 仅单元测试（供 pre-commit 等快速检查）
+test-unit:
+	go test ./...
 
 # Echo 压测入口
 bench:
