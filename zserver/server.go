@@ -11,10 +11,12 @@ import (
 	"github.com/aiyang-zh/zhenyi-base/zgrace"
 	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"github.com/aiyang-zh/zhenyi-base/zkcp"
+	"github.com/aiyang-zh/zhenyi-base/zlog"
 	"github.com/aiyang-zh/zhenyi-base/znet"
 	"github.com/aiyang-zh/zhenyi-base/ztcp"
 	"github.com/aiyang-zh/zhenyi-base/zws"
 	"github.com/panjf2000/ants/v2"
+	"go.uber.org/zap"
 )
 
 // HandlerFunc 业务处理函数
@@ -198,6 +200,9 @@ func (s *Server) handleRead(ch ziface.IChannel, msg ziface.IWireMessage) {
 	msgId := msg.GetMsgId()
 	handler, ok := s.router[msgId]
 	if !ok {
+		zlog.Warn("unknown msgId, dropped",
+			zap.Int32("msgId", msgId),
+			zap.Uint64("channelId", ch.GetChannelId()))
 		return
 	}
 
@@ -218,6 +223,10 @@ func (s *Server) handleRead(ch ziface.IChannel, msg ziface.IWireMessage) {
 	} else {
 		req.handler = handler
 		if err := s.pool.Invoke(req); err != nil {
+			zlog.Warn("pool.Invoke failed, request dropped",
+				zap.Int32("msgId", msgId),
+				zap.Uint64("channelId", ch.GetChannelId()),
+				zap.Error(err))
 			putRequest(req)
 		}
 	}

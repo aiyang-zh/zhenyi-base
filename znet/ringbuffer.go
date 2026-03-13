@@ -42,9 +42,12 @@ var (
 // 优化：连接关闭时归还 RingBuffer，新连接复用
 //
 // 使用方式：
-//   rb := GetRingBuffer()       // 从池获取
-//   defer PutRingBuffer(rb)     // 归还到池
-
+//
+//	rb := GetRingBuffer()       // 从池获取（默认 4KB，多连接时节省内存）
+//	defer PutRingBuffer(rb)     // 归还到池
+//
+// 注意：池默认 4KB，DefaultRingBufferConfig 为 64KB，二者不一致是刻意的：
+// 池用于每连接复用，取小以控制内存；直接 NewRingBuffer 默认 64KB 适合单缓冲场景。
 const defaultRingBufferSize = 4 * 1024 // 4KB
 
 var ringBufferPool = zpool.NewPool(func() *RingBuffer {
@@ -92,7 +95,7 @@ type RingBuffer struct {
 
 // RingBufferConfig Ring Buffer 配置
 type RingBufferConfig struct {
-	Size    int // 初始缓冲区大小，默认 64KB
+	Size    int // 初始缓冲区大小；DefaultRingBufferConfig 为 64KB；池 GetRingBuffer 为 4KB
 	MaxSize int // 最大扩容大小，默认 1MB，0 表示不限制
 }
 

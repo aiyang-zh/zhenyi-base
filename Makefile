@@ -1,4 +1,4 @@
-.PHONY: all test test-unit bench fmt vet tidy
+.PHONY: all test test-unit bench fmt vet tidy install-hooks
 
 # 默认跑测试
 all: test
@@ -26,4 +26,9 @@ vet:
 # 清理依赖
 tidy:
 	go mod tidy
+
+# 启用 Git 钩子（提交前运行 make test-unit）
+install-hooks:
+	git config core.hooksPath .githooks
+	@echo "已启用 .githooks，提交前将运行 make test-unit"
 

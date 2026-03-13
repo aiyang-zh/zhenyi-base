@@ -2,7 +2,9 @@ package zserver
 
 import (
 	"github.com/aiyang-zh/zhenyi-base/ziface"
+	"github.com/aiyang-zh/zhenyi-base/zlog"
 	"github.com/aiyang-zh/zhenyi-base/zpool"
+	"go.uber.org/zap"
 )
 
 // Request 封装一次客户端请求的上下文，包含连接、消息 ID、序号与负载数据。
@@ -31,7 +33,12 @@ func (r *Request) Conn() *Conn { return r.conn }
 // Reply 向发送方回复消息。sync 模式下自动直写；async 模式下异步入队。
 func (r *Request) Reply(msgId int32, data []byte) {
 	if r.conn.server.mode == ziface.ModeSync {
-		_ = r.ReplyImmediate(msgId, data)
+		if err := r.ReplyImmediate(msgId, data); err != nil {
+			zlog.Error("ReplyImmediate failed in sync mode",
+				zap.Int32("msgId", msgId),
+				zap.Uint64("channelId", r.conn.channel.GetChannelId()),
+				zap.Error(err))
+		}
 		return
 	}
 	r.conn.Send(msgId, data)

@@ -138,8 +138,8 @@ func (c *BaseChannel) IsOpen() bool {
 	return c.state.Load()
 }
 
-// read 零拷贝读取（核心优化点）
-func (c *BaseChannel) read() int {
+// read 零拷贝读取（核心优化点）。返回 true 表示应退出读循环（错误或断开）。
+func (c *BaseChannel) read() bool {
 	// 1. 从网络读取数据到 Ring Buffer
 	nRead, err := c.readBuffer.WriteFromReader(c.conn, 0)
 	if nRead > 0 {
@@ -179,7 +179,7 @@ func (c *BaseChannel) read() int {
 		}
 		if err != nil {
 			if err == io.EOF {
-				return 1
+				return true
 			} else if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 				if c.metrics != nil {
 					c.metrics.ConnHeartbeatTimeoutInc()
@@ -188,7 +188,7 @@ func (c *BaseChannel) read() int {
 					zap.Uint64("channelId", c.channelId),
 					zap.Int64("authId", c.GetAuthId()),
 					zap.String("addr", c.addr))
-				return 1
+				return true
 			} else if !c.isNormalCloseError(err) {
 				if c.metrics != nil {
 					c.metrics.ConnErrorsInc()
@@ -196,9 +196,9 @@ func (c *BaseChannel) read() int {
 				zlog.Warn("Read error",
 					zap.Uint64("channelId", c.channelId),
 					zap.Error(err))
-				return 1
+				return true
 			} else {
-				return 1
+				return true
 			}
 		}
 	}
@@ -214,7 +214,7 @@ func (c *BaseChannel) read() int {
 			zlog.Warn("ParseSocket error",
 				zap.Uint64("channelId", c.channelId),
 				zap.Error(parseErr))
-			return 1
+			return true
 		}
 		if !parsed {
 			if c.readBuffer.IsFull() {
@@ -222,14 +222,14 @@ func (c *BaseChannel) read() int {
 					zap.Uint64("channelId", c.channelId),
 					zap.Int("bufferCap", c.readBuffer.Cap()),
 					zap.Int("bufferLen", c.readBuffer.Len()))
-				return 1
+				return true
 			}
 			break
 		}
 		c.handleParsedMessage()
 	}
 
-	return 0
+	return false
 }
 
 // handleParsedMessage 解密并分派已解析的消息（提取公共逻辑）
@@ -249,24 +249,15 @@ func (c *BaseChannel) handleParsedMessage() {
 	c.server.HandleRead(c, netMsg)
 }
 
-// isNormalCloseError 判断是否是正常的连接关闭错误
+// isNormalCloseError 判断是否是正常的连接关闭错误（纯判断，无副作用）
 func (c *BaseChannel) isNormalCloseError(err error) bool {
 	if err == nil {
 		return false
 	}
 	errMsg := err.Error()
-	normalErrors := []string{
-		"use of closed network connection",
-		"connection reset by peer",
-		"forcibly closed by the remote host",
-	}
-	for _, e := range normalErrors {
-		if strings.Contains(errMsg, e) {
-			c.Close()
-			return true
-		}
-	}
-	return false
+	return strings.Contains(errMsg, "use of closed network connection") ||
+		strings.Contains(errMsg, "connection reset by peer") ||
+		strings.Contains(errMsg, "forcibly closed by the remote host")
 }
 
 // Start 开启读写业务
@@ -290,8 +281,7 @@ func (c *BaseChannel) Start() {
 	c.resetReadDeadline()
 
 	for {
-		n := c.read()
-		if n != 0 {
+		if c.read() {
 			return
 		}
 	}
@@ -319,6 +309,10 @@ func (c *BaseChannel) GetBuffered() int {
 // SendBatchMsg 批量发送消息（零拷贝 writev）；调用方不应再使用 messages 或 Release。
 func (c *BaseChannel) SendBatchMsg(messages []ziface.IMessage) {
 	if messages == nil || len(messages) == 0 {
+		return
+	}
+	// 连接已关闭则不再发送，避免对已关闭连接做加密/写（runSend 可能与 Close 并发）
+	if !c.IsOpen() {
 		return
 	}
 
@@ -556,9 +550,12 @@ func (c *BaseChannel) Send(msg ziface.IMessage) {
 		msg.Release()
 		return
 	}
-	// sync 模式：无发送队列，使用 ReplyImmediate
+	// sync 模式：无发送队列，应使用 ReplyImmediate；误用 Send 时打日志并丢弃，避免 panic 打崩进程
 	if c.mailBoxQueue == nil {
-		panic("sync mode: use ReplyImmediate in handlers, not Send")
+		zlog.Error("sync mode: Send not supported, use ReplyImmediate in handlers; message dropped",
+			zap.Uint64("channelId", c.channelId))
+		msg.Release()
+		return
 	}
 	c.mailBoxQueue.Enqueue(msg)
 	// ✅ 无锁设计：无需通知，无需计数，runSend 轮询队列（消费结果驱动）

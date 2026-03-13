@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.0.2] - 2026-03-13
+
+### Fixed
+- **znet.BaseChannel.isNormalCloseError**：去掉内部 `c.Close()` 调用，改为纯判断、无副作用；关闭统一由 `Start()` 的 defer 执行
+- **znet.BaseChannel.SendBatchMsg**：入口增加 `IsOpen()` 检查，避免连接已关闭时仍做加密/写
+- **zserver.Server.handleRead**：未知 msgId 时打 `zlog.Warn` 再 return；`pool.Invoke` 失败时打 `zlog.Warn` 并记录错误，不再静默丢弃
+- **znet.BaseChannel.Send**：sync 模式下由 panic 改为打 `zlog.Error` 并 Release 消息后 return，避免误用打崩进程
+- **zserver.Request.Reply**：sync 模式下 `ReplyImmediate` 失败时打 `zlog.Error`，不再静默丢弃错误
+
+### Changed
+- **znet.BaseChannel.read()**：返回值由 `int` 改为 `bool`（true 表示应退出读循环），语义更清晰
+- **zqueue.SPSCQueue**：`closed` 字段由 `int32` 改为 `atomic.Bool`，与 MPSCQueue 一致
+- **zqueue/spsc.go**：删除自定义 `min`，改用 Go 1.21+ 内置 `min`
+- **znet.RingBuffer**：注释明确池默认 4KB 与 `DefaultRingBufferConfig` 64KB 的刻意区分（池省内存、直接 New 默认 64KB）
+
+### Added
+- **Makefile**：`install-hooks` 目标，用于启用 `.githooks` 提交前跑单测
+
+---
+
 ## [1.0.1]
 
 ### Added

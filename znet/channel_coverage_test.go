@@ -667,7 +667,7 @@ func TestBaseChannel_Send_NotOpen(t *testing.T) {
 	ch.Send(msg)
 }
 
-func TestBaseChannel_Send_SyncMode_Panics(t *testing.T) {
+func TestBaseChannel_Send_SyncMode_DropsMessage(t *testing.T) {
 	bs := NewBaseServer("test:0", ServerHandlers{
 		OnAccept: func(ziface.IChannel) bool { return true },
 		OnRead:   func(ziface.IChannel, ziface.IWireMessage) {},
@@ -681,12 +681,9 @@ func TestBaseChannel_Send_SyncMode_Panics(t *testing.T) {
 	msg := GetNetMessage()
 	msg.MsgId = 1
 	msg.Data = []byte("x")
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("expected panic when Send in sync mode")
-		}
-	}()
+	// sync 模式下 Send 不 panic，打日志并丢弃消息（保证进程稳定）
 	ch.Send(msg)
+	// 不 panic 即通过；消息已被 Release，无需再 defer Release
 }
 
 func TestBaseChannel_GetReadBufferStats_NilBuffer(t *testing.T) {

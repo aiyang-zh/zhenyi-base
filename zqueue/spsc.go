@@ -32,7 +32,7 @@ type SPSCQueue[T any] struct {
 	_padding3 [cacheLineSize]byte
 
 	// --- 共享状态字段 ---
-	closed    int32
+	closed    atomic.Bool
 	_padding4 [cacheLineSize]byte
 
 	// --- 只读常量字段 ---
@@ -62,12 +62,12 @@ func NewSPSCQueue[T any](capacity int) *SPSCQueue[T] {
 // Close 关闭队列，后续写入立即失败。
 // 已在队列中的数据仍可被读取。
 func (q *SPSCQueue[T]) Close() {
-	atomic.StoreInt32(&q.closed, 1)
+	q.closed.Store(true)
 }
 
 // IsClosed 返回队列是否已被关闭。
 func (q *SPSCQueue[T]) IsClosed() bool {
-	return atomic.LoadInt32(&q.closed) == 1
+	return q.closed.Load()
 }
 
 // ==========================================
@@ -77,7 +77,7 @@ func (q *SPSCQueue[T]) IsClosed() bool {
 // EnqueueBatch 阻塞批量写入。
 // 队列空间不足时会自旋等待，直到全部写入或队列被关闭。
 func (q *SPSCQueue[T]) EnqueueBatch(items []T) bool {
-	if atomic.LoadInt32(&q.closed) == 1 {
+	if q.closed.Load() {
 		return false
 	}
 	if len(items) == 0 {
@@ -95,7 +95,7 @@ func (q *SPSCQueue[T]) EnqueueBatch(items []T) bool {
 		if targetHead > realTail+capacity {
 			spinCount := 0
 			for {
-				if atomic.LoadInt32(&q.closed) == 1 {
+				if q.closed.Load() {
 					return false
 				}
 				realTail = q.tail.Load()
@@ -126,7 +126,7 @@ func (q *SPSCQueue[T]) EnqueueBatch(items []T) bool {
 // TryEnqueueBatch 非阻塞批量写入。
 // 在空间不足时立即返回 false，不做阻塞等待。
 func (q *SPSCQueue[T]) TryEnqueueBatch(items []T) bool {
-	if atomic.LoadInt32(&q.closed) == 1 {
+	if q.closed.Load() {
 		return false
 	}
 	if len(items) == 0 {
@@ -165,7 +165,7 @@ func (q *SPSCQueue[T]) TryEnqueueBatch(items []T) bool {
 // Enqueue 阻塞单个写入。
 // 如果队列已关闭则返回 false。
 func (q *SPSCQueue[T]) Enqueue(item T) bool {
-	if atomic.LoadInt32(&q.closed) == 1 {
+	if q.closed.Load() {
 		return false
 	}
 
@@ -178,7 +178,7 @@ func (q *SPSCQueue[T]) Enqueue(item T) bool {
 		if head >= realTail+capacity {
 			spinCount := 0
 			for {
-				if atomic.LoadInt32(&q.closed) == 1 {
+				if q.closed.Load() {
 					return false
 				}
 				realTail = q.tail.Load()
@@ -200,7 +200,7 @@ func (q *SPSCQueue[T]) Enqueue(item T) bool {
 // TryEnqueue 非阻塞单个写入。
 // 队列空间不足时立即返回 false。
 func (q *SPSCQueue[T]) TryEnqueue(item T) bool {
-	if atomic.LoadInt32(&q.closed) == 1 {
+	if q.closed.Load() {
 		return false
 	}
 
@@ -250,7 +250,7 @@ func (q *SPSCQueue[T]) DequeueBatch(limit []T) (int, bool) {
 				if tail < realHead {
 					break
 				}
-				if atomic.LoadInt32(&q.closed) == 1 {
+				if q.closed.Load() {
 					if q.head.Load() <= tail {
 						return 0, false
 					}
@@ -285,7 +285,7 @@ func (q *SPSCQueue[T]) TryDequeueBatch(limit []T) (int, bool) {
 	} else {
 		realHead := q.head.Load()
 		if tail >= realHead {
-			if atomic.LoadInt32(&q.closed) == 1 {
+			if q.closed.Load() {
 				return 0, false
 			}
 			return 0, true
@@ -313,7 +313,7 @@ func (q *SPSCQueue[T]) Dequeue() (T, bool) {
 				if tail < realHead {
 					break
 				}
-				if atomic.LoadInt32(&q.closed) == 1 {
+				if q.closed.Load() {
 					if q.head.Load() <= tail {
 						return zero, false
 					}
@@ -378,12 +378,6 @@ func (q *SPSCQueue[T]) Len() int {
 	tail := q.tail.Load()
 	head := q.head.Load()
 	return int(head - tail)
-}
-func min[T_NUM ~int | ~uint64](a, b T_NUM) T_NUM {
-	if a < b {
-		return a
-	}
-	return b
 }
 func isPowerOfTwo(x int) bool {
 	return (x & (x - 1)) == 0
