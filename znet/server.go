@@ -37,8 +37,9 @@ type BaseServer struct {
 	listener         net.Listener
 	Once             sync.Once
 	iMetrics         ziface.IMetrics
-	heartbeatTimeout time.Duration     // 心跳超时（0 = 禁用，默认 30s）
-	tlsConfig        *ziface.TLSConfig // TLS 配置（nil = 不启用 TLS）
+	iChannelMetrics  ziface.IChannelMetrics // 单连接维度指标，AddChannel 时注入到支持 IChannelMetricsSetter 的 channel
+	heartbeatTimeout time.Duration          // 心跳超时（0 = 禁用，默认 30s）
+	tlsConfig        *ziface.TLSConfig      // TLS 配置（nil = 不启用 TLS）
 }
 
 // NewBaseServer 创建网络层服务端基类。
@@ -108,9 +109,14 @@ func (b *BaseServer) SetEncrypt(iEncrypt ziface.IEncrypt) {
 	b.iEncrypt = iEncrypt
 }
 
-// SetMetrics 设置连接级指标收集器（可选）。
+// SetMetrics 设置服务级连接指标收集器（可选）。ConnInc/ConnDec/ConnRejectedInc。
 func (b *BaseServer) SetMetrics(iMetrics ziface.IMetrics) {
 	b.iMetrics = iMetrics
+}
+
+// SetChannelMetrics 设置单连接维度指标收集器（可选）。AddChannel 时会注入到实现了 IChannelMetricsSetter 的 channel（如 *znet.BaseChannel）。
+func (b *BaseServer) SetChannelMetrics(m ziface.IChannelMetrics) {
+	b.iChannelMetrics = m
 }
 
 // SyncMode 返回是否使用 sync 模式（原生支持：无发送队列，ReplyImmediate 直写）
@@ -153,8 +159,14 @@ func (b *BaseServer) OnceDo(f func()) {
 
 // AddChannel 将新连接加入管理并递增连接计数；会应用心跳超时与指标。
 // heartbeatTimeout 由 SetHeartbeatTimeout 设置；0 表示禁用（覆盖 channel 默认 30s）。
+// 若已 SetChannelMetrics，会对实现了 IChannelMetricsSetter 的 channel 注入单连接指标。
 func (b *BaseServer) AddChannel(channel ziface.IChannel) {
 	channel.SetHeartbeatTimeout(b.heartbeatTimeout)
+	if b.iChannelMetrics != nil {
+		if setter, ok := channel.(ziface.IChannelMetricsSetter); ok {
+			setter.SetChannelMetrics(b.iChannelMetrics)
+		}
+	}
 	b.channels.Store(channel.GetChannelId(), channel)
 	b.connCount.Add(1)
 	if b.iMetrics != nil {

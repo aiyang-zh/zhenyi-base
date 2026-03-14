@@ -148,7 +148,71 @@ s.Run()
 
 ---
 
-## 6. 选择传输协议
+## 6. 使用 zreactor（仅 Linux，TCP 单循环）
+
+zreactor 用 epoll 单循环驱动所有连接的读，不每连接起 goroutine，适合高连接数、Linux 部署。**仅 Linux 可用**，且当前仅 TCP（不支持 TLS）。
+
+### 通过 zserver 使用（推荐，3 步与现有 API 一致）
+
+在 zserver 上打开 reactor 模式：`WithReactorMode()`，仅 TCP、且未配 TLS 时在 Linux 下生效；非 Linux 自动回退为普通每连接一 goroutine。
+
+```go
+import "github.com/aiyang-zh/zhenyi-base/zserver"
+import "github.com/aiyang-zh/zhenyi-base/zreactor"
+
+s := zserver.New(
+    zserver.WithAddr(":9001"),
+    zserver.WithReactorMode(), // 仅 Linux + TCP 时用 epoll 单循环
+)
+s.Handle(1, func(req *zserver.Request) { req.Reply(1, req.Data()) })
+s.SetReactorMetrics(&zreactor.Metrics{OnAccept: fn, OnClose: fn, ...}) // 可选
+s.Run() // 阻塞直到 SIGINT/SIGTERM
+```
+
+### 通过 ztcp 使用
+
+与普通 `Server(ctx)` 二选一：用 `ServerReactor(ctx)` 启动，阻塞直到 ctx 取消。
+
+```go
+package main
+
+import (
+    "context"
+    "github.com/aiyang-zh/zhenyi-base/ziface"
+    "github.com/aiyang-zh/zhenyi-base/znet"
+    "github.com/aiyang-zh/zhenyi-base/zreactor"
+    "github.com/aiyang-zh/zhenyi-base/ztcp"
+)
+
+func main() {
+    handlers := znet.ServerHandlers{
+        OnAccept: func(ch ziface.IChannel) bool { return true },
+        OnRead:   func(ch ziface.IChannel, msg ziface.IWireMessage) { /* 处理 msg */ },
+    }
+    ser := ztcp.NewServer(":9001", handlers)
+
+    // 可选：注入 reactor 监控回调（连接建立/关闭/读错误等）
+    ser.SetReactorMetrics(&zreactor.Metrics{
+        OnAccept: func() { /* 连接建立 */ },
+        OnClose:  func() { /* 连接关闭 */ },
+        OnReadErr: func(fd int, err error) { /* 读错误 */ },
+    })
+
+    ctx := context.Background() // 实际应用里用带取消的 ctx，便于优雅退出
+    ser.ServerReactor(ctx)      // 阻塞，ctx 取消后返回
+}
+```
+
+- `ServerReactor` 内部会 `net.Listen`、再调 `zreactor.Serve`，listener 与连接在退出时由 ztcp 关闭。
+- 不调用 `SetReactorMetrics` 时传 `nil`，不埋点。
+
+### 直接使用 zreactor 包
+
+需要自己创建 `*net.TCPListener`，并实现 `zreactor.AcceptFunc`，返回实现 `zreactor.ReactorChannel` 的 channel（如 `*znet.BaseChannel` 通过 ztcp.NewChannel 得到）。示例见 [zreactor 包文档](https://pkg.go.dev/github.com/aiyang-zh/zhenyi-base/zreactor)：Serve 返回后需自行 `listener.Close()`。
+
+---
+
+## 7. 选择传输协议
 
 | 场景       | 推荐     | 说明                     |
 |------------|----------|--------------------------|
@@ -156,7 +220,7 @@ s.Run()
 | 浏览器/跨域 | zws      | WebSocket                |
 | 弱网/丢包  | zkcp     | KCP 可靠 UDP             |
 
-底层均基于 znet，接口一致，切换协议只需改 `NewServer` 的包名。
+底层均基于 znet，接口一致，切换协议只需改 `NewServer` 的包名。Linux 下 TCP 还可选 ztcp.ServerReactor（见上一节）。
 
 ---
 

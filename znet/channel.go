@@ -21,8 +21,9 @@ import (
 	"github.com/aiyang-zh/zhenyi-base/ztime"
 )
 
-// 接口断言：确保 BaseChannel 实现 IChannel
+// 接口断言：确保 BaseChannel 实现 IChannel 与 IChannelMetricsSetter
 var _ ziface.IChannel = (*BaseChannel)(nil)
+var _ ziface.IChannelMetricsSetter = (*BaseChannel)(nil)
 
 // ================================================================
 // BaseChannel - 零拷贝通道
@@ -230,6 +231,40 @@ func (c *BaseChannel) read() bool {
 	}
 
 	return false
+}
+
+// WriteToReadBuffer 将数据追加到读缓冲，供 reactor 等外部驱动在可读时写入后调用。
+func (c *BaseChannel) WriteToReadBuffer(p []byte) (n int, err error) {
+	return c.readBuffer.Write(p)
+}
+
+// ParseAndDispatch 从读缓冲解析并分发所有完整消息；供 reactor 在 WriteToReadBuffer 后调用。
+// 返回 true 表示应关闭连接（解析错误或单包超缓冲容量）。
+func (c *BaseChannel) ParseAndDispatch() bool {
+	for {
+		c.parseData.ResetForReuse()
+		parsed, parseErr := c.socketParser.ParseFromRingBuffer(c.readBuffer, &c.parseData)
+		if parseErr != nil {
+			if c.metrics != nil {
+				c.metrics.ConnErrorsInc()
+			}
+			zlog.Warn("ParseSocket error",
+				zap.Uint64("channelId", c.channelId),
+				zap.Error(parseErr))
+			return true
+		}
+		if !parsed {
+			if c.readBuffer.IsFull() {
+				zlog.Error("Single packet exceeds buffer capacity, disconnecting",
+					zap.Uint64("channelId", c.channelId),
+					zap.Int("bufferCap", c.readBuffer.Cap()),
+					zap.Int("bufferLen", c.readBuffer.Len()))
+				return true
+			}
+			return false
+		}
+		c.handleParsedMessage()
+	}
 }
 
 // handleParsedMessage 解密并分派已解析的消息（提取公共逻辑）
@@ -494,6 +529,11 @@ func (c *BaseChannel) GetRpcId() uint64 {
 // SetLimit 设置限流器
 func (c *BaseChannel) SetLimit(rate ziface.ILimit) {
 	c.rate = rate
+}
+
+// SetChannelMetrics 注入单连接维度指标收集器（实现 ziface.IChannelMetricsSetter）。由 BaseServer.AddChannel 在 SetChannelMetrics 后自动调用。
+func (c *BaseChannel) SetChannelMetrics(m ziface.IChannelMetrics) {
+	c.metrics = m
 }
 
 // Allow 检查是否允许通过（限流检查）

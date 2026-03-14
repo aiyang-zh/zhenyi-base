@@ -1,6 +1,7 @@
 package zserver
 
 import (
+	"context"
 	"time"
 
 	"github.com/aiyang-zh/zhenyi-base/ziface"
@@ -110,4 +111,19 @@ func WithStandardTLS(certFile, keyFile string) Option {
 // WithTLSConfig 直接传入 TLS 配置（适用于需要自定义高级配置的场景）。
 func WithTLSConfig(cfg *ziface.TLSConfig) Option {
 	return func(s *Server) { s.tlsConfig = cfg }
+}
+
+// WithReactorMode 使用 reactor（epoll）单循环驱动 TCP 读，仅 Linux、仅 TCP 时生效；与 TLS 互斥（启用时 reactor 不生效）。
+// 高连接数场景可减少 goroutine 数量。非 Linux 或协议非 TCP 时忽略。
+func WithReactorMode() Option {
+	return func(s *Server) { s.useReactor = true }
+}
+
+// WithContext 注入生命周期 context 与 cancel；Stop() 会调用 cancel。
+// 不设置时 New 内部会创建 context.WithCancel(context.Background())。
+func WithContext(ctx context.Context, cancel context.CancelFunc) Option {
+	return func(s *Server) {
+		s.ctx = ctx
+		s.cancel = cancel
+	}
 }

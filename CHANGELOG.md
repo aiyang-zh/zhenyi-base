@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.0.3] - 2026-03-14
+
+### Added
+- **zreactor**：Linux 下基于 epoll 的 reactor 模式 TCP 服务循环（`Serve`/`ServeWithConfig`）；优雅退出与 FD 释放说明（doc）；核心流程日志（accept/close/read error）；`Metrics` 回调接口由调用方实现并注入。`ParseAndDispatch` 调用处增加 panic 恢复（`parseAndDispatchSafe`），单连接 handler panic 时仅关闭该连接并打日志，不拖垮进程。
+- **ztcp**：`ServerReactor(ctx)`（仅 Linux）使用 zreactor 驱动读；`SetReactorMetrics(*zreactor.Metrics)` 注入 reactor 监控回调；非 Linux 构建使用 `server_reactor_stub.go`，调用 `ServerReactor` 时 panic 提示仅 Linux 可用。
+- **ziface**：`IChannelMetricsSetter`，用于向 Channel 注入单连接指标。
+- **znet.BaseServer**：`SetChannelMetrics(IChannelMetrics)`，AddChannel 时自动注入到实现 `IChannelMetricsSetter` 的 channel。
+- **znet.BaseChannel**：`SetChannelMetrics(m)` 实现 `IChannelMetricsSetter`；`WriteToReadBuffer`/`ParseAndDispatch` 供 zreactor 驱动。
+- **zserver**：`WithContext(ctx, cancel)` Option，注入生命周期 context 与 cancel（`Stop()` 会调用 cancel）；不设置时 `New` 内部创建 `context.WithCancel(context.Background())`。
+- **docs**：新手学习方案 `BEGINNER_GUIDE.md`（含 Go 前置与阶段 0～4）；文档索引增加该入口。
+
+### Changed
+- **znet.BaseServer.SetMetrics**：注释明确为服务级指标（ConnInc/ConnDec/ConnRejectedInc）。
+
+---
+
 ## [1.0.2] - 2026-03-13
 
 ### Fixed

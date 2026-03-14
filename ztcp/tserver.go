@@ -2,19 +2,25 @@ package ztcp
 
 import (
 	"context"
+	"net"
+
+	"github.com/aiyang-zh/zhenyi-base/zerrs"
 	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"github.com/aiyang-zh/zhenyi-base/zlog"
 	"github.com/aiyang-zh/zhenyi-base/znet"
-	"net"
-
+	"github.com/aiyang-zh/zhenyi-base/zreactor"
 	"go.uber.org/zap"
-
-	"github.com/aiyang-zh/zhenyi-base/zerrs"
 )
 
 // Server 为 TCP 协议的服务端实现，嵌入 BaseServer 并完成 Listen/Accept 与 TLS 包装。
 type Server struct {
 	*znet.BaseServer
+	reactorMetrics *zreactor.Metrics // 仅 ServerReactor（Linux）时使用；通过 SetReactorMetrics 注入。
+}
+
+// SetReactorMetrics 设置 reactor 模式的监控回调；仅在使用 ServerReactor 时生效，传 nil 表示不埋点。
+func (ser *Server) SetReactorMetrics(m *zreactor.Metrics) {
+	ser.reactorMetrics = m
 }
 
 // NewServer 创建 TCP 服务端；addr 为监听地址，handlers 必须提供 OnAccept 与 OnRead。
@@ -103,6 +109,6 @@ func (ser *Server) Close() {
 	ser.OnceDo(func() {
 		close(ser.GetClose())
 	})
-	ser.BaseClose() // ✅ 修复：清理 listener 和所有 channels
+	ser.BaseClose() // 清理 listener 和所有 channels
 	zlog.Info("TCP server closed successfully", zap.String("addr", ser.GetAddr()))
 }

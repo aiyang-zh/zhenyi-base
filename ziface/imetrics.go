@@ -41,3 +41,9 @@ type ISessionStats interface {
 	// RecordRec 记录一次接收操作的字节数。
 	RecordRec(bytes int)
 }
+
+// IChannelMetricsSetter 用于向 Channel 注入单连接维度指标收集器。
+// 由 znet.BaseChannel 实现；BaseServer.SetChannelMetrics 后，AddChannel 时会对实现该接口的 channel 自动注入。
+type IChannelMetricsSetter interface {
+	SetChannelMetrics(m IChannelMetrics)
+}

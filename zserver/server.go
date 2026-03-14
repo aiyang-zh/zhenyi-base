@@ -13,6 +13,7 @@ import (
 	"github.com/aiyang-zh/zhenyi-base/zkcp"
 	"github.com/aiyang-zh/zhenyi-base/zlog"
 	"github.com/aiyang-zh/zhenyi-base/znet"
+	"github.com/aiyang-zh/zhenyi-base/zreactor"
 	"github.com/aiyang-zh/zhenyi-base/ztcp"
 	"github.com/aiyang-zh/zhenyi-base/zws"
 	"github.com/panjf2000/ants/v2"
@@ -42,6 +43,8 @@ type Server struct {
 	heartbeatTimeout  *time.Duration  // nil=使用底层默认 30s；非 nil 则 Start 时设置
 	showBanner        bool
 	tlsConfig         *ziface.TLSConfig
+	useReactor        bool               // 仅 TCP + Linux 时用 ztcp.ServerReactor
+	reactorMetrics    *zreactor.Metrics  // 仅 useReactor 时生效，可选
 	pool              *ants.PoolWithFunc // 零闭包分配
 	ctx               context.Context
 	cancel            context.CancelFunc
@@ -63,6 +66,9 @@ func New(opts ...Option) *Server {
 	for _, opt := range opts {
 		opt(s)
 	}
+	if s.ctx == nil {
+		s.ctx, s.cancel = context.WithCancel(context.Background())
+	}
 	return s
 }
 
@@ -81,11 +87,14 @@ func (s *Server) OnDisconnect(fn func(conn *Conn)) {
 	s.onDisconnect = fn
 }
 
+// SetReactorMetrics 设置 reactor 模式的监控回调；仅在使用 WithReactorMode 且协议为 TCP 时生效，传 nil 表示不埋点。
+func (s *Server) SetReactorMetrics(m *zreactor.Metrics) {
+	s.reactorMetrics = m
+}
+
 // Start 非阻塞启动服务器，配合 Stop 使用。
 // 启动后可通过 Addr() 获取实际监听地址（适用于端口 :0 场景）。
 func (s *Server) Start() {
-	s.ctx, s.cancel = context.WithCancel(context.Background())
-
 	// sync 模式必须 directDispatch（handler 在读协程内才能 ReplyImmediate）
 	if s.mode == ziface.ModeSync {
 		s.directDispatch = true
@@ -117,6 +126,17 @@ func (s *Server) Start() {
 		s.net.SetHeartbeatTimeout(*s.heartbeatTimeout)
 	}
 
+	// reactor 模式：仅 TCP、且未启用 TLS、且 Linux 时，用 ztcp.ServerReactor 阻塞运行；非 Linux 回退为普通 Server
+	if s.useReactor && s.protocol == znet.TCP && s.tlsConfig == nil && runtime.GOOS == "linux" {
+		if tcpServer, ok := s.net.(*ztcp.Server); ok {
+			if s.reactorMetrics != nil {
+				tcpServer.SetReactorMetrics(s.reactorMetrics)
+			}
+			tcpServer.ServerReactor(s.ctx)
+			return
+		}
+	}
+
 	s.net.Server(s.ctx)
 
 	mode := "worker pool"
@@ -129,10 +149,33 @@ func (s *Server) Start() {
 	fmt.Printf("[%s] server listening on %s (%s, %s)\n", s.name, s.addr, s.protocolName(), mode)
 }
 
-// Run 启动服务器（阻塞，直到收到 SIGINT/SIGTERM）
+// Run 启动服务器（阻塞，直到收到 SIGINT/SIGTERM）。
+// 若使用了 WithReactorMode 且协议为 TCP，Start 会在 reactor 循环内阻塞；Run 在子 goroutine 中执行 Start，主 goroutine 等信号后 Stop 并等待 Start 退出。
 func (s *Server) Run() {
+	if s.useReactor && s.protocol == znet.TCP && s.tlsConfig == nil && runtime.GOOS == "linux" {
+		cm := zgrace.New()
+		cm.Register(func() {
+			fmt.Printf("[%s] shutting down...\n", s.name)
+			s.Stop()
+		})
+		var startDone sync.WaitGroup
+		var startPanic interface{}
+		startDone.Add(1)
+		go func() {
+			defer func() {
+				startPanic = recover()
+				startDone.Done()
+			}()
+			s.Start() // 阻塞在 ztcp.ServerReactor 直到 ctx 取消
+		}()
+		cm.Wait() // 主 goroutine 等信号，触发 Stop → cancel → reactor 退出
+		startDone.Wait()
+		if startPanic != nil {
+			panic(startPanic)
+		}
+		return
+	}
 	s.Start()
-
 	cm := zgrace.New()
 	cm.Register(func() {
 		fmt.Printf("[%s] shutting down...\n", s.name)
