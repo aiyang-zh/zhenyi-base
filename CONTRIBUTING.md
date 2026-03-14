@@ -21,7 +21,7 @@
 
 - 遵循 Go 官方 [Effective Go](https://go.dev/doc/effective_go)
 - 新包需补充单元测试
-- 提交前运行 `./run_tests.sh` 确保通过
+- 提交前运行 `make test` 或 `make test-unit` 确保通过（测试范围不包含 `examples/`、`ziface/`）
 
 ## 提交信息格式
 

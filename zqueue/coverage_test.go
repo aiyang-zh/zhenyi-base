@@ -125,12 +125,12 @@ func TestPriorityQueue_ManyElements(t *testing.T) {
 // ============================================================
 
 func TestSPSCQueue_NewCapacity_LargeAndMaxCap(t *testing.T) {
-	// capacity > 1<<30 -> corrected to maxCapacity
-	q := NewSPSCQueue[int](1<<30 + 100)
+	// capacity > maxCapacity(1<<30) 时在实现中会被截断为 1<<30，但 1<<30 会分配约 8GB 易在 CI 被 OOM kill。
+	// 此处用较大但安全的值验证「超大 capacity 请求得到合法队列」；截断逻辑见 spsc.go maxCapacity。
+	q := NewSPSCQueue[int](1<<20 + 100) // 非 2 的幂会向上取整，分配约 16MB
 	if q == nil {
 		t.Fatal("NewSPSCQueue returned nil")
 	}
-	// Should have capacity 1<<30
 	if q.Len() != 0 {
 		t.Error("new queue should be empty")
 	}

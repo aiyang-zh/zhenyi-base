@@ -7,7 +7,6 @@ import (
 	"net"
 
 	"github.com/aiyang-zh/zhenyi-base/zlog"
-	"github.com/aiyang-zh/zhenyi-base/znet"
 	"github.com/aiyang-zh/zhenyi-base/zreactor"
 	"go.uber.org/zap"
 )

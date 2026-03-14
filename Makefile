@@ -1,19 +1,35 @@
-.PHONY: all test test-unit bench fmt vet tidy install-hooks
+.PHONY: all test test-unit bench fmt vet tidy install-hooks test-docker check-xinchuang check-xinchuang-amd64 check-xinchuang-arm64 check-xinchuang-loong64
 
 # 默认跑测试
 all: test
 
 # 统一测试入口：功能、基准、覆盖率
 test:
-	bash run_tests.sh
+	bash scripts/run_tests.sh
 
-# 仅单元测试（供 pre-commit 等快速检查）
+# 仅单元测试（供 pre-commit 等快速检查），排除 examples
 test-unit:
-	go test ./...
+	go test $$(go list ./... | grep -vE '/examples/|/ziface/')
 
 # Echo 压测入口
 bench:
-	bash run_echo_bench.sh
+	bash scripts/run_echo_bench.sh
+
+# Docker 内跑完整测试（复现 CI，含 Linux 专用代码）
+test-docker:
+	bash scripts/run_tests_docker.sh
+
+# 信创多架构适配检查（Docker：amd64/arm64/loong64）
+# 支持单架构：make check-xinchuang-amd64 | check-xinchuang-arm64 | check-xinchuang-loong64
+# 或 make check-xinchuang PLATFORM=linux/amd64
+check-xinchuang:
+	bash scripts/check_xinchuang_compat.sh $(PLATFORM)
+check-xinchuang-amd64:
+	bash scripts/check_xinchuang_compat.sh linux/amd64
+check-xinchuang-arm64:
+	bash scripts/check_xinchuang_compat.sh linux/arm64
+check-xinchuang-loong64:
+	bash scripts/check_xinchuang_compat.sh linux/loong64
 
 # go fmt 全部包
 fmt:

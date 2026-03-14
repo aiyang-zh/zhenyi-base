@@ -1,14 +1,14 @@
 #!/bin/bash
 # Echo 压测脚本：支持小字段/大字段、少连接/多连接等场景
-# 用法: ./run_echo_bench.sh [all|small|large|multi|1k|1k1k] [tcp|ws|kcp|all]
+# 用法: ./scripts/run_echo_bench.sh [all|small|large|multi|1k|1k1k] [tcp|ws|kcp|all]
 #   第1参 - 场景：all（默认）| small | large | multi | 1k | 1k1k
 #   第2参 - 协议：all（默认，tcp+ws+kcp）| tcp | ws | kcp
-# 示例：./run_echo_bench.sh 1k tcp   # 仅 TCP 1k 场景，约 1 分钟
+# 示例：make bench  或  ./scripts/run_echo_bench.sh 1k tcp
 # 若出现 "no buffer space available" (ENOBUFS)，可先执行：ulimit -n 4096
 
 set -e
-
-cd "$(dirname "$0")"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
 
 # 场景预设
 # small: 23B, 20 conn, 50万 msg

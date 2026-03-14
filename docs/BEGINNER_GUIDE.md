@@ -199,7 +199,7 @@ func main() {
 
 2. **跑官方示例**
    - 双终端：`go run ./examples/echodemo/server` 与 `go run ./examples/echodemo/client`，能交互输入并收到回显。
-   - 可选：`./run_echo_bench.sh` 看压测结果（理解 QPS 表即可）。
+   - 可选：`make bench` 看压测结果（理解 QPS 表即可）。
 
 3. **小扩展**
    - 增加一个 `Handle(2, ...)`，客户端发 msgId=2 时服务端返回固定字符串。
@@ -267,7 +267,7 @@ func main() {
 | 各包 API 索引 | [API.md](API.md) |
 | 示例列表与运行方式 | [examples/README.md](../examples/README.md) |
 | Echo 交互示例 | `examples/echodemo/` |
-| Echo 压测 | `examples/echobench/`、`./run_echo_bench.sh` |
+| Echo 压测 | `examples/echobench/`、`make bench` |
 
 ---
 

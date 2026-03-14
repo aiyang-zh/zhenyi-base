@@ -47,8 +47,8 @@ func TestServe_AcceptOneThenShutdown(t *testing.T) {
 	done := make(chan error, 1)
 	go func() {
 		done <- Serve(ctx, ln, func(conn net.Conn) (ReactorChannel, bool) {
-			conn.Close()
-			return nil, false
+			// 接受并加入 reactor，OnAccept 会在加入 fdMap 后调用
+			return &fakeChannel{conn: conn}, true
 		}, metrics)
 	}()
 	time.Sleep(10 * time.Millisecond)
@@ -56,8 +56,8 @@ func TestServe_AcceptOneThenShutdown(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	conn.Close()
-	time.Sleep(20 * time.Millisecond)
+	conn.Close() // 客户端关闭后，reactor 会 closeConn 并调用 OnClose
+	time.Sleep(50 * time.Millisecond)
 	cancel()
 	err = <-done
 	if err != nil {

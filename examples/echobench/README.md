@@ -36,9 +36,9 @@ hello
 
 ```bash
 cd /path/to/zhenyi-base
-./run_echo_bench.sh 1k1k tcp    # 只跑 TCP 1k1k
-./run_echo_bench.sh all tcp     # TCP 全场景
-./run_echo_bench.sh             # 默认 all + 全协议 (tcp/ws/kcp)
+./scripts/run_echo_bench.sh 1k1k tcp  # 只跑 TCP 1k1k
+./scripts/run_echo_bench.sh all tcp   # TCP 全场景
+make bench                            # 默认 all + 全协议 (tcp/ws/kcp)
 ```
 
 1k1k 可能跑 1～3 分钟，等 `recv: 100000 (100.0%)` 即跑通。若曾出现 "no buffer space available"，当前每连接 TCP 缓冲为 64KB；仍遇 ENOBUFS 时可先执行 `ulimit -n 4096`。
@@ -89,7 +89,7 @@ s.Run()
 
 ## 参考测试结果（Apple M3 · Go 1.24+）
 
-运行 `./run_echo_bench.sh` 在本机得到的一组示例数据（单位：msg/s，仅供参考，具体数值会随机器和环境变化）：
+运行 `make bench` 在本机得到的一组示例数据（单位：msg/s，仅供参考，具体数值会随机器和环境变化）：
 
 ```text
   [tcp] 23B/20c   QPS: 631612 msg/s

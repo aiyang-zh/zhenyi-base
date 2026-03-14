@@ -10,9 +10,21 @@
 - **znet.BaseChannel**：`SetChannelMetrics(m)` 实现 `IChannelMetricsSetter`；`WriteToReadBuffer`/`ParseAndDispatch` 供 zreactor 驱动。
 - **zserver**：`WithContext(ctx, cancel)` Option，注入生命周期 context 与 cancel（`Stop()` 会调用 cancel）；不设置时 `New` 内部创建 `context.WithCancel(context.Background())`。
 - **docs**：新手学习方案 `BEGINNER_GUIDE.md`（含 Go 前置与阶段 0～4）；文档索引增加该入口。
+- **scripts**：脚本统一放入 `scripts/`（`run_tests.sh`、`run_echo_bench.sh`、`check_xinchuang_compat.sh`、`run_tests_docker.sh`），Makefile 调用；新增 `scripts/README.md`。
+- **信创检查**：支持单架构，`make check-xinchuang-amd64` / `check-xinchuang-arm64` / `check-xinchuang-loong64` 或 `make check-xinchuang PLATFORM=linux/amd64`；脚本可传参或使用环境变量 `PLATFORM`；Docker 内 `go test -v` 输出具体用例。
 
 ### Changed
 - **znet.BaseServer.SetMetrics**：注释明确为服务级指标（ConnInc/ConnDec/ConnRejectedInc）。
+- **测试范围**：`make test`、`make test-unit`、信创检查均排除 `examples/`、`ziface/`，仅测库代码（run_tests.sh、Makefile、check_xinchuang_compat.sh）。
+- **Makefile**：`test`/`bench` 改为调用 `scripts/run_tests.sh`、`scripts/run_echo_bench.sh`；新增 `test-docker`、`check-xinchuang` 及单架构目标；`test-unit` 排除 examples/ziface。
+- **文档**：README、CONTRIBUTING、examples 下 README 中脚本路径改为 `make test`/`make bench` 或 `./scripts/...`；README 与 CONTRIBUTING 注明测试/覆盖率不包含 examples、ziface。
+
+### Fixed
+- **zserialize**：`json_generic.go`（非 amd64/arm64 时使用）补全 `import "encoding/json"`，修复龙芯等架构下 `undefined: json` 编译错误。
+- **zbackoff**：龙芯（LoongArch64）无 YIELD 指令，移除 `cpu_yield_loong64.s`，改由 `cpu_yield_other.go` 在 loong64 上提供实现（`runtime.Gosched()` 软回退）；`cpu_yield.go` 构建标签改为仅 `amd64 || arm64`。
+- **ztcp**：移除 `server_reactor_linux.go` 未使用的 `znet` import，修复 CI 编译。
+- **zqueue**：`TestSPSCQueue_NewCapacity_LargeAndMaxCap` 不再分配 1<<30（约 8GB），改为 1<<20+100 验证大容量，避免 CI/低内存环境被 OOM kill（signal: killed）。
+- **zreactor**：单测 `TestServe_AcceptOneThenShutdown` 改为接受连接（返回 `fakeChannel`）而非拒绝，正确触发 OnAccept/OnClose，用例通过。
 
 ---
 

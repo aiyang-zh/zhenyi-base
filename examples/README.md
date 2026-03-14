@@ -20,7 +20,7 @@ go run ./examples/echodemo/server
 go run ./examples/echodemo/client
 
 # 2. 压测（根目录运行脚本）
-./run_echo_bench.sh
+make bench
 ```
 
 ## 依赖说明

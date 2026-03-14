@@ -2,6 +2,8 @@
 
 package zserialize
 
+import "encoding/json"
+
 func UnmarshalJson(body []byte, data interface{}) error {
 	return json.Unmarshal(body, data)
 }
