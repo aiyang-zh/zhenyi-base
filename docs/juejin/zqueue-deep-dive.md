@@ -4,7 +4,7 @@
 
 ---
 
-上一篇介绍了 [zhenyi-base](https://zhenyi-site.pages.dev/articles) 整体能力，其中提到无锁队列 **16.7 ns/op**、0 分配。很多同学问：和 channel 比有什么不同？在 MPSC 场景下该怎么选？这篇单点深挖 **zqueue**，从设计、选型到 96 组合基准测试，把结论说清楚。
+上一篇介绍了 [zhenyi-base](https://juejin.cn/post/7614110147108913192) 整体能力，其中提到无锁队列 **16.7 ns/op**、0 分配。很多同学问：和 channel 比有什么不同？在 MPSC 场景下该怎么选？这篇单点深挖 **zqueue**，从设计、选型到 96 组合基准测试，把结论说清楚。
 
 ---
 

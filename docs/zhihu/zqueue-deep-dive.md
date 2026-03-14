@@ -6,7 +6,7 @@
 
 ## 写在前面的废话
 
-上一篇 [开源一个 Go 高性能基础库](https://github.com/aiyang-zh/zhenyi-base/blob/main/docs/zhihu/zhenyi-base-intro.md) 发了之后，很多人问：你那无锁队列 **16.7 ns/op**、0 分配，和 channel 比到底有啥区别？MPSC 场景下该用哪个？
+上一篇 [开源一个 Go 高性能基础库](https://zhuanlan.zhihu.com/p/2014088300122613485) 发了之后，很多人问：你那无锁队列 **16.7 ns/op**、0 分配，和 channel 比到底有啥区别？MPSC 场景下该用哪个？
 
 这篇专门把 **zqueue** 拎出来讲清楚：设计思路、选型逻辑、96 组合基准测试、典型用法，以及那些容易踩的坑。
 
