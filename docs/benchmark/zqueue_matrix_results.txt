@@ -1,0 +1,114 @@
+# zqueue 96 组合基准测试原始结果
+
+**测试环境**：Go 1.24, darwin/arm64, Apple M3  
+**复现命令**：`go test -bench=BenchmarkMatrix -benchmem ./zqueue/`  
+**数据日期**：2025-03
+
+---
+
+## 完整数据
+
+goos: darwin
+goarch: arm64
+pkg: github.com/aiyang-zh/zhenyi-base/zqueue
+cpu: Apple M3
+
+BenchmarkMatrix/MPSCBounded/Small/P1/Single-8  	53005778	        22.20 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P1/Batch-8   	79831246	        13.70 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P4/Single-8  	43890127	        27.97 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P4/Batch-8   	48176887	        24.93 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P16/Single-8 	45079239	        43.71 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P16/Batch-8  	30994503	        52.88 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P64/Single-8 	12039946	        94.63 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P64/Batch-8  	16041529	        68.50 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P1/Single-8 	45346260	        25.53 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P1/Batch-8  	79998890	        17.79 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P4/Single-8 	45266790	        31.73 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P4/Batch-8  	59603016	        23.06 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P16/Single-8         	34343361	        34.90 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P16/Batch-8          	50101854	        23.90 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P64/Single-8         	35747178	        37.33 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P64/Batch-8          	46585432	        31.24 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P1/Single-8           	29420720	        40.32 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P1/Batch-8            	61050706	        28.07 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P4/Single-8           	28834746	        42.91 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P4/Batch-8            	46886674	        27.61 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P16/Single-8          	25970886	        43.91 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P16/Batch-8           	39728467	        29.58 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P64/Single-8          	29289247	        41.49 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P64/Batch-8           	44000971	        29.18 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P1/Single-8         	10479690	       107.2 ns/op	       1 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P1/Batch-8          	10771718	       109.2 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P4/Single-8         	 5199818	       213.9 ns/op	       7 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P4/Batch-8          	 4718780	       282.0 ns/op	       4 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P16/Single-8        	 6592292	       197.6 ns/op	      13 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P16/Batch-8         	 6660009	       192.7 ns/op	      13 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P64/Single-8        	 5661976	       188.5 ns/op	      16 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P64/Batch-8        	 7555075	       216.2 ns/op	      20 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P1/Single-8        	 6922471	       264.7 ns/op	       4 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P1/Batch-8         	10914619	       132.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P4/Single-8        	 5434262	       236.6 ns/op	       8 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P4/Batch-8         	 7812732	       159.4 ns/op	      13 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P16/Single-8        	 6059673	       289.5 ns/op	      16 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P16/Batch-8        	 4885434	       239.4 ns/op	      15 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P64/Single-8       	 7708694	       143.2 ns/op	      15 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P64/Batch-8        	 6810991	       215.1 ns/op	      19 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P1/Single-8        	 7692882	       143.1 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P1/Batch-8         	9126770	       175.1 ns/op	       5 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P4/Single-8        	 5847841	       203.7 ns/op	      14 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P4/Batch-8          	 5208544	       242.5 ns/op	      17 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P16/Single-8       	 7786468	       162.4 ns/op	      16 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P16/Batch-8        	 6675810	       180.1 ns/op	      21 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P64/Single-8       	 5197154	       196.8 ns/op	      19 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P64/Batch-8        	 7324600	       150.7 ns/op	      19 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Small/P1/Single-8          	19678516	        55.13 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Small/P1/Batch-8           	19923004	        62.09 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Small/P4/Single-8          	12713137	       104.2 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Small/P4/Batch-8           	10410924	       116.7 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Small/P16/Single-8         	 7587172	       184.1 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Small/P16/Batch-8         	 6483441	       173.7 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Small/P64/Single-8         	 4095606	       293.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Small/P64/Batch-8          	 4617157	       271.3 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Medium/P1/Single-8         	20227942	        52.84 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Medium/P1/Batch-8           	23027932	        58.39 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Medium/P4/Single-8         	16220361	        81.87 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Medium/P4/Batch-8          	15703491	        82.57 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Medium/P16/Single-8        	10144645	       120.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Medium/P16/Batch-8          	10992722	       124.9 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Medium/P64/Single-8        	 5435589	       214.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Medium/P64/Batch-8          	 6890563	       182.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Large/P1/Single-8          	19822095	        50.57 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Large/P1/Batch-8           	24763904	        50.60 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Large/P4/Single-8          	17274802	        76.70 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Large/P4/Batch-8            	15019290	        83.96 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Large/P16/Single-8         	11401777	       119.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Large/P16/Batch-8           	12292352	        97.88 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Large/P64/Single-8         	 7579760	       193.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Large/P64/Batch-8           	8609808	       167.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Small/P1/Single-8        	 5760927	       196.1 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Small/P1/Batch-8         	 6416882	       181.3 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Small/P4/Single-8        	 2996634	       424.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Small/P4/Batch-8         	 2715234	       454.9 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Small/P16/Single-8       	 2315644	       514.9 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Small/P16/Batch-8        	 2553906	       483.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Small/P64/Single-8       	 2097529	       598.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Small/P64/Batch-8        	 2050854	       652.7 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Medium/P1/Single-8       	 5296393	       215.2 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Medium/P1/Batch-8        	 5064582	       219.3 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Medium/P4/Single-8       	 2596887	       471.1 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Medium/P4/Batch-8        	 2303348	       446.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Medium/P16/Single-8      	 2630275	       462.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Medium/P16/Batch-8       	 2492272	       481.9 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Medium/P64/Single-8      	 2044773	       551.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Medium/P64/Batch-8       	 1973086	       563.6 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Large/P1/Single-8        	 5987788	       179.7 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Large/P1/Batch-8         	 6761982	       172.7 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Large/P4/Single-8        	 2571218	       412.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Large/P4/Batch-8         	 2687157	       454.9 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Large/P16/Single-8       	 2409997	       518.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Large/P16/Batch-8        	 2340463	       502.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Large/P64/Single-8      	 2002802	       564.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Large/P64/Batch-8        	 2143082	       570.8 ns/op	       0 B/op	       0 allocs/op
+
+PASS
+ok  	github.com/aiyang-zh/zhenyi-base/zqueue	158.865s

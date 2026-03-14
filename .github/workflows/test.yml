@@ -3,8 +3,20 @@ name: Run Tests
 on:
   push:
     branches: [ "main" ]        # 推送到 main 时触发
+    paths:
+      - '**/*.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Makefile'
+      - '.github/workflows/**'
   pull_request:
     branches: [ "main" ]        # 向 main 提 PR 时触发
+    paths:
+      - '**/*.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Makefile'
+      - '.github/workflows/**'
 
 jobs:
   test:
