@@ -14,7 +14,8 @@ echo "📁 结果保存到：$OUTPUT_DIR"
 # 1. 功能测试
 echo "🔍 运行功能测试..."
 START=$SECONDS
-go test ./... -v > "$OUTPUT_DIR/unit_tests.log" 2>&1
+go test ./... -v 2>&1 | tee "$OUTPUT_DIR/unit_tests.log"
+[[ ${PIPESTATUS[0]} -ne 0 ]] && exit ${PIPESTATUS[0]}
 echo "✅ 功能测试完成（耗时 $((SECONDS - START)) 秒）"
 
 # 2. 基准测试
