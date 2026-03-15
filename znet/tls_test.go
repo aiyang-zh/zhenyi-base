@@ -199,10 +199,15 @@ func TestStandardTLS_EndToEnd(t *testing.T) {
 		done <- buf[:n]
 	}()
 
+	// 测试中客户端显式信任自签名证书，而不是跳过验证。
+	rootCAs := x509.NewCertPool()
+	if !rootCAs.AppendCertsFromPEM(certPEM) {
+		t.Fatal("failed to append server cert to RootCAs")
+	}
 	clientCfg := &ziface.TLSConfig{
 		Mode: ziface.TLSModeStandard,
 		StdConfig: &tls.Config{
-			InsecureSkipVerify: true,
+			RootCAs: rootCAs,
 		},
 	}
 	conn, err := DialTLS("tcp", ln.Addr().String(), clientCfg)
@@ -232,8 +237,11 @@ func TestClientTLSConfig_DefaultIsGM(t *testing.T) {
 	if cfg.Mode != ziface.TLSModeGM {
 		t.Fatalf("expected TLSModeGM (信创默认), got %d", cfg.Mode)
 	}
-	if !cfg.GMConfig.InsecureSkipVerify {
-		t.Fatal("client config should skip verify")
+	if cfg.GMConfig == nil {
+		t.Fatal("GMConfig should not be nil")
+	}
+	if cfg.GMConfig.InsecureSkipVerify {
+		t.Fatal("client config should not skip verify by default")
 	}
 }
 
@@ -242,7 +250,10 @@ func TestClientStandardTLSConfig(t *testing.T) {
 	if cfg.Mode != ziface.TLSModeStandard {
 		t.Fatalf("expected TLSModeStandard, got %d", cfg.Mode)
 	}
-	if !cfg.StdConfig.InsecureSkipVerify {
-		t.Fatal("client config should skip verify")
+	if cfg.StdConfig == nil {
+		t.Fatal("StdConfig should not be nil")
+	}
+	if cfg.StdConfig.InsecureSkipVerify {
+		t.Fatal("client config should not skip verify by default")
 	}
 }

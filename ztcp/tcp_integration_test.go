@@ -743,7 +743,13 @@ func TestTServer_WithTLS(t *testing.T) {
 
 	addr := server.GetAddr()
 
+	// 客户端在测试中显式信任自签名证书，而不是跳过验证。
+	rootCAs := x509.NewCertPool()
+	if !rootCAs.AppendCertsFromPEM(certPEM) {
+		t.Fatal("failed to append server cert to RootCAs")
+	}
 	clientCfg := znet.NewClientStandardTLSConfig()
+	clientCfg.StdConfig.RootCAs = rootCAs
 	conn, err := znet.DialTLS("tcp", addr, clientCfg)
 	if err != nil {
 		t.Fatalf("DialTLS to TServer failed: %v", err)

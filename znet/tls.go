@@ -142,23 +142,20 @@ func DialTLS(network, addr string, cfg *ziface.TLSConfig) (net.Conn, error) {
 	}
 }
 
-// NewClientTLSConfig 创建客户端 GM-TLS 配置（信创默认，跳过证书验证，用于测试/内网）。
+// NewClientTLSConfig 创建客户端 GM-TLS 配置（信创默认，启用证书验证）。
 func NewClientTLSConfig() *ziface.TLSConfig {
 	return &ziface.TLSConfig{
 		Mode: ziface.TLSModeGM,
 		GMConfig: &gmtls.Config{
-			GMSupport:          gmtls.NewGMSupport(),
-			InsecureSkipVerify: true,
+			GMSupport: gmtls.NewGMSupport(),
 		},
 	}
 }
 
-// NewClientStandardTLSConfig 创建客户端标准 TLS 配置（非信创场景，跳过证书验证）。
+// NewClientStandardTLSConfig 创建客户端标准 TLS 配置（非信创场景，启用证书验证）。
 func NewClientStandardTLSConfig() *ziface.TLSConfig {
 	return &ziface.TLSConfig{
-		Mode: ziface.TLSModeStandard,
-		StdConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+		Mode:      ziface.TLSModeStandard,
+		StdConfig: &tls.Config{},
 	}
 }
