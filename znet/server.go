@@ -22,6 +22,9 @@ type ServerHandlers struct {
 	SyncMode bool                                       // 可选：sync 模式，原生支持；不建发送队列，handler 用 ReplyImmediate 直写
 }
 
+// listenerHolder 供 atomic.Pointer 存储，避免 interface 的 atomic.Value 分配；嵌入 BaseServer 实现 0 分配。
+type listenerHolder struct{ L net.Listener }
+
 // BaseServer 是网络层通用服务端基类，负责连接管理、TLS、心跳与认证映射。
 // 具体协议（TCP/WebSocket/KCP）由子包嵌入并实现 Server(ctx) 与 listen。
 type BaseServer struct {
@@ -34,7 +37,8 @@ type BaseServer struct {
 	addr             string
 	iEncrypt         ziface.IEncrypt
 	closeCh          chan struct{}
-	listener         net.Listener
+	listener         atomic.Pointer[listenerHolder] // 无锁：Set/Get/Close 通过 atomic 协调
+	listenerH        listenerHolder                 // 嵌入，SetListener 仅写字段后 Store(&listenerH)，0 分配
 	Once             sync.Once
 	iMetrics         ziface.IMetrics
 	iChannelMetrics  ziface.IChannelMetrics // 单连接维度指标，AddChannel 时注入到支持 IChannelMetricsSetter 的 channel
@@ -80,23 +84,28 @@ func (b *BaseServer) GetTLSConfig() *ziface.TLSConfig {
 	return b.tlsConfig
 }
 
-// GetListener 返回当前使用的 net.Listener（启动后由具体协议设置）。
+// GetListener 返回当前使用的 net.Listener（启动后由具体协议设置）。无锁。
 func (b *BaseServer) GetListener() net.Listener {
-	return b.listener
-}
-
-// SetListener 设置或替换底层 listener（供 TCP/WebSocket/KCP 在 start 时注入）。
-func (b *BaseServer) SetListener(l net.Listener) {
-	b.listener = l
-}
-
-// GetAddr 返回实际监听地址。如果 listener 已绑定则返回实际地址（含 OS 分配端口），
-// 否则返回配置地址。
-func (b *BaseServer) GetAddr() string {
-	if b.listener != nil {
-		return b.listener.Addr().String()
+	p := b.listener.Load()
+	if p == nil {
+		return nil
 	}
-	return b.addr
+	return p.L
+}
+
+// SetListener 设置或替换底层 listener（供 TCP/WebSocket/KCP 在 start 时注入）。无锁、0 分配。
+func (b *BaseServer) SetListener(l net.Listener) {
+	b.listenerH.L = l
+	b.listener.Store(&b.listenerH)
+}
+
+// GetAddr 返回实际监听地址。如果 listener 已绑定则返回实际地址（含 OS 分配端口），否则返回配置地址。无锁。
+func (b *BaseServer) GetAddr() string {
+	p := b.listener.Load()
+	if p == nil || p.L == nil {
+		return b.addr
+	}
+	return p.L.Addr().String()
 }
 
 // SetMaxConnections 设置最大连接数；0 表示不限制。
@@ -266,12 +275,13 @@ func (b *BaseServer) GetChannelByAuthId(authId int64) ziface.IChannel {
 	return channel
 }
 
-// BaseClose 关闭 listener 并关闭所有已管理的 Channel（由具体协议的 Close 调用）。
+// BaseClose 关闭 listener 并关闭所有已管理的 Channel（由具体协议的 Close 调用）。无锁。
 func (b *BaseServer) BaseClose() {
-	if b.listener == nil {
+	p := b.listener.Swap(nil)
+	if p == nil || p.L == nil {
 		return
 	}
-	if err := b.listener.Close(); err != nil {
+	if err := p.L.Close(); err != nil {
 		zlog.Error("Server listener close failed", zap.String("addr", b.addr), zap.Error(err))
 	}
 	b.channels.Range(func(key, value any) bool {

@@ -2,22 +2,22 @@ package zws
 
 import (
 	"context"
-	"github.com/aiyang-zh/zhenyi-base/zlog"
-	"github.com/aiyang-zh/zhenyi-base/znet"
+	"github.com/aiyang-zh/zhenyi-base/zerrs"
 	"net/http"
+	"sync/atomic"
 	"time"
 
+	"github.com/aiyang-zh/zhenyi-base/zlog"
+	"github.com/aiyang-zh/zhenyi-base/znet"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
-
-	"github.com/aiyang-zh/zhenyi-base/zerrs"
 )
 
 // Server 为 WebSocket 协议的服务端实现，基于 HTTP 升级与 BaseServer。
 type Server struct {
 	*znet.BaseServer
 	upgrader websocket.Upgrader
-	sl       *http.Server
+	sl       atomic.Pointer[http.Server] // 无锁：start 时 Store，Close 时 Swap(nil) 后 Shutdown
 }
 
 // NewServer 创建 WebSocket 服务端；addr 为监听地址，handlers 必须提供 OnAccept 与 OnRead。
@@ -45,16 +45,17 @@ func (ser *Server) start(ctx context.Context) {
 	s.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		ser.handler(ctx, w, r)
 	})
-	ser.sl = &http.Server{
+	sl := &http.Server{
 		Addr:    ser.GetAddr(),
 		Handler: s,
 	}
+	ser.sl.Store(sl)
 
 	// 启动HTTP服务器的goroutine
 	errCh := make(chan error, 1)
 	go func() {
 		defer zlog.Recover("WServer start recover")
-		err := ser.sl.ListenAndServe()
+		err := sl.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
 			errCh <- err
 		}
@@ -115,8 +116,8 @@ func (ser *Server) Close() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if ser.sl != nil {
-		err := ser.sl.Shutdown(ctx)
+	if sl := ser.sl.Swap(nil); sl != nil {
+		err := sl.Shutdown(ctx)
 		if err != nil {
 			zlog.Warn("Failed to shutdown WebSocket server gracefully",
 				zap.String("addr", ser.GetAddr()),

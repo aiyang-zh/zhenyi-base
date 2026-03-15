@@ -9,7 +9,7 @@ test:
 
 # 仅单元测试（供 pre-commit 等快速检查），排除 examples
 test-unit:
-	go test $$(go list ./... | grep -vE '/examples/|/ziface/')
+	go test -race $$(go list ./... | grep -vE '/examples/|/ziface/') -count=1
 
 # Echo 压测入口
 bench:

@@ -116,12 +116,12 @@ func TestTChannel_DirectTCPConnection(t *testing.T) {
 	}
 	defer ln.Close()
 
-	var gotMsg bool
+	var gotMsg atomic.Bool
 	server := NewServer(ln.Addr().String(), znet.ServerHandlers{
 		OnAccept: func(ziface.IChannel) bool { return true },
 		OnRead: func(ch ziface.IChannel, msg ziface.IWireMessage) {
 			if msg.GetMsgId() == 100 && string(msg.GetMessageData()) == "direct" {
-				gotMsg = true
+				gotMsg.Store(true)
 			}
 		},
 	})
@@ -166,7 +166,7 @@ func TestTChannel_DirectTCPConnection(t *testing.T) {
 	}
 
 	time.Sleep(200 * time.Millisecond)
-	if !gotMsg {
+	if !gotMsg.Load() {
 		t.Error("server did not receive message")
 	}
 }
@@ -178,13 +178,13 @@ func TestBaseClient_FullOperations(t *testing.T) {
 	}
 	defer ln.Close()
 
-	var serverReceived []byte
+	serverReceivedCh := make(chan []byte, 1)
 	go func() {
 		conn, _ := ln.Accept()
 		defer conn.Close()
 		buf := make([]byte, 1024)
 		n, _ := conn.Read(buf)
-		serverReceived = buf[:n]
+		serverReceivedCh <- buf[:n]
 	}()
 
 	conn, err := net.Dial("tcp", ln.Addr().String())
@@ -217,7 +217,7 @@ func TestBaseClient_FullOperations(t *testing.T) {
 		t.Error("IsOpen should be false after Close")
 	}
 
-	time.Sleep(50 * time.Millisecond)
+	serverReceived := <-serverReceivedCh
 	if len(serverReceived) < 12 {
 		t.Errorf("expected server to receive packet, got %d bytes", len(serverReceived))
 	}

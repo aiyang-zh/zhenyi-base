@@ -24,7 +24,8 @@ func WithAsyncMode() ClientOption {
 	return func(b *BaseClient) { b.mode = ziface.ModeAsync }
 }
 
-// BaseClient 基础客户端（零拷贝实现）
+// BaseClient 基础客户端（零拷贝、热路径无锁）。
+// 设计目标：高性能低延迟、热路径无锁、0 分配；connMu 仅用于 Close 与 read 的关闭协调，非热路径。
 type BaseClient struct {
 	// 零拷贝相关
 	readBuffer   *RingBuffer // 读取缓冲区
@@ -39,6 +40,8 @@ type BaseClient struct {
 	readCall  func(ziface.IWireMessage)
 	state     atomic.Bool
 	conn      net.Conn
+	connMu    sync.RWMutex    // 保护 conn/readBuffer 的关闭与读；Close 先关 conn 再 readWg.Wait 再持锁清理，避免死锁
+	readWg    sync.WaitGroup  // 读 goroutine 退出后 Close 才做 buffer 等清理
 	writeLock sync.Mutex      // 写入锁，保护并发写入
 	mode      ziface.ConnMode // 默认 ModeSync（Request）；ModeAsync 时用 Read
 
@@ -92,28 +95,34 @@ func (b *BaseClient) GetConn() net.Conn {
 }
 
 // Close 关闭连接并释放 RingBuffer/ParseData 等资源；幂等。
+// 先关 conn 唤醒可能阻塞在 read 的 goroutine，再 readWg.Wait 后持锁清理，避免 read 持 RLock 时 Close 等 Lock 死锁。
 func (b *BaseClient) Close() error {
 	if !b.state.CompareAndSwap(true, false) {
 		return nil // 已关闭
 	}
 
-	// 释放 parseData 持有的 pool buffer
+	b.connMu.RLock()
+	conn := b.conn
+	b.connMu.RUnlock()
+	if conn != nil {
+		_ = conn.Close()
+	}
+	b.readWg.Wait()
+
+	b.connMu.Lock()
+	defer b.connMu.Unlock()
+
 	for _, buf := range b.parseData.OwnedBuffers {
 		buf.Release()
 	}
 	b.parseData.OwnedBuffers = b.parseData.OwnedBuffers[:0]
 
-	// 归还 RingBuffer 到池
 	if b.readBuffer != nil {
 		PutRingBuffer(b.readBuffer)
 		b.readBuffer = nil
 	}
 	b.requestReader = nil
-
-	// 关闭连接
-	if b.conn != nil {
-		return b.conn.Close()
-	}
+	b.conn = nil
 	return nil
 }
 
@@ -225,12 +234,14 @@ func (b *BaseClient) Read() {
 	if b.mode != ziface.ModeAsync {
 		panic("client: use WithAsyncMode() when creating client to enable Read(); default is sync (Request) mode")
 	}
+	b.readWg.Add(1)
 	go func() {
 		defer zlog.Recover("BaseClient Read recover")
 		defer b.Close()
 		for {
 			n1 := b.read()
 			if n1 != 0 {
+				b.readWg.Done()
 				return
 			}
 		}
@@ -241,16 +252,20 @@ func (b *BaseClient) read() int {
 	if !b.IsOpen() {
 		return 1
 	}
-
-	// 从网络读取数据到 RingBuffer
-	_, err := b.readBuffer.WriteFromReader(b.conn, 0)
+	b.connMu.RLock()
+	conn := b.conn
+	rb := b.readBuffer
+	b.connMu.RUnlock()
+	if conn == nil || rb == nil {
+		return 1
+	}
+	// 不在持锁下做阻塞 I/O，避免 Close() 等待 Lock 时与 read 死锁；Close 关 conn 后此处会得到错误并 return 1
+	_, err := rb.WriteFromReader(conn, 0)
 	if err != nil {
 		if err == ErrBufferFull {
-			// 与 channel 一致：尝试扩容，避免 1k1k 等场景下 buffer 满导致误判 single packet exceeds 并断开
-			if b.readBuffer.Grow(65536) {
-				_, err = b.readBuffer.WriteFromReader(b.conn, 0)
+			if rb.Grow(65536) {
+				_, err = rb.WriteFromReader(conn, 0)
 				if err != nil && err != ErrBufferFull {
-					// 重试时其他错误，交给下方统一处理
 				} else {
 					err = nil
 				}
@@ -262,7 +277,6 @@ func (b *BaseClient) read() int {
 				return 1
 			}
 			if err == ErrBufferFull {
-				// 扩容失败或仍满，继续解析已有数据以腾出空间，不断开
 			} else if b.isNormalCloseError(err) {
 				return 1
 			} else {
@@ -276,6 +290,11 @@ func (b *BaseClient) read() int {
 		}
 	}
 
+	b.connMu.RLock()
+	defer b.connMu.RUnlock()
+	if b.readBuffer == nil {
+		return 1
+	}
 	// 循环解析所有完整消息（复用 b.parseData，零池化开销）
 	for {
 		b.parseData.ResetForReuse()
@@ -294,7 +313,6 @@ func (b *BaseClient) read() int {
 			break
 		}
 
-		// 解密
 		wireMsg := b.parseData.Message
 		if encData := wireMsg.GetMessageData(); len(encData) > 0 && b.iEncrypt != nil {
 			decrypted, decryptErr := b.iEncrypt.Decrypt(encData)
@@ -305,9 +323,13 @@ func (b *BaseClient) read() int {
 			wireMsg.SetMessageData(decrypted)
 		}
 
-		// 回调（传递 IWireMessage，回调方同步处理或自行拷贝数据）
 		if b.readCall != nil {
+			b.connMu.RUnlock()
 			b.readCall(wireMsg)
+			b.connMu.RLock()
+			if b.conn == nil || b.readBuffer == nil {
+				return 1
+			}
 		}
 	}
 
