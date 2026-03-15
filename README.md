@@ -9,8 +9,16 @@
 *MIT 协议 · 零分配 · 无锁队列 · 开箱即用*
 
 [![Tests](https://github.com/aiyang-zh/zhenyi-base/actions/workflows/test.yml/badge.svg)](https://github.com/aiyang-zh/zhenyi-base/actions)
+[![Go Reference](https://pkg.go.dev/badge/github.com/aiyang-zh/zhenyi-base.svg)](https://pkg.go.dev/github.com/aiyang-zh/zhenyi-base)
+[![Go Report Card](https://goreportcard.com/badge/github.com/aiyang-zh/zhenyi-base?style=flat-square)](https://goreportcard.com/report/github.com/aiyang-zh/zhenyi-base)
 [![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=flat-square&logo=go)](https://golang.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/aiyang-zh/zhenyi-base?style=flat-square)](https://github.com/aiyang-zh/zhenyi-base/stargazers)
+
+![Zero Allocation](https://img.shields.io/badge/Zero%20Allocation-yes-brightgreen?style=flat-square)
+![Lock-Free Queue](https://img.shields.io/badge/Lock--Free-Queue-orange?style=flat-square)
+![QPS](https://img.shields.io/badge/QPS-770k+-brightgreen?style=flat-square)
+![Latency](https://img.shields.io/badge/Latency-16ns-orange?style=flat-square)
 
 **[官网](https://zhenyi-site.pages.dev/)** · [GitHub](https://github.com/aiyang-zh/zhenyi-base)
 
