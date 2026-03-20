@@ -2,6 +2,9 @@
 
 ## [1.0.4] - 2026-03-15
 
+### Added
+- **zpool**: 增加对象池观测与命名配置
+
 ### Fixed
 - **znet.BaseClient**：修复 Close 与读协程之间的竞态与潜在死锁问题，引入 `connMu` 与 `readWg`，先关闭连接再等待读协程退出并统一清理缓冲区。
 - **znet.NetMessage 测试**：修复 Reset 回归用例误报，确保 `SetDataCopy` + `Reset` + 复用场景下无泄漏、无 double-free。
