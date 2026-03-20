@@ -96,6 +96,43 @@ func TestPool_Get_NilNew(t *testing.T) {
 	}
 }
 
+func TestPool_WithName(t *testing.T) {
+	p := NewPoolWithOptions(func() *int {
+		v := 1
+		return &v
+	}, WithName("test_pool"))
+	if p.Name() != "test_pool" {
+		t.Fatalf("expected Name=test_pool, got %q", p.Name())
+	}
+}
+
+type testObserver struct {
+	get int64
+	put int64
+	new int64
+}
+
+func (o *testObserver) OnPoolCreate(string) {}
+func (o *testObserver) OnNew(string)        { o.new++ }
+func (o *testObserver) OnGet(string)        { o.get++ }
+func (o *testObserver) OnPut(string)        { o.put++ }
+func (o *testObserver) OnPutNil(string)     {}
+
+func TestPool_WithObserver(t *testing.T) {
+	local := &testObserver{}
+	p := NewPoolWithOptions(func() *int {
+		v := 1
+		return &v
+	}, WithName("obs_pool"), WithObserver(local))
+
+	x := p.Get()
+	p.Put(x)
+
+	if local.get != 1 || local.put != 1 {
+		t.Fatalf("expected local get/put=1/1, got %d/%d", local.get, local.put)
+	}
+}
+
 // ============================================================
 // buff.go — bytes.Buffer 池
 // ============================================================
