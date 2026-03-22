@@ -67,4 +67,4 @@ s.Run()
 
 MIT 协议，按需引入，零分配无锁，不捆绑任何中间件。支持 TCP / KCP / WebSocket 无损切换，业务代码零修改。
 
-示例与性能图表见 [官网](https://zhenyi-site.pages.dev/)，欢迎试用、反馈。
+示例与性能图表见 https://zhenyi-site.pages.dev/ ，欢迎试用、反馈。
