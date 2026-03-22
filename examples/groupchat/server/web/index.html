@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>groupchat — zhenyi-base</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; background: #111; color: #e8e8e8; }
+    body { max-width: 640px; margin: 1.5rem auto; padding: 0 12px; }
+    h1 { font-size: 1.1rem; font-weight: 600; color: #9cf; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
+    input[type="text"] { flex: 1; min-width: 140px; padding: 8px 10px; border-radius: 6px; border: 1px solid #333; background: #1a1a1a; color: #eee; }
+    button { padding: 8px 14px; border-radius: 6px; border: none; background: #2a6; color: #fff; cursor: pointer; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    #log {
+      height: 320px; overflow-y: auto; padding: 10px; border-radius: 8px;
+      background: #0d0d0d; border: 1px solid #2a2a2a; font-size: 14px; line-height: 1.45;
+    }
+    .msg { margin: 4px 0; word-break: break-word; }
+    .msg .u { color: #8bd; font-weight: 600; margin-right: 6px; }
+    .msg .sys { color: #888; font-style: italic; }
+    .err { color: #f66; }
+  </style>
+</head>
+<body>
+  <h1>内存群聊（WebSocket + zserver）</h1>
+  <p style="color:#888;font-size:13px;">先填昵称并连接；消息仅存内存，刷新即无历史。</p>
+  <div class="row">
+    <label>WS 端口</label>
+    <input type="text" id="wsPort" value="9001" style="max-width:80px" />
+    <label>昵称</label>
+    <input type="text" id="nick" placeholder="昵称" maxlength="24" />
+    <button type="button" id="btnConn">连接</button>
+    <button type="button" id="btnDisc" disabled>断开</button>
+  </div>
+  <div class="row">
+    <input type="text" id="line" placeholder="说点什么…" maxlength="512" disabled />
+    <button type="button" id="btnSend" disabled>发送</button>
+  </div>
+  <div id="log"></div>
+
+  <script>
+    const MSG_JOIN = 1;
+    const MSG_CHAT = 2;
+    const MSG_EVT = 10;
+    const MSG_ERR = 99;
+
+    let ws = null;
+    let seq = 0;
+    let joined = false;
+
+    const $ = (id) => document.getElementById(id);
+    const logEl = $("log");
+
+    function pack(msgId, bodyUtf8) {
+      const body = new TextEncoder().encode(bodyUtf8);
+      const buf = new ArrayBuffer(12 + body.length);
+      const dv = new DataView(buf);
+      dv.setInt32(0, msgId, false);
+      dv.setUint32(4, (++seq) >>> 0, false);
+      dv.setUint32(8, body.length, false);
+      new Uint8Array(buf, 12).set(body);
+      return buf;
+    }
+
+    function appendLine(html) {
+      const d = document.createElement("div");
+      d.className = "msg";
+      d.innerHTML = html;
+      logEl.appendChild(d);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function parsePackets(u8) {
+      let off = 0;
+      while (off + 12 <= u8.length) {
+        const dv = new DataView(u8.buffer, u8.byteOffset + off, 12);
+        const msgId = dv.getInt32(0, false);
+        const len = dv.getUint32(8, false);
+        if (len > 65536) break;
+        if (off + 12 + len > u8.length) break;
+        const payload = new TextDecoder().decode(u8.subarray(off + 12, off + 12 + len));
+        off += 12 + len;
+        try {
+          if (msgId === MSG_EVT) {
+            const o = JSON.parse(payload);
+            if (o.type === "join") appendLine(`<span class="sys">${escapeHtml(o.user)} 进入群聊</span>`);
+            else if (o.type === "leave") appendLine(`<span class="sys">${escapeHtml(o.user)} 离开</span>`);
+            else if (o.type === "say") appendLine(`<span class="u">${escapeHtml(o.user)}</span>${escapeHtml(o.text)}`);
+          } else if (msgId === MSG_ERR) {
+            appendLine(`<span class="err">${escapeHtml(payload)}</span>`);
+          }
+        } catch (_) {}
+      }
+      return off;
+    }
+
+    let buf = new Uint8Array(0);
+    function mergeBuf(a, b) {
+      const o = new Uint8Array(a.length + b.length);
+      o.set(a, 0);
+      o.set(b, a.length);
+      return o;
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    $("btnConn").onclick = () => {
+      const port = $("wsPort").value.trim() || "9001";
+      const nick = $("nick").value.trim();
+      if (!nick) { alert("请填写昵称"); return; }
+      const url = `ws://${location.hostname}:${port}/`;
+      ws = new WebSocket(url);
+      ws.binaryType = "arraybuffer";
+      joined = false;
+      buf = new Uint8Array(0);
+
+      ws.onopen = () => {
+        ws.send(pack(MSG_JOIN, nick));
+        joined = true;
+        $("btnConn").disabled = true;
+        $("btnDisc").disabled = false;
+        $("line").disabled = false;
+        $("btnSend").disabled = false;
+        $("nick").disabled = true;
+        appendLine('<span class="sys">已连接</span>');
+      };
+      ws.onmessage = (ev) => {
+        const chunk = new Uint8Array(ev.data);
+        buf = mergeBuf(buf, chunk);
+        const used = parsePackets(buf);
+        if (used > 0) buf = buf.subarray(used);
+      };
+      ws.onclose = () => {
+        joined = false;
+        $("btnConn").disabled = false;
+        $("btnDisc").disabled = true;
+        $("line").disabled = true;
+        $("btnSend").disabled = true;
+        $("nick").disabled = false;
+        appendLine('<span class="sys">连接已关闭</span>');
+      };
+      ws.onerror = () => appendLine('<span class="err">WebSocket 错误</span>');
+    };
+
+    $("btnDisc").onclick = () => { if (ws) ws.close(); };
+
+    function sendChat() {
+      if (!ws || ws.readyState !== 1 || !joined) return;
+      const t = $("line").value.trim();
+      if (!t) return;
+      ws.send(pack(MSG_CHAT, t));
+      $("line").value = "";
+    }
+    $("btnSend").onclick = sendChat;
+    $("line").onkeydown = (e) => { if (e.key === "Enter") sendChat(); };
+  </script>
+</body>
+</html>

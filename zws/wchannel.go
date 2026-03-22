@@ -13,6 +13,6 @@ type Channel struct {
 // NewChannel 创建 WebSocket 通道（由 Server 在 Upgrade 后调用）。
 func NewChannel(channelId uint64, conn *websocket.Conn, server *Server) *Channel {
 	return &Channel{
-		BaseChannel: znet.NewBaseChannel(channelId, conn.NetConn(), server),
+		BaseChannel: znet.NewBaseChannel(channelId, newWSConn(conn), server),
 	}
 }

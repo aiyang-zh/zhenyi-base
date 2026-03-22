@@ -57,9 +57,8 @@ func (n *Client) Connect(addr string) error {
 			zap.Error(err))
 		return zerrs.Wrap(err, zerrs.ErrTypeNetwork, "failed to dial WebSocket server")
 	}
-	conn1 := conn.NetConn()
-	setNoDelay(conn1) // 禁用底层 TCP Nagle，降低 sync/RPC 场景延迟
-	n.SetConn(conn1)
+	setNoDelay(conn.NetConn()) // 底层 TCP：禁用 Nagle
+	n.SetConn(newWSConn(conn))
 
 	zlog.Info("WebSocket client connected successfully", zap.String("addr", addr))
 	return nil

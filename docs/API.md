@@ -22,6 +22,7 @@
 
 ### ztcp / zws / zkcp
 传输实现：`Server`、`Client`、`Channel`，`NewServer`、`NewClient(addr, opts...)`、`NewChannel`。
+- **zws**：业务读写经 **WebSocket 二进制帧**（`zws` 内部 `wsConn` 适配 `net.Conn`），与浏览器 `WebSocket` 发送的二进制负载互通；线协议仍为 `msgId+seqId+len+data`（见 `znet.BaseSocket`）。
 - **ztcp.Server**：`SetReactorMetrics(*zreactor.Metrics)` 仅在使用 `ServerReactor`（Linux）时生效，传 nil 表示不埋点。
 - `NewClient(addr)` 默认 sync；`NewClient(addr, znet.WithAsyncMode())` 启用 async（Read），与 server WithAsyncMode 共用 ziface.ModeAsync。
 

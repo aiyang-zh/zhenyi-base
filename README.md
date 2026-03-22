@@ -258,7 +258,8 @@ zhenyi-base/
 ├── ztime/         # 时间工具
 ├── ztimer/        # 定时器
 ├── zfile/         # 文件工具
-└── examples/      # 示例代码
+├── zbrand/        # 展示常量（如启动 Banner）
+└── examples/      # 示例代码（含 groupchat 内存群聊 + 网页）
 ```
 
 ---

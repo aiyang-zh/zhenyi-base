@@ -24,6 +24,7 @@
 - **znet**：`channel_coverage_test.go` 等覆盖补充。
 - **zbrand**：新包，常量 **`Banner`**（ASCII）；`zserver.printBanner`、示例客户端引用。
 - **examples**：服务端 **`WithName`**（如 `echodemo/server`、`echobench/server`）；**echobench** 服务端 **`WithBanner(!*quiet)`**；交互客户端 **`fmt.Print(zbrand.Banner)`**。
+- **examples/groupchat**：内存群聊示例；自带网页（`embed`）、WebSocket、单房间广播；MsgID 1 加入、2 发言、10 广播事件、99 错误；需 **`WithAsyncMode`** 使 `Send` 入队生效。
 
 ### Changed
 - **ziface / znet / zserver**（**破坏性**）：会话与通道认证 ID：`int64` → **`uint64`**（`ISession.GetAuthId`/`SetAuthId`、`IServer.SetChannelAuth`/`GetChannelByAuthId`、`BaseServer`、`zserver.Conn.AuthId`/`SetAuthId`）。
@@ -44,9 +45,10 @@
 ### Documentation
 - **znet**：`docs/API.md`、包注释：**async** 下 `BaseChannel.Send`/`Close`（`StopEnqueue`、`TryEnqueue`、`Release`）；**RingBuffer `Peek*`** 与 `Discard`/后续读写关系。
 - **znet**：新增 `TestBaseChannel_Send_AfterClose_ReleasesMessage`、`TestBaseChannel_Send_Close_ConcurrentReleaseCount`（关闭并发下每条消息一次 `Release`）。
-- **README.md**、**docs/API.md**、**examples/README.md**、**examples/echodemo/README.md**、**examples/echobench/README.md**：**zbrand**、**zserver** `WithBanner`/`WithName`、**zserialize** MsgPack v5、示例依赖 **zbrand**。
+- **README.md**、**docs/API.md**、**examples/README.md**、**examples/echodemo/README.md**、**examples/echobench/README.md**、**examples/groupchat/README.md**：**zbrand**、**zserver** `WithBanner`/`WithName`、**zserialize** MsgPack v5、**groupchat** 协议说明、示例依赖 **zbrand**。
 
 ### Fixed
+- **zws**：WebSocket 读写改为经 **`ReadMessage`/`WriteMessage` 二进制帧** 的 `net.Conn` 适配（`wsconn.go`），不再对 `NetConn()` 裸 TCP 读写；**浏览器等标准 WebSocket 客户端可互通**。
 - **zpool**：`Put`：仅 **`T` 为指针**时用 `any(obj)==any(z)` 识别 typed nil，匹配则 `OnPutNil`、不入池；热路径无 `reflect.ValueOf`。
 - **znet**：`TestRingBufferPool_GetPut`：池化 `Put` 后 **Stats** 与 `Reset` 一致。
 

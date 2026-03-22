@@ -8,6 +8,7 @@
 |------|------|----------|
 | [echodemo](./echodemo/) | 极简 Echo：服务端收到什么回什么，客户端支持交互输入 | `go run ./examples/echodemo/server` + `go run ./examples/echodemo/client` |
 | [echobench](./echobench/) | Echo 压测：交互模式 + 批量压测，含 QPS 参考数据 | `go run ./examples/echobench/server` + `go run ./examples/echobench/client [-bench -n 100000 -c 10]` |
+| [groupchat](./groupchat/) | 内存群聊：自带网页 + WebSocket，单房间广播 | `go run ./examples/groupchat/server` 后打开提示的 http 地址 |
 
 ## 快速体验
 
@@ -27,5 +28,6 @@ make bench
 
 - **echodemo**：服务端 zserver、ztcp、znet；客户端 ztcp、znet、zbrand
 - **echobench**：服务端 zserver、ztcp、zws、zkcp、znet；客户端 ztcp、zws、zkcp、znet、ziface、zbrand（交互模式）
+- **groupchat**：zserver（WebSocket）、znet、`embed` 静态页
 
 详见各子目录 README。
