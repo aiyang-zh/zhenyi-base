@@ -243,10 +243,14 @@ func TestRingBufferPool_GetPut(t *testing.T) {
 	rb.Write([]byte("test"))
 	PutRingBuffer(rb)
 
-	// 重新获取，应该被 Reset 过
+	// 重新获取，应该被 Reset 过（含 Stats 与底层字节清零）
 	rb2 := GetRingBuffer()
 	if rb2.Len() != 0 {
 		t.Errorf("expected empty RingBuffer after pool recycle, got Len=%d", rb2.Len())
+	}
+	tr, tw := rb2.Stats()
+	if tr != 0 || tw != 0 {
+		t.Errorf("expected Stats zero after pool Get, got tr=%d tw=%d", tr, tw)
 	}
 	PutRingBuffer(rb2)
 }
@@ -925,8 +929,8 @@ func TestDefaultSocketConfig(t *testing.T) {
 	if cfg.MaxDataLength != 1024*1024 {
 		t.Errorf("expected MaxDataLength=1048576, got %d", cfg.MaxDataLength)
 	}
-	if cfg.MaxMsgId != 1000000000 {
-		t.Errorf("expected MaxMsgId=1000000000, got %d", cfg.MaxMsgId)
+	if cfg.MaxMsgId != DefaultMaxMsgId {
+		t.Errorf("expected MaxMsgId=%d, got %d", DefaultMaxMsgId, cfg.MaxMsgId)
 	}
 }
 

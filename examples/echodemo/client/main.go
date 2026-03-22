@@ -6,11 +6,15 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/aiyang-zh/zhenyi-base/zbrand"
 	"github.com/aiyang-zh/zhenyi-base/znet"
 	"github.com/aiyang-zh/zhenyi-base/ztcp"
 )
 
 func main() {
+	fmt.Print(zbrand.Banner)
+	fmt.Println("[echodemo/client] echo client")
+
 	client, err := ztcp.NewClient("127.0.0.1:9001")
 	if err != nil {
 		fmt.Printf("connect failed: %v\n", err)

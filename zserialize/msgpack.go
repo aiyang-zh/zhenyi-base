@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"sync"
 
-	"github.com/vmihailenco/msgpack"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 var encoderPool = sync.Pool{
@@ -19,9 +19,7 @@ var encoderPool = sync.Pool{
 }
 var decoderPool = sync.Pool{
 	New: func() interface{} {
-		// 创建一个 Decoder，并未绑定具体 Reader，或者绑定一个空的
-		dec := msgpack.NewDecoder(nil)
-		return dec
+		return msgpack.NewDecoder(bytes.NewReader(nil))
 	},
 }
 
@@ -51,10 +49,6 @@ func UnmarshalMsgPack(body []byte, obj interface{}) error {
 	dec := decoderPool.Get().(*msgpack.Decoder)
 	defer decoderPool.Put(dec)
 
-	err := dec.Reset(bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-
+	dec.Reset(bytes.NewReader(body))
 	return dec.Decode(obj)
 }

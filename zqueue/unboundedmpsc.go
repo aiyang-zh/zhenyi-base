@@ -40,6 +40,10 @@ type UnboundedMPSC[T any] struct {
 	// 消费者端本地缓存（单线程，用于 Dequeue 归还）
 	recycleCache []*mpscNode[T]
 	recycleCap   int
+
+	// enqueueStopped：单消费者调用 StopEnqueue 后，TryEnqueue 在链入链表前二次检查并不再接受新元素。
+	// 与 BaseChannel.Close 配合，收紧「停止入队」与链式入队之间的 TOCTOU（无 mutex）。
+	enqueueStopped atomic.Bool
 }
 
 // NewUnboundedMPSC 创建新的无界 MPSC 队列。
@@ -61,19 +65,40 @@ func NewUnboundedMPSC[T any]() *UnboundedMPSC[T] {
 	return q
 }
 
-// Enqueue 添加元素到队列（wait-free，多生产者安全）。
-func (q *UnboundedMPSC[T]) Enqueue(v T) {
-	n := q.nodePool.Get() // 从对象池获取节点
+// StopEnqueue 禁止后续 TryEnqueue 成功（仅生产者侧；Dequeue 仍由单消费者调用）。
+// 典型由 Channel.Close 在通知发送协程退出之前调用，与 TryEnqueue 内二次检查配合收紧 TOCTOU。
+func (q *UnboundedMPSC[T]) StopEnqueue() {
+	q.enqueueStopped.Store(true)
+}
+
+// TryEnqueue 尝试入队；若已 StopEnqueue 或在分配节点后再次观察到停止，则返回 false（调用方保留 v 的所有权）。
+func (q *UnboundedMPSC[T]) TryEnqueue(v T) bool {
+	if q.enqueueStopped.Load() {
+		return false
+	}
+	n := q.nodePool.Get()
 	n.val = v
 	atomic.StorePointer(&n.next, nil)
-
+	if q.enqueueStopped.Load() {
+		var zero T
+		n.val = zero
+		q.nodePool.Put(n)
+		return false
+	}
 	prev := (*mpscNode[T])(atomic.SwapPointer(&q.head, unsafe.Pointer(n)))
 	atomic.StorePointer(&prev.next, unsafe.Pointer(n))
+	return true
+}
+
+// Enqueue 添加元素到队列（wait-free，多生产者安全）。
+// 若已 StopEnqueue，静默丢弃 v；需回收资源时请使用 TryEnqueue 并在 false 时自行处理。
+func (q *UnboundedMPSC[T]) Enqueue(v T) {
+	_ = q.TryEnqueue(v)
 }
 
 // EnqueueBatch 批量入队（wait-free，多生产者安全）。
 func (q *UnboundedMPSC[T]) EnqueueBatch(elements []T) {
-	if len(elements) == 0 {
+	if len(elements) == 0 || q.enqueueStopped.Load() {
 		return
 	}
 
@@ -88,7 +113,18 @@ func (q *UnboundedMPSC[T]) EnqueueBatch(elements []T) {
 	}
 	last := current
 	last.next = nil
-
+	// 二次检查，如果已停止则回滚释放所有节点
+	if q.enqueueStopped.Load() {
+		var zero T
+		node := first
+		for node != nil {
+			next := (*mpscNode[T])(node.next)
+			node.val = zero
+			q.nodePool.Put(node)
+			node = next
+		}
+		return
+	}
 	prevHead := (*mpscNode[T])(atomic.SwapPointer(&q.head, unsafe.Pointer(last)))
 	atomic.StorePointer(&prevHead.next, unsafe.Pointer(first))
 }
@@ -191,6 +227,7 @@ func (q *UnboundedMPSC[T]) Shrink() {
 // Close 关闭队列并清理本地缓存。
 // 关闭后不再使用队列，适合进程退出或 Actor 停止时调用。
 func (q *UnboundedMPSC[T]) Close() {
+	q.StopEnqueue()
 	for _, node := range q.recycleCache {
 		if node != nil {
 			q.nodePool.Put(node)

@@ -29,10 +29,12 @@ func main() {
 	s := zserver.New(
 		zserver.WithAddr(*addr),
 		zserver.WithProtocol(proto),
+		zserver.WithName("echobench/server"),
 		zserver.WithAsyncMode(), // 异步模式：发送队列，Reply 异步入队
 		zserver.WithDirectDispatch(),
 		zserver.WithDirectDispatchRef(),
 		zserver.WithHeartbeatTimeout(0), // 压测时禁用心跳，避免 1k1k 下调度延迟导致误断
+		zserver.WithBanner(!*quiet),     // 压测 -quiet 时不打印 ASCII 标识
 	)
 
 	if !*quiet {
@@ -53,7 +55,7 @@ func main() {
 	})
 
 	if !*quiet {
-		fmt.Printf("[echo] starting server on %s (%s)\n", *addr, *protocol)
+		fmt.Printf("[echobench/server] listen %s (%s)\n", *addr, *protocol)
 	}
 	s.Run()
 }

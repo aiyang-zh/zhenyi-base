@@ -2,6 +2,7 @@ package znet
 
 import (
 	"context"
+	"github.com/aiyang-zh/zhenyi-base/zcoll"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -30,8 +31,8 @@ type listenerHolder struct{ L net.Listener }
 type BaseServer struct {
 	idGen            uint64
 	handlers         ServerHandlers
-	channels         sync.Map // channelId → IChannel
-	authChannels     sync.Map // authId → IChannel
+	channels         *zcoll.SyncMap[uint64, ziface.IChannel] // channelId → IChannel
+	authChannels     *zcoll.SyncMap[uint64, ziface.IChannel] // authId → IChannel
 	connCount        atomic.Int64
 	maxConn          int64 // 0 = 不限
 	addr             string
@@ -58,7 +59,8 @@ func NewBaseServer(addr string, handlers ServerHandlers) *BaseServer {
 	s := &BaseServer{
 		handlers:         handlers,
 		addr:             addr,
-		channels:         sync.Map{},
+		channels:         zcoll.NewSyncMap[uint64, ziface.IChannel](),
+		authChannels:     zcoll.NewSyncMap[uint64, ziface.IChannel](),
 		closeCh:          make(chan struct{}, 1),
 		Once:             sync.Once{},
 		heartbeatTimeout: 30 * time.Second,
@@ -253,7 +255,7 @@ func (b *BaseServer) RemoveChannel(channelId uint64) {
 }
 
 // SetChannelAuth 将指定 Channel 绑定到业务侧认证 ID，便于通过 GetChannelByAuthId 查询。
-func (b *BaseServer) SetChannelAuth(channelId uint64, authId int64) {
+func (b *BaseServer) SetChannelAuth(channelId uint64, authId uint64) {
 	channel := b.GetChannel(channelId)
 	if channel == nil {
 		return
@@ -263,7 +265,7 @@ func (b *BaseServer) SetChannelAuth(channelId uint64, authId int64) {
 }
 
 // GetChannelByAuthId 根据业务侧认证 ID 查找对应连接，不存在则返回 nil。
-func (b *BaseServer) GetChannelByAuthId(authId int64) ziface.IChannel {
+func (b *BaseServer) GetChannelByAuthId(authId uint64) ziface.IChannel {
 	ch, ok := b.authChannels.Load(authId)
 	if !ok {
 		return nil
@@ -284,12 +286,8 @@ func (b *BaseServer) BaseClose() {
 	if err := p.L.Close(); err != nil {
 		zlog.Error("Server listener close failed", zap.String("addr", b.addr), zap.Error(err))
 	}
-	b.channels.Range(func(key, value any) bool {
-		channel, ok := value.(ziface.IChannel)
-		if !ok {
-			return true
-		}
-		channel.Close()
+	b.channels.Range(func(key uint64, value ziface.IChannel) bool {
+		value.Close()
 		return true
 	})
 }

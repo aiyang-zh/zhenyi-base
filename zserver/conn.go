@@ -19,10 +19,10 @@ func newConn(ch ziface.IChannel, s *Server) *Conn {
 func (c *Conn) Id() uint64 { return c.channel.GetChannelId() }
 
 // AuthId 返回业务侧设置的认证 ID（例如用户 ID / 设备 ID）。
-func (c *Conn) AuthId() int64 { return c.channel.GetAuthId() }
+func (c *Conn) AuthId() uint64 { return c.channel.GetAuthId() }
 
 // SetAuthId 绑定业务认证 ID，之后可通过 Server.GetConnByAuthId 查询到该连接。
-func (c *Conn) SetAuthId(id int64) {
+func (c *Conn) SetAuthId(id uint64) {
 	c.server.net.SetChannelAuth(c.channel.GetChannelId(), id)
 }
 
@@ -47,7 +47,7 @@ func (c *Conn) Close() { c.channel.Close() }
 func (s *Server) getOrCreateConn(ch ziface.IChannel) *Conn {
 	key := ch.GetChannelId()
 	if v, ok := s.connCache.Load(key); ok {
-		return v.(*Conn)
+		return v
 	}
 	c := newConn(ch, s)
 	s.connCache.Store(key, c)

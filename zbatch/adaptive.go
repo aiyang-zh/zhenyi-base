@@ -10,7 +10,7 @@ import (
 // - 适用于 Channel/Actor 的单 Goroutine 场景（如 runSend、Run）
 // - 去掉锁和 atomic 操作，降低开销
 // - 使用滚动和优化，避免每次循环求和
-// - 使用简单的平均延迟代替 P99 排序，性能更好
+// - 延迟反馈使用「滑动窗口内的算术平均延迟」，而非统计意义上的 P99（避免排序/选择，保持 O(1)）
 // - 动态步长调整，平滑过渡
 //
 // 性能指标：
@@ -31,8 +31,8 @@ type AdaptiveBatcher struct {
 
 // Config 为 AdaptiveBatcher 的配置项。
 type Config struct {
-	// 延迟目标
-	TargetP99 time.Duration // 目标延迟（如 5ms）
+	// TargetMeanLatency 与 GetBatchSize 所用的滑动窗口算术平均延迟比较的控制目标（如 5ms），并非统计 P99。
+	TargetMeanLatency time.Duration
 
 	// 批量大小范围
 	MinBatch int // 最小批量（默认 10）
@@ -41,8 +41,8 @@ type Config struct {
 	// 初始批量
 	InitialBatch int // 初始批量大小（默认 50）
 
-	// 统计窗口
-	WindowSize int // 延迟统计窗口大小（默认 20）
+	// 统计窗口：最近 WindowSize 次批处理延迟参与滚动均值（默认 64，降低抖动）
+	WindowSize int
 
 	// 队列阈值（用于快速判断）
 	EmptyThreshold    int64 // 空闲阈值（默认 50）
@@ -52,11 +52,11 @@ type Config struct {
 // DefaultConfig 返回一份适用于通用网络场景的默认配置。
 func DefaultConfig() Config {
 	return Config{
-		TargetP99:         5 * time.Millisecond,
+		TargetMeanLatency: 5 * time.Millisecond,
 		MinBatch:          10,
 		MaxBatch:          200,
 		InitialBatch:      50,
-		WindowSize:        20,
+		WindowSize:        64,
 		EmptyThreshold:    50,
 		OverloadThreshold: 5000,
 	}
@@ -77,10 +77,10 @@ func NewAdaptiveBatcher(config Config) *AdaptiveBatcher {
 		config.InitialBatch = 50
 	}
 	if config.WindowSize <= 0 {
-		config.WindowSize = 20
+		config.WindowSize = 64
 	}
-	if config.TargetP99 <= 0 {
-		config.TargetP99 = 5 * time.Millisecond
+	if config.TargetMeanLatency <= 0 {
+		config.TargetMeanLatency = 5 * time.Millisecond
 	}
 	if config.EmptyThreshold <= 0 {
 		config.EmptyThreshold = 50
@@ -99,6 +99,7 @@ func NewAdaptiveBatcher(config Config) *AdaptiveBatcher {
 // GetBatchSize 根据当前队列长度与历史延迟，返回推荐的批量大小。
 //
 // queueLen 通常为当前待处理任务数。
+// 当队列长度处于 EmptyThreshold 与 OverloadThreshold 之间且已有延迟样本时，用窗口内平均延迟与 TargetMeanLatency 比较。
 // 性能：O(1)，无锁，无内存分配。
 func (ab *AdaptiveBatcher) GetBatchSize(queueLen int64) int {
 	// 1. 优先策略：队列积压策略
@@ -126,7 +127,7 @@ func (ab *AdaptiveBatcher) GetBatchSize(queueLen int64) int {
 	if ab.count > 0 {
 		avg := ab.calculateAvgLatency()
 
-		if avg > ab.config.TargetP99 {
+		if avg > ab.config.TargetMeanLatency {
 			// 延迟太高，说明单次 Batch 处理太慢（可能是加密耗时或网络阻塞）
 			// 适当减小 Batch，让数据包更碎片化地流出，避免 HoL 阻塞
 			step := (ab.currentBatch - ab.config.MinBatch) / 4 // 动态步长
@@ -134,7 +135,7 @@ func (ab *AdaptiveBatcher) GetBatchSize(queueLen int64) int {
 				step = 1
 			}
 			ab.currentBatch -= step
-		} else if avg < ab.config.TargetP99/2 {
+		} else if avg < ab.config.TargetMeanLatency/2 {
 			// 延迟很低，说明系统很闲或者处理很快
 			// 尝试增大 Batch 以提升吞吐量上限
 			step := (ab.config.MaxBatch - ab.currentBatch) / 4

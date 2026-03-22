@@ -15,14 +15,17 @@ go run ./examples/echodemo/client
 ## 服务端代码（3 步）
 
 ```go
-s := zserver.New(zserver.WithAddr(":9001"))
+s := zserver.New(
+	zserver.WithAddr(":9001"),
+	zserver.WithName("echodemo/server"),
+)
 s.Handle(1, func(req *zserver.Request) {
-    req.Reply(1, req.Data())
+	req.Reply(1, req.Data())
 })
 s.Run()
 ```
 
-客户端支持**交互式输入**：输入任意内容，服务端原样回显，Ctrl+D 退出。
+客户端：`fmt.Print(zbrand.Banner)`；stdin 行输入回显，Ctrl+D 退出。
 
 ## 客户端代码（默认 Request 模式）
 

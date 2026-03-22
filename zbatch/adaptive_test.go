@@ -7,7 +7,7 @@ import (
 
 func TestAdaptiveBatcher_Basic(t *testing.T) {
 	config := DefaultConfig()
-	config.TargetP99 = 5 * time.Millisecond
+	config.TargetMeanLatency = 5 * time.Millisecond
 
 	batcher := NewAdaptiveBatcher(config)
 
@@ -43,7 +43,7 @@ func TestAdaptiveBatcher_Overload(t *testing.T) {
 
 func TestAdaptiveBatcher_LatencyFeedback(t *testing.T) {
 	config := DefaultConfig()
-	config.TargetP99 = 5 * time.Millisecond
+	config.TargetMeanLatency = 5 * time.Millisecond
 
 	batcher := NewAdaptiveBatcher(config)
 
@@ -63,7 +63,7 @@ func TestAdaptiveBatcher_LatencyFeedback(t *testing.T) {
 
 func TestAdaptiveBatcher_LowLatency(t *testing.T) {
 	config := DefaultConfig()
-	config.TargetP99 = 5 * time.Millisecond
+	config.TargetMeanLatency = 5 * time.Millisecond
 
 	batcher := NewAdaptiveBatcher(config)
 	batcher.currentBatch = 50 // 设置为较小值
@@ -191,8 +191,8 @@ func TestNewAdaptiveBatcher_ZeroConfig(t *testing.T) {
 	if batcher.config.MinBatch != 10 || batcher.config.MaxBatch != 200 {
 		t.Errorf("Expected MinBatch=10, MaxBatch=200 defaults, got %d, %d", batcher.config.MinBatch, batcher.config.MaxBatch)
 	}
-	if batcher.config.WindowSize != 20 || batcher.config.EmptyThreshold != 50 || batcher.config.OverloadThreshold != 5000 {
-		t.Errorf("Expected WindowSize=20, EmptyThreshold=50, OverloadThreshold=5000, got %d, %d, %d",
+	if batcher.config.WindowSize != 64 || batcher.config.EmptyThreshold != 50 || batcher.config.OverloadThreshold != 5000 {
+		t.Errorf("Expected WindowSize=64, EmptyThreshold=50, OverloadThreshold=5000, got %d, %d, %d",
 			batcher.config.WindowSize, batcher.config.EmptyThreshold, batcher.config.OverloadThreshold)
 	}
 }

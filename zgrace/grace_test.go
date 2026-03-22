@@ -1,6 +1,7 @@
 package zgrace
 
 import (
+	"context"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -23,7 +24,8 @@ func TestGrace_New(t *testing.T) {
 func TestGrace_Register(t *testing.T) {
 	m := New()
 	called := false
-	m.Register(func() {
+	m.Register(func(ctx context.Context) {
+		_ = ctx
 		called = true
 	})
 
@@ -31,8 +33,7 @@ func TestGrace_Register(t *testing.T) {
 		t.Errorf("expected 1 registered func, got %d", len(m.fs))
 	}
 
-	// 手动触发
-	m.fs[0]()
+	m.fs[0](context.Background())
 	if !called {
 		t.Error("registered function should be callable")
 	}
@@ -42,12 +43,72 @@ func TestGrace_RegisterMultiple(t *testing.T) {
 	m := New()
 	var count int32
 
-	m.Register(func() { atomic.AddInt32(&count, 1) })
-	m.Register(func() { atomic.AddInt32(&count, 1) })
-	m.Register(func() { atomic.AddInt32(&count, 1) })
+	m.Register(func(ctx context.Context) { _ = ctx; atomic.AddInt32(&count, 1) })
+	m.Register(func(ctx context.Context) { _ = ctx; atomic.AddInt32(&count, 1) })
+	m.Register(func(ctx context.Context) { _ = ctx; atomic.AddInt32(&count, 1) })
 
 	if len(m.fs) != 3 {
 		t.Errorf("expected 3, got %d", len(m.fs))
+	}
+}
+
+func TestGrace_SetContextPassedToHooks(t *testing.T) {
+	m := New()
+	type key struct{}
+	k := key{}
+	base := context.WithValue(context.Background(), k, "v")
+	m.SetContext(base)
+	var got string
+	m.Register(func(ctx context.Context) {
+		if v, ok := ctx.Value(k).(string); ok {
+			got = v
+		}
+	})
+
+	done := make(chan struct{})
+	go func() {
+		m.Wait()
+		close(done)
+	}()
+	time.Sleep(50 * time.Millisecond)
+	m.Stop()
+	select {
+	case <-done:
+		if got != "v" {
+			t.Fatalf("hook ctx: want v, got %q", got)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout")
+	}
+}
+
+func TestGrace_PanicInHookContinues(t *testing.T) {
+	m := New()
+	var order []int
+	m.Register(func(ctx context.Context) {
+		_ = ctx
+		order = append(order, 1)
+		panic("first")
+	})
+	m.Register(func(ctx context.Context) {
+		_ = ctx
+		order = append(order, 2)
+	})
+
+	done := make(chan struct{})
+	go func() {
+		m.Wait()
+		close(done)
+	}()
+	time.Sleep(50 * time.Millisecond)
+	m.Stop()
+	select {
+	case <-done:
+		if len(order) != 2 || order[0] != 1 || order[1] != 2 {
+			t.Fatalf("expected [1,2] after recover, got %v", order)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout")
 	}
 }
 
@@ -55,7 +116,8 @@ func TestGrace_StopTriggersClose(t *testing.T) {
 	m := New()
 	var called int32
 
-	m.Register(func() {
+	m.Register(func(ctx context.Context) {
+		_ = ctx
 		atomic.StoreInt32(&called, 1)
 	})
 
@@ -85,9 +147,9 @@ func TestGrace_ExecutionOrder(t *testing.T) {
 	m := New()
 	var order []int
 
-	m.Register(func() { order = append(order, 1) })
-	m.Register(func() { order = append(order, 2) })
-	m.Register(func() { order = append(order, 3) })
+	m.Register(func(ctx context.Context) { _ = ctx; order = append(order, 1) })
+	m.Register(func(ctx context.Context) { _ = ctx; order = append(order, 2) })
+	m.Register(func(ctx context.Context) { _ = ctx; order = append(order, 3) })
 
 	done := make(chan struct{})
 	go func() {
@@ -127,7 +189,7 @@ func TestCustomSignal_Signal(t *testing.T) {
 
 func BenchmarkGrace_Register(b *testing.B) {
 	m := New()
-	f := func() {}
+	f := func(context.Context) {}
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {

@@ -25,7 +25,7 @@ make bench
 
 ## 依赖说明
 
-- **echodemo**：依赖 zserver、ztcp、znet、ziface
-- **echobench**：依赖 zserver、ztcp、zws、zkcp、znet、ziface
+- **echodemo**：服务端 zserver、ztcp、znet；客户端 ztcp、znet、zbrand
+- **echobench**：服务端 zserver、ztcp、zws、zkcp、znet；客户端 ztcp、zws、zkcp、znet、ziface、zbrand（交互模式）
 
 详见各子目录 README。

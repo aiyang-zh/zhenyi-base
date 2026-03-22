@@ -46,7 +46,7 @@ type BaseChannel struct {
 	// ========== 8 字节字段 ==========
 	channelId        uint64
 	rpcId            uint64 // RPC ID（原子递增）
-	authId           int64  // 认证 ID（用户 ID）
+	authId           uint64 // 认证 ID（用户 ID）
 	lastRecTime      int64  // 最后接收时间（毫秒）
 	heartbeatTimeout int64  // 心跳超时时间（毫秒），0 = 使用默认 30s
 	msgCount         int64  // ✅ 队列长度（仅用于监控，定期更新）
@@ -108,7 +108,7 @@ func NewBaseChannel(channelId uint64, conn net.Conn, server ziface.IServer) *Bas
 		batcher: zbatch.NewFastAdaptiveBatcher(
 			1,                  // minBatch: 最小批次 1
 			200,                // maxBatch: 最大批次 200
-			5*time.Millisecond, // targetP99: 网络场景目标延迟 5ms
+			5*time.Millisecond, // targetMeanLatency：与窗口平均延迟比较的控制目标
 		),
 	}
 
@@ -187,7 +187,7 @@ func (c *BaseChannel) read() bool {
 				}
 				zlog.Warn("Connection heartbeat timeout, closing",
 					zap.Uint64("channelId", c.channelId),
-					zap.Int64("authId", c.GetAuthId()),
+					zap.Uint64("authId", c.GetAuthId()),
 					zap.String("addr", c.addr))
 				return true
 			} else if !c.isNormalCloseError(err) {
@@ -443,7 +443,13 @@ func (c *BaseChannel) writeBuffers(buffers net.Buffers) error {
 	return nil
 }
 
-// Close 关闭通道（优雅关闭：等待发送完成）
+// Close 关闭通道（优雅关闭：等待发送协程退出并排空已入队发送）。
+//
+// 关闭顺序要点（与 Send 的竞态语义）：
+//   - 先从 Server 摘除 channel，再 StopEnqueue，使后续 TryEnqueue 失败；
+//   - 再置 state、关闭 closeChan、关闭连接，等待 runSend 退出后回收队列。
+//
+// 因此与 Close 并发的 Send 可能入队失败：此时 Send 会对消息调用 Release，业务不得假定「Send 返回即已发出」。
 func (c *BaseChannel) Close() {
 	if c.isClose.Load() {
 		return
@@ -454,6 +460,12 @@ func (c *BaseChannel) Close() {
 
 		// Step 0: 从 Server 的 map 中移除，阻止新消息路由到此 channel
 		c.server.RemoveChannel(c.channelId)
+
+		// Step 0.5: 必须在通知 runSend 退出之前禁止入队，否则 Send 在 state 检查与入队之间存在 TOCTOU：
+		// runSend 已退出后仍可能 Enqueue 成功，导致消息永不出队、回调永不触发（见 UnboundedMPSC.StopEnqueue 注释）。
+		if c.mailBoxQueue != nil {
+			c.mailBoxQueue.StopEnqueue()
+		}
 
 		// Step 1: 标记不可写 + 通知 runSend 退出
 		c.state.Store(false)
@@ -512,13 +524,13 @@ func (c *BaseChannel) GetReadBufferStats() (len, cap int, totalRead, totalWrite 
 // ================================================================
 
 // GetAuthId 获取认证 ID
-func (c *BaseChannel) GetAuthId() int64 {
-	return atomic.LoadInt64(&c.authId)
+func (c *BaseChannel) GetAuthId() uint64 {
+	return atomic.LoadUint64(&c.authId)
 }
 
 // SetAuthId 设置认证 ID
-func (c *BaseChannel) SetAuthId(authId int64) {
-	atomic.StoreInt64(&c.authId, authId)
+func (c *BaseChannel) SetAuthId(authId uint64) {
+	atomic.SwapUint64(&c.authId, authId)
 }
 
 // GetRpcId 获取并递增 RPC ID
@@ -579,7 +591,15 @@ func (c *BaseChannel) SetCloseCall(closeCall func(ziface.IChannel)) {
 	c.closeCall = closeCall
 }
 
-// Send 异步发送消息（入队列）
+// Send 异步发送消息（仅 async 模式：入发送队列，由 runSend 批量写出）。
+//
+// 语义与生命周期：
+//   - 成功入队后，由 runSend 在写出完成后调用 IMessage.Release（每条消息恰好一次）。
+//   - 若 channel 已关闭、未打开、sync 模式、或 TryEnqueue 失败（例如 Close 已 StopEnqueue），
+//     本方法会立即调用 msg.Release()，消息不会发送；调用方不得再使用该 msg。
+//   - 与 Close 并发时，可能出现「检查时尚可写，入队前队列已停」——此时 Release 即表示发送取消，并非泄漏。
+//
+// Sync 模式无发送队列，请使用 ReplyImmediate；误用 Send 将打日志并 Release。
 func (c *BaseChannel) Send(msg ziface.IMessage) {
 	// ✅ 快速检查：避免向已关闭的 Channel 发送
 	if c.isClose.Load() {
@@ -597,7 +617,11 @@ func (c *BaseChannel) Send(msg ziface.IMessage) {
 		msg.Release()
 		return
 	}
-	c.mailBoxQueue.Enqueue(msg)
+	if !c.mailBoxQueue.TryEnqueue(msg) {
+		// StopEnqueue 已生效（Close 与 Send 竞态）或节点分配后二次观察到停止；须由调用方 Release（Enqueue 会静默丢引用）
+		msg.Release()
+		return
+	}
 	// ✅ 无锁设计：无需通知，无需计数，runSend 轮询队列（消费结果驱动）
 }
 

@@ -350,6 +350,40 @@ func TestRingBuffer_Uint64Overflow(t *testing.T) {
 	}
 }
 
+// Reset 须清零底层 buf，避免对象池复用或悬挂 Peek 引用读到上一会话数据（C2）。
+func TestRingBuffer_Reset_ClearsBuf(t *testing.T) {
+	rb := NewRingBuffer(RingBufferConfig{Size: 32})
+	if _, err := rb.Write([]byte("deadbeef")); err != nil {
+		t.Fatal(err)
+	}
+	s, err := rb.Peek(4)
+	if err != nil || string(s) != "dead" {
+		t.Fatalf("Peek: %v %q", err, s)
+	}
+	rb.Reset()
+	for i := range s {
+		if s[i] != 0 {
+			t.Fatalf("after Reset expected peek slice byte %d = 0, got %x", i, s[i])
+		}
+	}
+}
+
+func TestRingBuffer_Reset_ClearsStats(t *testing.T) {
+	rb := NewRingBuffer(RingBufferConfig{Size: 32})
+	if _, err := rb.Write([]byte("abcd")); err != nil {
+		t.Fatal(err)
+	}
+	tr, tw := rb.Stats()
+	if tw != 4 || tr != 0 {
+		t.Fatalf("before Reset Stats: tr=%d tw=%d", tr, tw)
+	}
+	rb.Reset()
+	tr, tw = rb.Stats()
+	if tr != 0 || tw != 0 {
+		t.Fatalf("after Reset Stats: tr=%d tw=%d", tr, tw)
+	}
+}
+
 // ================================================================
 // 基准测试
 // ================================================================

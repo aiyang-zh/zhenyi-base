@@ -56,10 +56,10 @@ type FastAdaptiveBatcher struct {
 // 参数:
 //   - minB: 最小批量（推荐 10–20）
 //   - maxB: 最大批量（推荐 200–500）
-//   - targetP99: 目标延迟（推荐 5–10ms）
+//   - targetMeanLatency: 与固定窗口内平均延迟比较的控制目标（推荐 5–10ms）
 //
 // 注意：此版本**非线程安全**，仅适用于单 Goroutine 场景（如 Channel.runSend、Actor.Run）。
-func NewFastAdaptiveBatcher(minB, maxB int, targetP99 time.Duration) *FastAdaptiveBatcher {
+func NewFastAdaptiveBatcher(minB, maxB int, targetMeanLatency time.Duration) *FastAdaptiveBatcher {
 	if minB <= 0 {
 		minB = 10
 	}
@@ -70,7 +70,7 @@ func NewFastAdaptiveBatcher(minB, maxB int, targetP99 time.Duration) *FastAdapti
 	return &FastAdaptiveBatcher{
 		minBatch:      int32(minB),
 		maxBatch:      int32(maxB),
-		targetLatency: int64(targetP99),
+		targetLatency: int64(targetMeanLatency),
 		currentBatch:  int32(minB * 2), // 初始值给个中间态
 	}
 }

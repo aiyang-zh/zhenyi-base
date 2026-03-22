@@ -8,10 +8,14 @@
 go run ./examples/echobench/server
 ```
 
-输出：
+输出示例（默认；**`-quiet`** 无 ASCII 横幅）：
 ```
-[echo] starting server on :9001
-[zhenyi] server listening on :9001 (TCP)
+[echobench/server] listen :9001 (tcp)
+   #####  #   #  #####  ...
+  [zhenyi-base] echobench/server | TCP | direct dispatch
+  [Github] https://github.com/aiyang-zh/zhenyi-base
+
+[echobench/server] server listening on :9001 (TCP, direct dispatch)
 ```
 
 ## 交互模式
@@ -22,7 +26,8 @@ go run ./examples/echobench/client
 
 输入文字后回车发送，收到服务端回显：
 ```
-connected to 127.0.0.1:9001
+（首行：`zbrand.Banner`）
+[echobench/client] connected to 127.0.0.1:9001 (type message and press Enter, Ctrl+C to quit)
 hello
 > sent: hello
 < recv msgId=1: hello

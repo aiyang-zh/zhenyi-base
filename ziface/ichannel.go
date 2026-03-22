@@ -46,10 +46,10 @@ type ISession interface {
 	// 认证管理
 
 	// GetAuthId 获取当前会话绑定的认证 ID（例如用户 ID）。
-	GetAuthId() int64
+	GetAuthId() uint64
 
 	// SetAuthId 设置会话的认证 ID。
-	SetAuthId(authId int64)
+	SetAuthId(authId uint64)
 
 	// RPC 管理
 

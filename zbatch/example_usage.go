@@ -21,11 +21,11 @@ func NewBaseChannel(...) *BaseChannel {
 	c := &BaseChannel{
 		// ... 其他初始化
 		batcher: batch.NewAdaptiveBatcher(batch.Config{
-			TargetP99:         5 * time.Millisecond,  // 目标延迟
+			TargetMeanLatency:         5 * time.Millisecond,  // 与窗口平均延迟比较（非 P99）
 			MinBatch:          20,
 			MaxBatch:          200,
 			InitialBatch:      128,
-			WindowSize:        20,
+			WindowSize:        64,
 			EmptyThreshold:    50,
 			OverloadThreshold: 10000,
 		}),
@@ -92,7 +92,7 @@ func NewActor(config ActorConfig) *Actor {
 	a := &Actor{
 		// ... 其他初始化
 		batcher: batch.NewAdaptiveBatcher(batch.Config{
-			TargetP99:         10 * time.Millisecond, // Actor 延迟目标可以稍高
+			TargetMeanLatency:         10 * time.Millisecond, // 与窗口平均延迟比较（非 P99）
 			MinBatch:          10,
 			MaxBatch:          200,
 			InitialBatch:      50,
@@ -173,11 +173,11 @@ func (a *Actor) processBatch(maxCount int) int {
 // // ConfigForChannel 适用于 Channel 的配置（网络 I/O 场景）
 // func ConfigForChannel() Config {
 // 	return Config{
-// 		TargetP99:         5 * time.Millisecond,  // 网络场景要求低延迟
+// 		TargetMeanLatency:         5 * time.Millisecond,  // 与窗口平均延迟比较（非 P99）
 // 		MinBatch:          20,                     // 最小批次稍大
 // 		MaxBatch:          200,                    // 最大批次
 // 		InitialBatch:      128,                    // 初始较大批次
-// 		WindowSize:        20,                     // 较小窗口，快速响应
+// 		WindowSize:        64,                     // 与 DefaultConfig 默认一致，降低抖动
 // 		EmptyThreshold:    50,
 // 		OverloadThreshold: 10000,
 // 	}
@@ -186,7 +186,7 @@ func (a *Actor) processBatch(maxCount int) int {
 // // ConfigForActor 适用于 Actor 的配置（业务逻辑场景）
 // func ConfigForActor() Config {
 // 	return Config{
-// 		TargetP99:         10 * time.Millisecond, // 业务逻辑可以容忍稍高延迟
+// 		TargetMeanLatency:         10 * time.Millisecond, // 业务逻辑可以容忍稍高延迟
 // 		MinBatch:          10,                     // 最小批次较小
 // 		MaxBatch:          200,
 // 		InitialBatch:      50,                     // 初始中等批次
@@ -199,7 +199,7 @@ func (a *Actor) processBatch(maxCount int) int {
 // // ConfigForHighThroughput 高吞吐量场景配置
 // func ConfigForHighThroughput() Config {
 // 	return Config{
-// 		TargetP99:         20 * time.Millisecond, // 容忍更高延迟
+// 		TargetMeanLatency:         20 * time.Millisecond, // 容忍更高延迟
 // 		MinBatch:          50,                     // 更大的最小批次
 // 		MaxBatch:          500,                    // 更大的最大批次
 // 		InitialBatch:      200,                    // 更大的初始批次
@@ -212,7 +212,7 @@ func (a *Actor) processBatch(maxCount int) int {
 // // ConfigForLowLatency 低延迟场景配置
 // func ConfigForLowLatency() Config {
 // 	return Config{
-// 		TargetP99:         2 * time.Millisecond,  // 极低延迟要求
+// 		TargetMeanLatency:         2 * time.Millisecond,  // 极低延迟要求
 // 		MinBatch:          5,                      // 极小最小批次
 // 		MaxBatch:          50,                     // 较小最大批次
 // 		InitialBatch:      20,                     // 较小初始批次

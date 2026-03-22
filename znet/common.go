@@ -1,6 +1,8 @@
 package znet
 
 import (
+	"math"
+
 	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"time"
 )
@@ -33,7 +35,9 @@ type NetOperator struct {
 const (
 	DefaultMaxHeaderLength = 10 * 1024   // 单包 header 最大长度（10KB）
 	DefaultMaxDataLength   = 1024 * 1024 // 单包 body 最大长度（1MB）
-	DefaultMaxMsgId        = 1000000000  // 消息 ID 合法范围 [-DefaultMaxMsgId, DefaultMaxMsgId]
+	// DefaultMaxMsgId 与协议头中 4 字节 msgId 按 int32 解析一致：合法区间为
+	// [-DefaultMaxMsgId, DefaultMaxMsgId]。取 math.MaxInt32 时，唯一无法落入该闭区间的 int32 值为 MinInt32（-2^31），会被校验拒绝。
+	DefaultMaxMsgId = math.MaxInt32
 )
 
 // SocketConfig 为 BaseSocket 的解析与安全限制配置。

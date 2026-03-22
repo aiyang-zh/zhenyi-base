@@ -21,8 +21,13 @@ import (
 //   - 协议解析
 //
 // ⚠️ 线程安全性：
-//   - 非线程安全，需要外部保证串行访问
-//   - 适用于 goroutine-per-conn 模型（每连接一个 RingBuffer）
+//   - 非线程安全：同一 RingBuffer 上禁止并发调用 Read / Write / WriteFromReader / Discard / Peek* / Reset
+//   - 适用于 goroutine-per-conn 模型（每连接一个 RingBuffer，单协程驱动读缓冲）
+//
+// ⚠️ Peek* 与生命周期：
+//   - Peek / PeekBytes 等返回的是底层缓冲区的切片视图（零拷贝），在调用 Discard、Read、Write 或 Reset 之后
+//     不得再使用该切片，否则可能读到后续写入覆盖的数据（与 use-after-free 类似语义）。
+//   - 从池中取出时 PutRingBuffer 会 Reset（含 clear），避免连接间残留字节；调用方仍须遵守单协程与 Peek 约束。
 //
 // ⚠️ 指针溢出说明：
 //   - read/write 使用 uint64，即使每秒写入 10GB，也需要 58 年才会溢出
@@ -175,10 +180,16 @@ func (rb *RingBuffer) IsFull() bool {
 	return rb.Len() == int(rb.size)
 }
 
-// Reset 重置缓冲区
+// Reset 重置逻辑读写到空，并清零底层 buf、复位统计计数。
+// 对象池借还时依赖本方法消除残留字节，避免池化复用后 Peek 悬挂引用读到上一连接数据。
 func (rb *RingBuffer) Reset() {
 	rb.read = 0
 	rb.write = 0
+	if len(rb.buf) > 0 {
+		clear(rb.buf)
+	}
+	atomic.StoreUint64(&rb.totalRead, 0)
+	atomic.StoreUint64(&rb.totalWrite, 0)
 }
 
 // ================================================================
@@ -241,7 +252,8 @@ func (rb *RingBuffer) Grow(n int) bool {
 
 // Peek 零拷贝查看数据（不移动读指针）
 // 返回最多 n 字节的数据切片
-// ⚠️ 返回的切片直接引用内部缓冲区，调用 Discard 后失效
+// ⚠️ 返回的切片直接引用内部缓冲区：在 Discard、Read、Write、WriteFromReader、Reset 或任何覆盖该区间
+// 的写入之后均不得再使用；跨边界时仅返回第一段，需配合 PeekTwoSlices/PeekAll 取全量。
 func (rb *RingBuffer) Peek(n int) ([]byte, error) {
 	if rb.IsEmpty() {
 		return nil, ErrBufferEmpty
@@ -266,7 +278,8 @@ func (rb *RingBuffer) Peek(n int) ([]byte, error) {
 }
 
 // PeekAll 零拷贝查看所有可读数据
-// 如果数据跨越边界，返回两个切片
+// 如果数据跨越边界，返回两个切片。
+// ⚠️ 切片生命周期同 Peek：任何后续修改缓冲区的操作后均失效。
 func (rb *RingBuffer) PeekAll() (first, second []byte) {
 	if rb.IsEmpty() {
 		return nil, nil
@@ -285,7 +298,8 @@ func (rb *RingBuffer) PeekAll() (first, second []byte) {
 }
 
 // PeekTwoSlices 零拷贝查看指定长度的数据，返回两个切片
-// 用于协议解析层处理跨边界数据，避免 PeekBytes 的隐性拷贝
+// 用于协议解析层处理跨边界数据，避免 PeekBytes 的隐性拷贝。
+// ⚠️ 切片生命周期同 Peek。
 func (rb *RingBuffer) PeekTwoSlices(offset, length int) (first, second []byte, err error) {
 	if rb.Len() < offset+length {
 		return nil, nil, ErrInsufficientData
@@ -356,6 +370,8 @@ func (rb *RingBuffer) Write(p []byte) (n int, err error) {
 
 // WriteFromReader 从 io.Reader 读取数据写入缓冲区
 // 返回实际写入的字节数
+//
+// ⚠️ 与 RingBuffer 上其它方法相同：须单 goroutine 串行调用，不得与 Read/Discard/Peek 等并发。
 //
 // ⚠️ 调用方注意事项：
 //   - 如果返回 ErrBufferFull，说明缓冲区已满且达到 MaxSize 限制

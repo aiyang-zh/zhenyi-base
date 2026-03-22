@@ -7,6 +7,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -44,6 +45,19 @@ func newTestChannelWithServer(t *testing.T, srv *testServer) (*BaseChannel, net.
 	clientConn, serverConn := net.Pipe()
 	ch := NewBaseChannel(srv.NextId(), clientConn, srv)
 	return ch, serverConn
+}
+
+// releaseTrackMsg 包装 *NetMessage，用于测试 Send/Close 路径上每条消息是否恰好 Release 一次。
+type releaseTrackMsg struct {
+	*NetMessage
+	releases *atomic.Int64
+}
+
+func (t *releaseTrackMsg) Release() {
+	if t.releases != nil {
+		t.releases.Add(1)
+	}
+	t.NetMessage.Release()
 }
 
 // ================================================================
@@ -656,6 +670,163 @@ func TestBaseChannel_ConcurrentSendClose(t *testing.T) {
 	wg.Wait()
 }
 
+// countingSendMsg 实现 IMessage，用于统计 Release 次数（每条消息应恰好 Release 一次）。
+type countingSendMsg struct {
+	msgId    int32
+	seqId    uint32
+	data     []byte
+	releases *atomic.Int32
+}
+
+func (m *countingSendMsg) GetMsgId() int32         { return m.msgId }
+func (m *countingSendMsg) SetMsgId(v int32)        { m.msgId = v }
+func (m *countingSendMsg) GetSeqId() uint32        { return m.seqId }
+func (m *countingSendMsg) SetSeqId(v uint32)       { m.seqId = v }
+func (m *countingSendMsg) GetMessageData() []byte  { return m.data }
+func (m *countingSendMsg) SetMessageData(b []byte) { m.data = b }
+func (m *countingSendMsg) Reset()                  {}
+func (m *countingSendMsg) Release()                { m.releases.Add(1) }
+
+var _ ziface.IMessage = (*countingSendMsg)(nil)
+
+// TestBaseChannel_SendClose_EveryMessageReleased 多 goroutine Send 完成后顺序 Close，验证每条消息恰好 Release 一次（runSend + drain 路径）。
+// 注意：若 Close 在部分 Send 返回前完成，可能出现「Enqueue 晚于 drain」的孤儿入队，此时无法用单一全局计数与 n 对齐；交错场景见 TestBaseChannel_ConcurrentSendClose 与 -race。
+func TestBaseChannel_SendClose_EveryMessageReleased(t *testing.T) {
+	rounds := 40
+	n := 400
+	if testing.Short() {
+		rounds = 8
+		n = 80
+	}
+
+	for round := 0; round < rounds; round++ {
+		ch, serverConn, bs := newTestChannel(t)
+		bs.AddChannel(ch)
+		ctx, cancel := context.WithCancel(context.Background())
+		ch.StartSend(ctx)
+
+		var total atomic.Int32
+		var wg sync.WaitGroup
+		for j := 0; j < n; j++ {
+			wg.Add(1)
+			go func(idx int) {
+				defer wg.Done()
+				msg := &countingSendMsg{
+					msgId:    int32(idx),
+					seqId:    uint32(idx),
+					data:     []byte("x"),
+					releases: &total,
+				}
+				ch.Send(msg)
+			}(j)
+		}
+
+		wg.Wait()
+		ch.Close()
+		cancel()
+		serverConn.Close()
+
+		got := int(total.Load())
+		if got != n {
+			t.Fatalf("round %d: Release count=%d want %d", round, got, n)
+		}
+	}
+}
+
+// TestBaseChannel_Send_AfterClose_Releases Close 完成后再 Send，应立刻 Release 且不入队（mailboxStopEnqueue / IsOpen）。
+func TestBaseChannel_Send_AfterClose_Releases(t *testing.T) {
+	ch, serverConn, bs := newTestChannel(t)
+	bs.AddChannel(ch)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ch.StartSend(ctx)
+
+	time.Sleep(30 * time.Millisecond)
+	ch.Close()
+
+	var total atomic.Int32
+	msg := &countingSendMsg{
+		msgId:    1,
+		data:     []byte("x"),
+		releases: &total,
+	}
+	ch.Send(msg)
+	if total.Load() != 1 {
+		t.Fatalf("Send after Close: Release count=%d want 1", total.Load())
+	}
+	serverConn.Close()
+}
+
+// TestBaseChannel_SendClose_ConcurrentStress Close 与 Send 高并发交错，不 panic；精确 Release 计数在「Close 晚于全部 Send 返回」场景见 TestBaseChannel_SendClose_EveryMessageReleased。
+func TestBaseChannel_SendClose_ConcurrentStress(t *testing.T) {
+	iter := 80
+	n := 40
+	if testing.Short() {
+		iter = 25
+		n = 20
+	}
+	for i := 0; i < iter; i++ {
+		ch, serverConn, bs := newTestChannel(t)
+		bs.AddChannel(ch)
+		ctx, cancel := context.WithCancel(context.Background())
+		ch.StartSend(ctx)
+
+		var wg sync.WaitGroup
+		for j := 0; j < n; j++ {
+			wg.Add(1)
+			go func(idx int) {
+				defer wg.Done()
+				msg := GetNetMessage()
+				msg.MsgId = int32(idx)
+				msg.SeqId = uint32(idx)
+				msg.Data = []byte("x")
+				ch.Send(msg)
+			}(j)
+		}
+		var closeDone sync.WaitGroup
+		closeDone.Add(1)
+		go func() {
+			defer closeDone.Done()
+			time.Sleep(time.Microsecond * time.Duration(i%13))
+			ch.Close()
+		}()
+		wg.Wait()
+		closeDone.Wait()
+		cancel()
+		serverConn.Close()
+	}
+}
+
+// TestBaseChannel_Close_DrainsBurst 主 goroutine 连续 Send 多条后立即 Close，须全部 Release（runSend + drain）。
+func TestBaseChannel_Close_DrainsBurst(t *testing.T) {
+	n := 120
+	if testing.Short() {
+		n = 40
+	}
+	ch, serverConn, bs := newTestChannel(t)
+	bs.AddChannel(ch)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ch.StartSend(ctx)
+
+	var total atomic.Int32
+	for j := 0; j < n; j++ {
+		msg := &countingSendMsg{
+			msgId:    int32(j),
+			seqId:    uint32(j),
+			data:     []byte("x"),
+			releases: &total,
+		}
+		ch.Send(msg)
+	}
+	ch.Close()
+	serverConn.Close()
+
+	if int(total.Load()) != n {
+		t.Fatalf("releases=%d want %d", total.Load(), n)
+	}
+}
+
 func TestBaseChannel_Send_NotOpen(t *testing.T) {
 	ch, serverConn, _ := newTestChannel(t)
 	defer serverConn.Close()
@@ -733,4 +904,92 @@ func TestBaseChannel_Close_ConnAlreadyClosed(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	ch.Close()
+}
+
+// TestBaseChannel_Send_AfterClose_ReleasesMessage 验证关闭后 Send 仍会 Release 消息（不入队成功路径）。
+func TestBaseChannel_Send_AfterClose_ReleasesMessage(t *testing.T) {
+	ch, serverConn, bs := newTestChannel(t)
+	bs.AddChannel(ch)
+	ctx, cancel := context.WithCancel(context.Background())
+	ch.StartSend(ctx)
+	defer cancel()
+	defer serverConn.Close()
+
+	go func() {
+		buf := make([]byte, 4096)
+		for {
+			_, err := serverConn.Read(buf)
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	ch.Close()
+
+	var cnt atomic.Int64
+	nm := GetNetMessage()
+	nm.MsgId = 1
+	tm := &releaseTrackMsg{NetMessage: nm, releases: &cnt}
+	ch.Send(tm)
+	if cnt.Load() != 1 {
+		t.Fatalf("Send after Close: want 1 Release, got %d", cnt.Load())
+	}
+}
+
+// TestBaseChannel_Send_Close_ConcurrentReleaseCount 并发 Send 与 Close 交错，每条消息必须恰好 Release 一次（无泄漏、无双释放）。
+func TestBaseChannel_Send_Close_ConcurrentReleaseCount(t *testing.T) {
+	ch, serverConn, bs := newTestChannel(t)
+	bs.AddChannel(ch)
+	ctx, cancel := context.WithCancel(context.Background())
+	ch.StartSend(ctx)
+	defer cancel()
+	defer serverConn.Close()
+
+	stopDrain := make(chan struct{})
+	go func() {
+		buf := make([]byte, 256*1024)
+		for {
+			select {
+			case <-stopDrain:
+				return
+			default:
+				_ = serverConn.SetReadDeadline(time.Now().Add(300 * time.Millisecond))
+				_, err := serverConn.Read(buf)
+				if err != nil {
+					return
+				}
+			}
+		}
+	}()
+	defer close(stopDrain)
+
+	var total atomic.Int64
+	const rounds = 200
+	const goroutines = 32
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+	for g := 0; g < goroutines; g++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			for i := 0; i < rounds; i++ {
+				nm := GetNetMessage()
+				nm.MsgId = 1
+				tm := &releaseTrackMsg{NetMessage: nm, releases: &total}
+				ch.Send(tm)
+			}
+		}()
+	}
+	close(start)
+	time.Sleep(50 * time.Millisecond)
+	ch.Close()
+	wg.Wait()
+
+	want := int64(goroutines * rounds)
+	got := total.Load()
+	if got != want {
+		t.Fatalf("Release count: want %d (exactly one per message), got %d", want, got)
+	}
 }

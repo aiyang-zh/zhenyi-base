@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/aiyang-zh/zhenyi-base/zbrand"
 	"github.com/aiyang-zh/zhenyi-base/zerrs"
 	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"github.com/aiyang-zh/zhenyi-base/zkcp"
@@ -98,7 +99,8 @@ func runInteractive() {
 		return
 	}
 
-	fmt.Printf("connected to %s (type message and press Enter, Ctrl+C to quit)\n", *addr)
+	fmt.Print(zbrand.Banner)
+	fmt.Printf("[echobench/client] connected to %s (type message and press Enter, Ctrl+C to quit)\n", *addr)
 
 	client.SetReadCall(func(msg ziface.IWireMessage) {
 		fmt.Printf("< recv msgId=%d: %s\n", msg.GetMsgId(), string(msg.GetMessageData()))
@@ -174,7 +176,7 @@ func runBenchmark() {
 			}
 			totalSent.Add(int64(perClient))
 		}(client)
-		time.Sleep(1 * time.Millisecond)
+		// time.Sleep(1 * time.Millisecond)
 	}
 
 	// 发送阶段最多等 5 分钟，避免服务端过载时 Write 永久阻塞

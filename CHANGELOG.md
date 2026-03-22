@@ -1,5 +1,57 @@
 # Changelog
 
+## [1.0.5] - 2026-03-22
+
+### 升级风险说明
+
+本版含破坏性变更与默认行为变化；可继续固定 `v1.0.4`（或当前所用 tag）。
+
+| 风险类型 | 说明 |
+|----------|------|
+| **编译级破坏** | `ziface` 会话/通道认证 ID：`int64` → **`uint64`**；`zgrace.Register`：`func(context.Context)`。 |
+| **协议/校验行为** | `DefaultMaxMsgId`：`math.MaxInt32`；更严上界：`SocketConfig.MaxMsgId`。 |
+| **网络通道语义** | `BaseChannel` / `UnboundedMPSC`：`StopEnqueue`、关闭与入队时序与旧版可能不同。 |
+| **zgrace 语义** | 单回调 `panic`：`recover`，后续回调仍执行，不向 `Wait` 传播。 |
+| **开发与 CI** | `make test-unit`：`-count=5`。 |
+| **zbatch 默认窗口** | `AdaptiveBatcher` 默认 **`WindowSize`：64**（原 20）。 |
+| **zbatch 配置字段重命名** | `batch.Config`：**`TargetP99` → `TargetMeanLatency`**；字面量赋值需改字段名。 |
+| **zserver / zbrand** | **`zserver` 不再导出 `Banner`**，改用 **`zbrand.Banner`**。 |
+
+### Added
+- **zcoll**：`SyncMap[K,V]`，对 `sync.Map` 的泛型封装（`Load`/`Store`/`Range` 等）；`znet.BaseServer` 的 `channels` / `authChannels` 与 **`zserver.Server.connCache`** 改用该类型。
+- **ztimer**：`TimerPool`（`timer.go`），基于 `zpool` 复用 `time.Timer`，Get/Put 时排空 `C` 并安全 `Reset`。
+- **zgrace**：`doc.go`：`Register(context.Context)`、`SetContext`、`Wait`、单回调 `panic` 恢复等说明。
+- **znet**：`channel_coverage_test.go` 等覆盖补充。
+- **zbrand**：新包，常量 **`Banner`**（ASCII）；`zserver.printBanner`、示例客户端引用。
+- **examples**：服务端 **`WithName`**（如 `echodemo/server`、`echobench/server`）；**echobench** 服务端 **`WithBanner(!*quiet)`**；交互客户端 **`fmt.Print(zbrand.Banner)`**。
+
+### Changed
+- **ziface / znet / zserver**（**破坏性**）：会话与通道认证 ID：`int64` → **`uint64`**（`ISession.GetAuthId`/`SetAuthId`、`IServer.SetChannelAuth`/`GetChannelByAuthId`、`BaseServer`、`zserver.Conn.AuthId`/`SetAuthId`）。
+- **zgrace**（**破坏性**）：`Register`：`func(context.Context)`；`SetContext`；单回调 `panic`：`recover`。
+- **zserver**：`Run` 中 `zgrace.Register` 适配新签名；`connCache.Load` 使用泛型 `SyncMap` 返回值，去掉类型断言。
+- **znet**：`DefaultSocketConfig.DefaultMaxMsgId`：`1_000_000_000` → **`math.MaxInt32`**（`common.go` 注释：合法区间、`MinInt32`）；更严上界用 `SocketConfig.MaxMsgId`。
+- **znet.RingBuffer**：`Reset`：`clear(buf)`、读写统计归零；`Peek*` 切片生命周期见注释与 `docs/API.md`。
+- **znet.BaseChannel / zqueue.UnboundedMPSC**：`StopEnqueue`、`TryEnqueue` 二次检查；`Close` 停入队、`sendDone.Wait`；停止/失败路径 **`Release`**（见注释）。
+- **zbatch**（**破坏性**：`Config` 字段名）：**`TargetP99` → `TargetMeanLatency`**；`NewFastAdaptiveBatcher` 第三参 **`targetMeanLatency`**。`DefaultConfig` / 零值补全默认 **`WindowSize`：20→64**。
+- **ztimer**：`tickerPool`：`NewPoolWithOptions`，**`WithName("ztimer.ticker")`**。
+- **Makefile**：`test-unit`：`-count=1` → **`-count=5`**。
+- **docs**：`docs/API.md`：zgrace。
+- **examples/echobench**：客户端建连处 **`time.Sleep(1ms)`** 已注释。
+- **zserver**：`printBanner` 使用 **`zbrand.Banner`**；不导出 **`Banner`**。
+- **zserialize**：MsgPack **`github.com/vmihailenco/msgpack` v4 → `.../msgpack/v5`**；`Decoder` 池：`NewDecoder(bytes.NewReader(nil))`；**`Reset` 无 error 返回值**。
+- **go.mod**：`go 1.24.0`；移除 **`google.golang.org/appengine`**、**`github.com/golang/protobuf`**；新增 **`github.com/vmihailenco/tagparser/v2`**。
+
+### Documentation
+- **znet**：`docs/API.md`、包注释：**async** 下 `BaseChannel.Send`/`Close`（`StopEnqueue`、`TryEnqueue`、`Release`）；**RingBuffer `Peek*`** 与 `Discard`/后续读写关系。
+- **znet**：新增 `TestBaseChannel_Send_AfterClose_ReleasesMessage`、`TestBaseChannel_Send_Close_ConcurrentReleaseCount`（关闭并发下每条消息一次 `Release`）。
+- **README.md**、**docs/API.md**、**examples/README.md**、**examples/echodemo/README.md**、**examples/echobench/README.md**：**zbrand**、**zserver** `WithBanner`/`WithName`、**zserialize** MsgPack v5、示例依赖 **zbrand**。
+
+### Fixed
+- **zpool**：`Put`：仅 **`T` 为指针**时用 `any(obj)==any(z)` 识别 typed nil，匹配则 `OnPutNil`、不入池；热路径无 `reflect.ValueOf`。
+- **znet**：`TestRingBufferPool_GetPut`：池化 `Put` 后 **Stats** 与 `Reset` 一致。
+
+---
+
 ## [1.0.4] - 2026-03-15
 
 ### Added

@@ -14,6 +14,7 @@ type IPoolObserver interface {
 	OnGet(name string)
 	// OnPut 在 Put 被调用时触发（name 可能为空）。
 	OnPut(name string)
-	// OnPutNil 在 Put(nil)（可判定时）触发。注意：为了兼容性，不会阻止 Put。
+	// OnPutNil 在 Put 遇到可判定的 nil 引用（如 *T/slice/map 的 nil）并已丢弃、未写入底层池时触发。
+	// 该路径下不会调用 OnPut。
 	OnPutNil(name string)
 }

@@ -40,10 +40,10 @@ type IServer interface {
 	// 认证管理（原 SessionManager 职责）
 
 	// SetChannelAuth 为指定 Channel 绑定业务侧的认证 ID。
-	SetChannelAuth(channelId uint64, authId int64)
+	SetChannelAuth(channelId uint64, authId uint64)
 
 	// GetChannelByAuthId 通过业务侧认证 ID 查找对应 Channel。
-	GetChannelByAuthId(authId int64) IChannel
+	GetChannelByAuthId(authId uint64) IChannel
 
 	// RemoveChannel 从服务器管理中移除一个 Channel。
 	// 该方法由 channel.Close() 内部自动调用，业务侧不应直接使用。

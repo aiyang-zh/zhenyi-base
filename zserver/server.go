@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aiyang-zh/zhenyi-base/zbrand"
+	"github.com/aiyang-zh/zhenyi-base/zcoll"
 	"github.com/aiyang-zh/zhenyi-base/zgrace"
 	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"github.com/aiyang-zh/zhenyi-base/zkcp"
@@ -48,7 +50,7 @@ type Server struct {
 	pool              *ants.PoolWithFunc // 零闭包分配
 	ctx               context.Context
 	cancel            context.CancelFunc
-	connCache         sync.Map // channelId → *Conn，实例级缓存
+	connCache         *zcoll.SyncMap[uint64, *Conn] // channelId → *Conn，实例级缓存
 	stopOnce          sync.Once
 }
 
@@ -62,6 +64,7 @@ func New(opts ...Option) *Server {
 		workerSize: runtime.NumCPU(),
 		mode:       ziface.ModeSync,
 		showBanner: true,
+		connCache:  zcoll.NewSyncMap[uint64, *Conn](),
 	}
 	for _, opt := range opts {
 		opt(s)
@@ -154,7 +157,8 @@ func (s *Server) Start() {
 func (s *Server) Run() {
 	if s.useReactor && s.protocol == znet.TCP && s.tlsConfig == nil && runtime.GOOS == "linux" {
 		cm := zgrace.New()
-		cm.Register(func() {
+		cm.Register(func(ctx context.Context) {
+			_ = ctx
 			fmt.Printf("[%s] shutting down...\n", s.name)
 			s.Stop()
 		})
@@ -177,7 +181,8 @@ func (s *Server) Run() {
 	}
 	s.Start()
 	cm := zgrace.New()
-	cm.Register(func() {
+	cm.Register(func(ctx context.Context) {
+		_ = ctx
 		fmt.Printf("[%s] shutting down...\n", s.name)
 		s.Stop()
 	})
@@ -217,7 +222,7 @@ func (s *Server) GetConn(id uint64) *Conn {
 }
 
 // GetConnByAuthId 按认证 ID 查找连接
-func (s *Server) GetConnByAuthId(authId int64) *Conn {
+func (s *Server) GetConnByAuthId(authId uint64) *Conn {
 	ch := s.net.GetChannelByAuthId(authId)
 	if ch == nil {
 		return nil
@@ -299,14 +304,7 @@ func (s *Server) protocolName() string {
 }
 
 func (s *Server) printBanner(mode string) {
-	const banner = `
-   #####  #   #  #####  #   #  #   #  #####
-      #   #   #  #      ##  #   # #     #
-     #    # # #  #####  # # #    #      #
-    #     #   #  #      #  ##    #      #
-   #####  #   #  #####  #   #    #    #####
-`
-	fmt.Print(banner)
+	fmt.Print(zbrand.Banner)
 	fmt.Printf("  [zhenyi-base] %s | %s | %s\n", s.name, s.protocolName(), mode)
 	fmt.Printf("  [Github] https://github.com/aiyang-zh/zhenyi-base\n\n")
 }

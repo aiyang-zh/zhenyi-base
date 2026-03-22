@@ -5,9 +5,9 @@ import (
 	"time"
 )
 
-var tickerPool = zpool.NewPool[*Ticker](func() *Ticker {
+var tickerPool = zpool.NewPoolWithOptions(func() *Ticker {
 	return &Ticker{}
-})
+}, zpool.WithName("ztimer.ticker"))
 
 type Ticker struct {
 	ticker *time.Ticker

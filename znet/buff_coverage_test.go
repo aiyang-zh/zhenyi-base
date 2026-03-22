@@ -13,6 +13,7 @@ import (
 
 	"github.com/aiyang-zh/zhenyi-base/zencrypt"
 	"github.com/aiyang-zh/zhenyi-base/zpool"
+	"github.com/aiyang-zh/zhenyi-base/ztime"
 )
 
 // ================================================================
@@ -63,7 +64,7 @@ func TestAdaptiveWriter_DowngradeTier(t *testing.T) {
 	aw.lastCheck = time.Now().Add(-15 * time.Second)
 	aw.lastWrite = time.Now().Add(-35 * time.Second)
 
-	aw.tryAdapt()
+	aw.tryAdapt(ztime.ServerNow())
 
 	if aw.GetTier() >= ziface.TierLarge {
 		t.Fatalf("expected tier to downgrade from TierLarge, got %d", aw.GetTier())

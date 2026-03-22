@@ -133,6 +133,61 @@ func TestPool_WithObserver(t *testing.T) {
 	}
 }
 
+func TestPool_PutNilPointer_Discarded(t *testing.T) {
+	p := NewPool(func() *int {
+		v := 42
+		return &v
+	})
+	var z *int
+	p.Put(z)
+	x := p.Get()
+	if x == nil {
+		t.Fatal("expected non-nil *int from New after Put(nil) discarded")
+	}
+	if *x != 42 {
+		t.Fatalf("want *x=42, got %d", *x)
+	}
+}
+
+func TestPool_PutNilPointer_Observer(t *testing.T) {
+	local := &testObserver{}
+	p := NewPoolWithOptions(func() *int {
+		v := 1
+		return &v
+	}, WithName("nil_discard"), WithObserver(local))
+	var z *int
+	p.Put(z)
+	if local.put != 0 {
+		t.Fatalf("Put(nil) must not count as OnPut, got put=%d", local.put)
+	}
+}
+
+type testObserverPutNil struct {
+	testObserver
+	putNil int
+}
+
+func (o *testObserverPutNil) OnPutNil(string) { o.putNil++ }
+
+func TestPool_PutNilPointer_OnPutNil(t *testing.T) {
+	local := &testObserverPutNil{}
+	p := NewPoolWithOptions(func() *int {
+		v := 1
+		return &v
+	}, WithObserver(local))
+	var z *int
+	p.Put(z)
+	if local.putNil != 1 {
+		t.Fatalf("OnPutNil want 1, got %d", local.putNil)
+	}
+}
+
+func TestPool_PutZeroValueInt_StillStored(t *testing.T) {
+	p := NewPool(func() int { return 0 })
+	p.Put(0)
+	_ = p.Get()
+}
+
 // ============================================================
 // buff.go — bytes.Buffer 池
 // ============================================================

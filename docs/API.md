@@ -12,6 +12,9 @@
 
 ### znet
 网络核心：`BaseServer`、`BaseClient`、`BaseChannel`、`BaseSocket`、`RingBuffer`、`NetMessage`、`ParseData`。协议解析、零拷贝读写、TLS/GM-TLS 配置。
+- **AdaptiveWriter**（`buff.go`）：按写频率在多档缓冲间自适应；**默认偏保守**（升档较快、降档需缓冲已空且超过 `idleTimeout` 空闲后再逐级缩小）。档位评估依赖 `Write` 路径（与 `ztime` 取时）；**长时间无写不会触发 tryAdapt**，`Flush`/`Close` 也不评估档位，静默连接可能长期保持较高档位直至下次写入或 `Close`/`Reset`。频率阈值、检查间隔、`idleTimeout` 等为**包内常量**，未通过 Option 暴露，调参需改源码或 fork；详见类型注释。
+- **BaseChannel.Send / Close（async）**：`Close` 在 `runSend` 退出前对发送队列 **StopEnqueue**，与 `Send` 的 **TryEnqueue** 配合，避免「已停写仍永久挂起在队列里」。与关闭并发时 **TryEnqueue 可能失败**，此时 `Send` 会立即对 `IMessage` 做 **Release**，**不保证消息已发出**；成功入队的消息由 `runSend` 在写出后 **Release**（每条一次）。若业务需要「必达或显式错误码」，须在协议/业务层处理。**Sync 模式**无发送队列，应使用 **ReplyImmediate**，勿用 `Send`。详见 `znet` 包内 `Send`/`Close` 注释。
+- **RingBuffer**：**单协程**使用；**Peek\*** 返回底层 **slice 视图**（零拷贝），在 **Discard / 后续读写 / Reset** 前不得长期持有该切片引用。池化归还前会 **Reset（含 clear）**。
 - **BaseServer**：`SetMetrics(IMetrics)` 服务级指标；`SetChannelMetrics(IChannelMetrics)` 单连接指标，AddChannel 时注入到实现 `IChannelMetricsSetter` 的 channel。
 - **BaseChannel**：实现 `IChannelMetricsSetter`，`SetChannelMetrics(m)` 由 AddChannel 自动调用；供 reactor 驱动时实现 `WriteToReadBuffer`、`ParseAndDispatch`、`GetChannelId`、`Close`。
 - **客户端**：`NewBaseClient(opts...)`、`WithAsyncMode()`；默认 sync（Request），可选 async（Read），与 ziface.ModeSync/ModeAsync 对应。
@@ -28,7 +31,10 @@
 ### zserver
 轻量服务器：`New`、`Handle`、`Run`、`Request`、`Conn`，3 步启动。
 - **Request/Conn**：`Request` 为服务端请求封装；`Reply` 在 sync 下直写、async 下入队；`ReplyImmediate` 读协程内直写（配合 `WithDirectDispatch`）。
-- **Option**：`WithDirectDispatch`、`WithDirectDispatchRef`；默认 sync 模式（与 client 默认 Request 一致）；`WithAsyncMode` 启用队列模式；`WithContext(ctx, cancel)` 注入生命周期 context（不设置则 New 内部创建）；`WithReactorMode` 启用 reactor（仅 Linux + TCP）。
+- **Option**：`WithDirectDispatch`、`WithDirectDispatchRef`；默认 sync；`WithAsyncMode`；`WithContext`；`WithReactorMode`（Linux + TCP）；**`WithBanner(show bool)`**（默认 true）；**`WithName(name string)`**（横幅第二行）。ASCII：**`zbrand.Banner`**。
+
+### zbrand
+- **`Banner`**：`const`；`zserver.printBanner`、示例客户端使用。
 
 ---
 
@@ -41,7 +47,7 @@
 - `Queue` - 通用队列（支持 Resize）
 
 ### zpool
-- `Pool[T]` - 泛型对象池
+- `Pool[T]` - 泛型对象池；仅当 **T 为指针类型** 时 `Put` 会丢弃 typed nil（`any` 相等比较，见包 `doc`）；非指针 `T`（如切片、标量）不走该分支
 - `Buffer`、`GetBytesBuffer`、`PutBytesBuffer` - 字节缓冲池
 - `GetNetBuffer`、`PutNetBuffer` - 网络缓冲池
 
@@ -70,7 +76,9 @@
 - `bcrypt`、`argon2` 密码哈希
 
 ### zserialize
-- Protobuf、JSON(sonic)、MsgPack 序列化
+- Protobuf、JSON(sonic)、**MsgPack**（**`github.com/vmihailenco/msgpack/v5`**，`MarshalMsgPack` / `UnmarshalMsgPack`）
 
 ### zbackoff / zlimiter / zgrace / zpub / zid / zrand / ztime / ztimer / zfile
 各包独立，详见 pkg.go.dev 或源码 godoc。
+
+**zgrace**：优雅退出与停机回调；`Register(func(context.Context))`、`SetContext`、单次 `Wait` 等约定见包注释 `zgrace/doc.go`（`go doc github.com/aiyang-zh/zhenyi-base/zgrace`）。
