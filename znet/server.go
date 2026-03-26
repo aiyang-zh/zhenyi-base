@@ -43,7 +43,9 @@ type BaseServer struct {
 	Once             sync.Once
 	iMetrics         ziface.IMetrics
 	iChannelMetrics  ziface.IChannelMetrics // 单连接维度指标，AddChannel 时注入到支持 IChannelMetricsSetter 的 channel
-	heartbeatTimeout time.Duration          // 心跳超时（0 = 禁用，默认 30s）
+	// sessionStatsFactory 非 nil 时，NewBaseChannel 为每条连接创建独立 ISessionStats（如业务层会话计数）。
+	sessionStatsFactory func() ziface.ISessionStats
+	heartbeatTimeout time.Duration // 心跳超时（0 = 禁用，默认 30s）
 	tlsConfig        *ziface.TLSConfig      // TLS 配置（nil = 不启用 TLS）
 }
 
@@ -128,6 +130,17 @@ func (b *BaseServer) SetMetrics(iMetrics ziface.IMetrics) {
 // SetChannelMetrics 设置单连接维度指标收集器（可选）。AddChannel 时会注入到实现了 IChannelMetricsSetter 的 channel（如 *znet.BaseChannel）。
 func (b *BaseServer) SetChannelMetrics(m ziface.IChannelMetrics) {
 	b.iChannelMetrics = m
+}
+
+// SetSessionStatsFactory 设置每条新连接使用的会话统计工厂（可选）。在 NewBaseChannel 内调用一次 factory，注入到 BaseChannel.stats。
+// 传 nil 表示不采集（RecordSend/RecordRec 路径保持 no-op）。
+func (b *BaseServer) SetSessionStatsFactory(f func() ziface.ISessionStats) {
+	b.sessionStatsFactory = f
+}
+
+// GetSessionStatsFactory 返回当前工厂，供 NewBaseChannel 探测；未设置时为 nil。
+func (b *BaseServer) GetSessionStatsFactory() func() ziface.ISessionStats {
+	return b.sessionStatsFactory
 }
 
 // SyncMode 返回是否使用 sync 模式（原生支持：无发送队列，ReplyImmediate 直写）
@@ -275,6 +288,28 @@ func (b *BaseServer) GetChannelByAuthId(authId uint64) ziface.IChannel {
 		return nil
 	}
 	return channel
+}
+
+// AggregateChannelSessionStats 遍历当前连接，累加实现了 ISessionStatsSnapshot 的会话统计（如 zmonitor.SessionStats）。
+// channelsWithStats 为成功导出快照的连接数；未配置工厂或自定义 ISessionStats 未实现快照接口的连接会跳过。
+func (b *BaseServer) AggregateChannelSessionStats() (channelsWithStats int, sumSendCount, sumRecvCount, sumSendBytes, sumRecvBytes int64) {
+	b.channels.Range(func(_ uint64, ch ziface.IChannel) bool {
+		snap, ok := ch.(ziface.IChannelSessionStatsSnapshot)
+		if !ok {
+			return true
+		}
+		sc, rc, sb, rb, _, _, ok := snap.SessionStatsSnapshot()
+		if !ok {
+			return true
+		}
+		channelsWithStats++
+		sumSendCount += sc
+		sumRecvCount += rc
+		sumSendBytes += sb
+		sumRecvBytes += rb
+		return true
+	})
+	return
 }
 
 // BaseClose 关闭 listener 并关闭所有已管理的 Channel（由具体协议的 Close 调用）。无锁。

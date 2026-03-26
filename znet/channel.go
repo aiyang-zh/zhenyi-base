@@ -24,6 +24,7 @@ import (
 // 接口断言：确保 BaseChannel 实现 IChannel 与 IChannelMetricsSetter
 var _ ziface.IChannel = (*BaseChannel)(nil)
 var _ ziface.IChannelMetricsSetter = (*BaseChannel)(nil)
+var _ ziface.IChannelSessionStatsSnapshot = (*BaseChannel)(nil)
 
 // ================================================================
 // BaseChannel - 零拷贝通道
@@ -88,6 +89,7 @@ func NewBaseChannel(channelId uint64, conn net.Conn, server ziface.IServer) *Bas
 	state.Store(true)
 
 	syncMode := server.SyncMode()
+	tuning := GetSendLoopTuning()
 
 	c := &BaseChannel{
 		// 网络层
@@ -106,9 +108,9 @@ func NewBaseChannel(channelId uint64, conn net.Conn, server ziface.IServer) *Bas
 
 		// ✅ 极速自适应批量处理器（网络场景配置）
 		batcher: zbatch.NewFastAdaptiveBatcher(
-			1,                  // minBatch: 最小批次 1
-			200,                // maxBatch: 最大批次 200
-			5*time.Millisecond, // targetMeanLatency：与窗口平均延迟比较的控制目标
+			tuning.BatchMin,        // minBatch: 最小批次
+			tuning.BatchMax,        // maxBatch: 最大批次
+			tuning.BatchTargetMean, // targetMeanLatency：与窗口平均延迟比较的控制目标
 		),
 	}
 
@@ -129,6 +131,14 @@ func NewBaseChannel(channelId uint64, conn net.Conn, server ziface.IServer) *Bas
 		_ = tcpConn.SetWriteBuffer(tcpBufSize)
 		_ = tcpConn.SetReadBuffer(tcpBufSize)
 		_ = tcpConn.SetNoDelay(true) // 禁用 Nagle 算法，减少延迟
+	}
+
+	if prov, ok := server.(interface {
+		GetSessionStatsFactory() func() ziface.ISessionStats
+	}); ok {
+		if f := prov.GetSessionStatsFactory(); f != nil {
+			c.stats = f()
+		}
 	}
 
 	return c
@@ -234,8 +244,13 @@ func (c *BaseChannel) read() bool {
 }
 
 // WriteToReadBuffer 将数据追加到读缓冲，供 reactor 等外部驱动在可读时写入后调用。
+// 与 read() 路径一致：累加 IChannelMetrics 接收字节，保证 epoll/reactor 模式下 Prometheus 字节指标与自旋读一致。
 func (c *BaseChannel) WriteToReadBuffer(p []byte) (n int, err error) {
-	return c.readBuffer.Write(p)
+	n, err = c.readBuffer.Write(p)
+	if n > 0 && c.metrics != nil {
+		c.metrics.BytesRecAdd(int64(n))
+	}
+	return n, err
 }
 
 // ParseAndDispatch 从读缓冲解析并分发所有完整消息；供 reactor 在 WriteToReadBuffer 后调用。
@@ -636,8 +651,14 @@ func (c *BaseChannel) runSend(ctx context.Context) {
 	defer c.sendDone.Done()
 	defer zlog.Recover("Channel.runSend")
 
+	tuning := GetSendLoopTuning()
+
 	// ✅ 使用动态批量大小
-	readBatch := make([]ziface.IMessage, MaxBatchLimit)
+	readBatchLimit := tuning.MaxBatchLimit
+	if readBatchLimit <= 0 || readBatchLimit > MaxBatchLimit {
+		readBatchLimit = MaxBatchLimit
+	}
+	readBatch := make([]ziface.IMessage, readBatchLimit)
 
 	// 监控指标
 	var totalMsgsSent int64
@@ -673,8 +694,8 @@ func (c *BaseChannel) runSend(ctx context.Context) {
 		batchSize := c.batcher.GetBatchSize(int64(lastBatchSize))
 
 		// 确保批量大小不超过预分配的缓冲区
-		if batchSize > MaxBatchLimit {
-			batchSize = MaxBatchLimit
+		if batchSize > readBatchLimit {
+			batchSize = readBatchLimit
 		}
 
 		// ✅ 记录批处理开始时间
@@ -729,7 +750,7 @@ func (c *BaseChannel) runSend(ctx context.Context) {
 		// 4. 空闲处理：Backoff 策略，避免 CPU 空转
 		if processedCount == 0 {
 			idleCount++
-			zbackoff.Backoff(idleCount, 10, 30, time.Microsecond)
+			zbackoff.Backoff(idleCount, tuning.BackoffFirst, tuning.BackoffSecond, tuning.BackoffSleep)
 
 			// ✅ 空闲时重置 lastBatchSize，避免使用过期的预测数据
 			lastBatchSize = 1
@@ -737,8 +758,8 @@ func (c *BaseChannel) runSend(ctx context.Context) {
 			// ✅ 空闲时归零监控计数，避免监控假阳性（显示队列有积压但实际为空）
 			atomic.StoreInt64(&c.msgCount, 0)
 
-			// ✅ 持续空闲 30 秒后缩容节点池，释放内存
-			if idleCount > 100 && time.Since(lastShrinkTime) > 30*time.Second {
+			// ✅ 持续空闲后缩容节点池，释放内存
+			if idleCount > tuning.IdleShrinkAfter && time.Since(lastShrinkTime) > tuning.IdleShrinkEvery {
 				c.mailBoxQueue.Shrink()
 				lastShrinkTime = time.Now()
 			}
@@ -766,4 +787,18 @@ func (c *BaseChannel) RecordRecv(dataLen int) {
 	if c.stats != nil {
 		c.stats.RecordRec(dataLen)
 	}
+}
+
+// SessionStatsSnapshot 实现 ziface.IChannelSessionStatsSnapshot：从挂接的 ISessionStats 拉取数值快照。
+// 若未配置 stats 或实现未支持 ISessionStatsSnapshot，则 ok=false。
+func (c *BaseChannel) SessionStatsSnapshot() (sendCount, recvCount, sendBytes, recvBytes, connectedAtMs, lastActiveMs int64, ok bool) {
+	if c.stats == nil {
+		return 0, 0, 0, 0, 0, 0, false
+	}
+	ss, ok := c.stats.(ziface.ISessionStatsSnapshot)
+	if !ok {
+		return 0, 0, 0, 0, 0, 0, false
+	}
+	sendCount, recvCount, sendBytes, recvBytes, connectedAtMs, lastActiveMs = ss.SessionStatsValues()
+	return sendCount, recvCount, sendBytes, recvBytes, connectedAtMs, lastActiveMs, true
 }

@@ -1084,6 +1084,27 @@ func TestRecoverWith_PanicHookCalled(t *testing.T) {
 	}
 }
 
+func TestAppendPanicHook_ChainsAfterSet(t *testing.T) {
+	logger := createRecoverTestLogger(t)
+	defer logger.Close()
+
+	var order []int
+	first := func() { order = append(order, 1) }
+	second := func() { order = append(order, 2) }
+	SetPanicHook(first)
+	defer SetPanicHook(nil)
+	AppendPanicHook(second)
+
+	func() {
+		defer logger.Recover("append chain test")
+		panic("trigger")
+	}()
+
+	if len(order) != 2 || order[0] != 1 || order[1] != 2 {
+		t.Fatalf("expected hook order [1,2], got %v", order)
+	}
+}
+
 // --- 基准测试 ---
 
 // BenchmarkLogger_Info 基准测试：Info 日志

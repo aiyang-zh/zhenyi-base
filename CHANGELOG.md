@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.0.6] - 2026-03-27
+
+### Added
+- **znet**：新增 `SendLoopTuning`（`znet/send_tuning.go`），提供 `SetSendLoopTuning` / `GetSendLoopTuning`，可在启动期调整 `BaseChannel.runSend` 的 batch/backoff/shrink 参数。
+- **ziface**：新增 `ISessionStatsSnapshot` 与 `IChannelSessionStatsSnapshot`，用于从连接级统计对象拉取快照并供服务端聚合。
+- **zlog**：新增 `AppendPanicHook(fn)`，支持在已存在 panic hook 基础上 CAS 追加执行链。
+
+### Changed
+- **znet.BaseChannel**：
+  - `NewBaseChannel` 中 `FastAdaptiveBatcher` 参数改为读取 `SendLoopTuning`（默认保持 `1/200/5ms` 不变）。
+  - `runSend` 中的 `MaxBatchLimit`、`Backoff(10,30,1us)`、空闲缩容阈值改为可配置项（默认值与旧行为一致）。
+  - 增加 `SessionStatsSnapshot()`，将挂接的 `ISessionStats` 导出为统一快照接口。
+  - `WriteToReadBuffer` 在 reactor 路径下补充 `BytesRecAdd` 统计，保证与自旋读路径一致。
+- **znet.BaseServer**：
+  - 新增 `SetSessionStatsFactory` / `GetSessionStatsFactory`，用于为每条连接注入独立 `ISessionStats`。
+  - 新增 `AggregateChannelSessionStats()`，按连接聚合 `send/recv count/bytes`。
+- **zserialize**：
+  - `json_sonic.go` 构建标签调整为 `sonic && (amd64 || arm64)`。
+  - 默认 JSON 实现改为 `json_std.go`（`!sonic`），即不显式传 `-tags sonic` 时统一使用 `encoding/json`。
+
+### Removed
+- **zserialize**：删除 `json_generic.go`（由统一的 `json_std.go` 覆盖默认实现）。
+
 ## [1.0.5] - 2026-03-22
 
 ### 升级风险说明

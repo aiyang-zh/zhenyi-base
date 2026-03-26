@@ -28,8 +28,33 @@ var panicHook atomic.Pointer[func()]
 
 // SetPanicHook 注册 panic 回调（用于 metrics 等外部模块，避免循环依赖）。
 // Recover/RecoverWith 在记录 panic 日志后会尝试调用该回调。
+// 注意：会覆盖此前通过 SetPanicHook / AppendPanicHook 注册的回调；若需保留已有回调，请用 AppendPanicHook。
 func SetPanicHook(fn func()) {
 	panicHook.Store(&fn)
+}
+
+// AppendPanicHook 在现有 panic 回调之后追加执行 fn（fn 为 nil 则忽略）。
+// 与 SetPanicHook 不同：本函数通过 CAS 合并到当前链上，适合 zmetrics 等在默认 logger 已可能被配置 hook 后仍追加计数。
+func AppendPanicHook(fn func()) {
+	if fn == nil {
+		return
+	}
+	for {
+		cur := panicHook.Load()
+		var merged func()
+		if cur != nil && *cur != nil {
+			prev := *cur
+			merged = func() {
+				prev()
+				fn()
+			}
+		} else {
+			merged = fn
+		}
+		if panicHook.CompareAndSwap(cur, &merged) {
+			return
+		}
+	}
 }
 
 // GetDefaultLog 返回当前的默认 Logger。
