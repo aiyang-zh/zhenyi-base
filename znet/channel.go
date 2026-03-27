@@ -114,6 +114,13 @@ func NewBaseChannel(channelId uint64, conn net.Conn, server ziface.IServer) *Bas
 		),
 	}
 
+	// 发送缓冲预热：降低首轮发送和批次波动时的切片扩容概率（低风险、仅容量优化）。
+	hdrLen := c.socketParser.HeaderLen()
+	if tuning.BatchMax > 0 && hdrLen > 0 {
+		c.headersBuf = make([]byte, 0, tuning.BatchMax*hdrLen)
+		c.writeBufs = make(net.Buffers, 0, tuning.BatchMax*2) // 每条消息最多 header/body 两段
+	}
+
 	// async 模式：创建发送队列；sync 模式：无队列，ReplyImmediate 直写
 	if !syncMode {
 		c.mailBoxQueue = zqueue.NewUnboundedMPSC[ziface.IMessage]()
@@ -376,7 +383,13 @@ func (c *BaseChannel) SendBatchMsg(messages []ziface.IMessage) {
 	headers := c.headersBuf
 
 	// ✅ 复用 Channel 上预分配的 writeBufs（runSend 单协程，无并发）
-	c.writeBufs = c.writeBufs[:0]
+	// 每条消息最多写入两段（header/body），预留容量可减少 append 扩容带来的分配与拷贝。
+	needBufsCap := 2 * len(messages)
+	if cap(c.writeBufs) < needBufsCap {
+		c.writeBufs = make(net.Buffers, 0, needBufsCap)
+	} else {
+		c.writeBufs = c.writeBufs[:0]
+	}
 
 	// 复用消息包装器
 	wrapper := GetNetMessage()
