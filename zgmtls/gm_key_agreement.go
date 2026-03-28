@@ -70,136 +70,100 @@ type ecdheKeyAgreementGM struct {
 
 func (ka *ecdheKeyAgreementGM) generateServerKeyExchange(config *Config, signCert, cipherCert *Certificate,
 	clientHello *clientHelloMsg, hello *serverHelloMsg) (*serverKeyExchangeMsg, error) {
-	panic("")
-	//	preferredCurves := config.curvePreferences()
-	//
-	//NextCandidate:
-	//	for _, candidate := range preferredCurves {
-	//		for _, c := range clientHello.supportedCurves {
-	//			if candidate == c {
-	//				ka.curveid = c
-	//				break NextCandidate
-	//			}
-	//		}
-	//	}
-	//
-	//	if ka.curveid == 0 {
-	//		return nil, errors.New("tls: no supported elliptic curves offered")
-	//	}
-	//
-	//	var ecdhePublic []byte
-	//
-	//	if ka.curveid == X25519 {
-	//		var scalar, public [32]byte
-	//		if _, err := io.ReadFull(config.rand(), scalar[:]); err != nil {
-	//			return nil, err
-	//		}
-	//
-	//		curve25519.ScalarBaseMult(&public, &scalar)
-	//		ka.privateKey = scalar[:]
-	//		ecdhePublic = public[:]
-	//	} else {
-	//		curve, ok := curveForCurveID(ka.curveid)
-	//		if !ok {
-	//			return nil, errors.New("tls: preferredCurves includes unsupported curve")
-	//		}
-	//
-	//		var x, y *big.Int
-	//		var err error
-	//		ka.privateKey, x, y, err = elliptic.GenerateKey(curve, config.rand())
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//		ecdhePublic = elliptic.Marshal(curve, x, y)
-	//	}
-	//
-	//	// https://tools.ietf.org/html/rfc4492#section-5.4
-	//	serverECDHParams := make([]byte, 1+2+1+len(ecdhePublic))
-	//	serverECDHParams[0] = 3 // named curve
-	//	serverECDHParams[1] = byte(ka.curveid >> 8)
-	//	serverECDHParams[2] = byte(ka.curveid)
-	//	serverECDHParams[3] = byte(len(ecdhePublic))
-	//	copy(serverECDHParams[4:], ecdhePublic)
-	//
-	//	priv, ok := cert.PrivateKey.(crypto.Signer)
-	//	if !ok {
-	//		return nil, errors.New("tls: certificate private key does not implement crypto.Signer")
-	//	}
-	//
-	//	signatureAlgorithm, sigType, hashFunc, err := pickSignatureAlgorithm(priv.Public(), clientHello.supportedSignatureAlgorithms, supportedSignatureAlgorithms, ka.version)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	if (sigType == signaturePKCS1v15 || sigType == signatureRSAPSS) != ka.isRSA {
-	//		return nil, errors.New("tls: certificate cannot be used with the selected cipher suite")
-	//	}
-	//
-	//	digest, err := hashForServerKeyExchange(sigType, hashFunc, ka.version, clientHello.random, hello.random, serverECDHParams)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	signOpts := crypto.SignerOpts(hashFunc)
-	//	if sigType == signatureRSAPSS {
-	//		signOpts = &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash, Hash: hashFunc}
-	//	}
-	//	sig, err := priv.Sign(config.rand(), digest, signOpts)
-	//	if err != nil {
-	//		return nil, errors.New("tls: failed to sign ECDHE parameters: " + err.Error())
-	//	}
-	//
-	//	skx := new(serverKeyExchangeMsg)
-	//	sigAndHashLen := 0
-	//	if ka.version >= VersionTLS12 {
-	//		sigAndHashLen = 2
-	//	}
-	//	skx.key = make([]byte, len(serverECDHParams)+sigAndHashLen+2+len(sig))
-	//	copy(skx.key, serverECDHParams)
-	//	k := skx.key[len(serverECDHParams):]
-	//	if ka.version >= VersionTLS12 {
-	//		k[0] = byte(signatureAlgorithm >> 8)
-	//		k[1] = byte(signatureAlgorithm)
-	//		k = k[2:]
-	//	}
-	//	k[0] = byte(len(sig) >> 8)
-	//	k[1] = byte(len(sig))
-	//	copy(k[2:], sig)
-	//
-	//	return skx, nil
+	_ = cipherCert
+	// GM/T 0024：ECDHE 使用 SM2 曲线（与 secp256r1 同参）；named curve 使用 TLS CurveID 23（secp256r1）
+	curve := sm2.P256()
+	ka.curveid = CurveP256
+
+	privKey, x, y, err := elliptic.GenerateKey(curve, config.rand())
+	if err != nil {
+		return nil, err
+	}
+	ka.privateKey = privKey
+	ecdhePublic := elliptic.Marshal(curve, x, y)
+
+	serverECDHParams := make([]byte, 1+2+1+len(ecdhePublic))
+	serverECDHParams[0] = 3
+	serverECDHParams[1] = byte(ka.curveid >> 8)
+	serverECDHParams[2] = byte(ka.curveid)
+	serverECDHParams[3] = byte(len(ecdhePublic))
+	copy(serverECDHParams[4:], ecdhePublic)
+
+	priv, ok := signCert.PrivateKey.(crypto.Signer)
+	if !ok {
+		return nil, errors.New("tls: certificate private key does not implement crypto.Signer")
+	}
+
+	signatureAlgorithm, sigType, hashFunc, err := pickSignatureAlgorithm(priv.Public(), clientHello.supportedSignatureAlgorithms, supportedSignatureAlgorithms, ka.version)
+	if err != nil {
+		return nil, err
+	}
+	if sigType != signatureSM2 {
+		return nil, errors.New("tls: GM ECDHE requires SM2 signing certificate")
+	}
+
+	digest, err := hashForServerKeyExchange(sigType, hashFunc, ka.version, clientHello.random, hello.random, serverECDHParams)
+	if err != nil {
+		return nil, err
+	}
+
+	sig, err := priv.Sign(config.rand(), digest, nil)
+	if err != nil {
+		return nil, errors.New("tls: failed to sign ECDHE parameters: " + err.Error())
+	}
+
+	skx := new(serverKeyExchangeMsg)
+	sigAndHashLen := 0
+	if ka.version >= VersionTLS12 {
+		sigAndHashLen = 2
+	}
+	skx.key = make([]byte, len(serverECDHParams)+sigAndHashLen+2+len(sig))
+	copy(skx.key, serverECDHParams)
+	k := skx.key[len(serverECDHParams):]
+	if ka.version >= VersionTLS12 {
+		k[0] = byte(signatureAlgorithm >> 8)
+		k[1] = byte(signatureAlgorithm)
+		k = k[2:]
+	}
+	k[0] = byte(len(sig) >> 8)
+	k[1] = byte(len(sig))
+	copy(k[2:], sig)
+
+	return skx, nil
 }
 
 func (ka *ecdheKeyAgreementGM) processClientKeyExchange(config *Config, cert *Certificate, ckx *clientKeyExchangeMsg, version uint16) ([]byte, error) {
-	panic("")
-	//	if len(ckx.ciphertext) == 0 || int(ckx.ciphertext[0]) != len(ckx.ciphertext)-1 {
-	//		return nil, errClientKeyExchange
-	//	}
-	//
-	//	if ka.curveid == X25519 {
-	//		if len(ckx.ciphertext) != 1+32 {
-	//			return nil, errClientKeyExchange
-	//		}
-	//
-	//		var theirPublic, sharedKey, scalar [32]byte
-	//		copy(theirPublic[:], ckx.ciphertext[1:])
-	//		copy(scalar[:], ka.privateKey)
-	//		curve25519.ScalarMult(&sharedKey, &scalar, &theirPublic)
-	//		return sharedKey[:], nil
-	//	}
-	//
-	//	curve, ok := curveForCurveID(ka.curveid)
-	//	if !ok {
-	//		panic("internal error")
-	//	}
-	//	x, y := elliptic.Unmarshal(curve, ckx.ciphertext[1:]) // Unmarshal also checks whether the given point is on the curve
-	//	if x == nil {
-	//		return nil, errClientKeyExchange
-	//	}
-	//	x, _ = curve.ScalarMult(x, y, ka.privateKey)
-	//	preMasterSecret := make([]byte, (curve.Params().BitSize+7)>>3)
-	//	xBytes := x.Bytes()
-	//	copy(preMasterSecret[len(preMasterSecret)-len(xBytes):], xBytes)
-	//
-	//	return preMasterSecret, nil
+	_ = cert
+	if len(ckx.ciphertext) == 0 {
+		return nil, errClientKeyExchange
+	}
+	if int(ckx.ciphertext[0]) != len(ckx.ciphertext)-1 {
+		return nil, errClientKeyExchange
+	}
+
+	if ka.curveid == X25519 {
+		if len(ckx.ciphertext) != 1+32 {
+			return nil, errClientKeyExchange
+		}
+
+		var theirPublic, sharedKey, scalar [32]byte
+		copy(theirPublic[:], ckx.ciphertext[1:])
+		copy(scalar[:], ka.privateKey)
+		curve25519.ScalarMult(&sharedKey, &scalar, &theirPublic)
+		return sharedKey[:], nil
+	}
+
+	curve := sm2.P256()
+	x, y := elliptic.Unmarshal(curve, ckx.ciphertext[1:])
+	if x == nil {
+		return nil, errClientKeyExchange
+	}
+	x, _ = curve.ScalarMult(x, y, ka.privateKey)
+	preMasterSecret := make([]byte, (curve.Params().BitSize+7)>>3)
+	xBytes := x.Bytes()
+	copy(preMasterSecret[len(preMasterSecret)-len(xBytes):], xBytes)
+
+	return preMasterSecret, nil
 }
 
 func (ka *ecdheKeyAgreementGM) processServerKeyExchange(config *Config, clientHello *clientHelloMsg, serverHello *serverHelloMsg, cert *x509.Certificate, skx *serverKeyExchangeMsg) error {
@@ -209,7 +173,7 @@ func (ka *ecdheKeyAgreementGM) processServerKeyExchange(config *Config, clientHe
 	if skx.key[0] != 3 { // named curve
 		return errors.New("tls: server selected unsupported curve")
 	}
-	ka.curveid = CurveID(skx.key[1])<<8 | CurveID(skx.key[2])
+	ka.curveid = CurveID(uint16(skx.key[1])<<8 | uint16(skx.key[2]))
 
 	publicLen := int(skx.key[3])
 	if publicLen+4 > len(skx.key) {
@@ -230,10 +194,12 @@ func (ka *ecdheKeyAgreementGM) processServerKeyExchange(config *Config, clientHe
 		return errServerKeyExchange
 	}
 
-	var signatureAlgorithm SignatureScheme
-	_, sigType, hashFunc, err := pickSignatureAlgorithm(cert.PublicKey, []SignatureScheme{signatureAlgorithm}, clientHello.supportedSignatureAlgorithms, ka.version)
+	_, sigType, hashFunc, err := pickSignatureAlgorithm(cert.PublicKey, clientHello.supportedSignatureAlgorithms, supportedSignatureAlgorithms, ka.version)
+	if err != nil {
+		return err
+	}
 
-	sigLen := int(sig[0])<<8 | int(sig[1])
+	sigLen := int(uint16(sig[0])<<8 | uint16(sig[1]))
 	if sigLen+2 != len(sig) {
 		return errServerKeyExchange
 	}
@@ -266,10 +232,7 @@ func (ka *ecdheKeyAgreementGM) generateClientKeyExchange(config *Config, clientH
 		serialized = ourPublic[:]
 		preMasterSecret = sharedKey[:]
 	} else {
-		curve, ok := curveForCurveID(ka.curveid)
-		if !ok {
-			panic("internal error")
-		}
+		curve := sm2.P256()
 		priv, mx, my, err := elliptic.GenerateKey(curve, config.rand())
 		if err != nil {
 			return nil, nil, err
@@ -340,7 +303,7 @@ func (ka *eccKeyAgreementGM) processClientKeyExchange(config *Config, cert *Cert
 		return nil, errClientKeyExchange
 	}
 
-	if int(ckx.ciphertext[0]<<8|ckx.ciphertext[1]) != len(ckx.ciphertext)-2 {
+	if int(uint16(ckx.ciphertext[0])<<8|uint16(ckx.ciphertext[1])) != len(ckx.ciphertext)-2 {
 		return nil, errClientKeyExchange
 	}
 
@@ -372,7 +335,7 @@ func (ka *eccKeyAgreementGM) processServerKeyExchange(config *Config, clientHell
 	if len(skx.key) <= 2 {
 		return errServerKeyExchange
 	}
-	sigLen := int(skx.key[0]<<8 | skx.key[1])
+	sigLen := int(uint16(skx.key[0])<<8 | uint16(skx.key[1]))
 	if sigLen+2 != len(skx.key) {
 		return errServerKeyExchange
 	}

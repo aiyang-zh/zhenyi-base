@@ -25,6 +25,7 @@ import (
 	"io"
 	"math/big"
 
+	"github.com/emmansun/gmsm/sm3"
 	x509 "github.com/emmansun/gmsm/smx509"
 
 	"golang.org/x/crypto/curve25519"
@@ -124,6 +125,14 @@ func md5SHA1Hash(slices [][]byte) []byte {
 // using the given hash function (for >= TLS 1.2) or using a default based on
 // the sigType (for earlier TLS versions).
 func hashForServerKeyExchange(sigType uint8, hashFunc crypto.Hash, version uint16, slices ...[]byte) ([]byte, error) {
+	// GM/T 0024：ServerKeyExchange 签名对 client_random || server_random || ECDH 参数做 SM3；与 sm2.VerifyASN1 的「预计算 hash」一致。
+	if version == VersionGMSSL && sigType == signatureSM2 {
+		h := sm3.New()
+		for _, slice := range slices {
+			h.Write(slice)
+		}
+		return h.Sum(nil), nil
+	}
 	if version >= VersionTLS12 {
 		h := hashFunc.New()
 		for _, slice := range slices {

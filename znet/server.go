@@ -29,24 +29,24 @@ type listenerHolder struct{ L net.Listener }
 // BaseServer 是网络层通用服务端基类，负责连接管理、TLS、心跳与认证映射。
 // 具体协议（TCP/WebSocket/KCP）由子包嵌入并实现 Server(ctx) 与 listen。
 type BaseServer struct {
-	idGen            uint64
-	handlers         ServerHandlers
-	channels         *zcoll.SyncMap[uint64, ziface.IChannel] // channelId → IChannel
-	authChannels     *zcoll.SyncMap[uint64, ziface.IChannel] // authId → IChannel
-	connCount        atomic.Int64
-	maxConn          int64 // 0 = 不限
-	addr             string
-	iEncrypt         ziface.IEncrypt
-	closeCh          chan struct{}
-	listener         atomic.Pointer[listenerHolder] // 无锁：Set/Get/Close 通过 atomic 协调
-	listenerH        listenerHolder                 // 嵌入，SetListener 仅写字段后 Store(&listenerH)，0 分配
-	Once             sync.Once
-	iMetrics         ziface.IMetrics
-	iChannelMetrics  ziface.IChannelMetrics // 单连接维度指标，AddChannel 时注入到支持 IChannelMetricsSetter 的 channel
+	idGen           uint64
+	handlers        ServerHandlers
+	channels        *zcoll.SyncMap[uint64, ziface.IChannel] // channelId → IChannel
+	authChannels    *zcoll.SyncMap[uint64, ziface.IChannel] // authId → IChannel
+	connCount       atomic.Int64
+	maxConn         int64 // 0 = 不限
+	addr            string
+	iEncrypt        ziface.IEncrypt
+	closeCh         chan struct{}
+	listener        atomic.Pointer[listenerHolder] // 无锁：Set/Get/Close 通过 atomic 协调
+	listenerH       listenerHolder                 // 嵌入，SetListener 仅写字段后 Store(&listenerH)，0 分配
+	Once            sync.Once
+	iMetrics        ziface.IMetrics
+	iChannelMetrics ziface.IChannelMetrics // 单连接维度指标，AddChannel 时注入到支持 IChannelMetricsSetter 的 channel
 	// sessionStatsFactory 非 nil 时，NewBaseChannel 为每条连接创建独立 ISessionStats（如业务层会话计数）。
 	sessionStatsFactory func() ziface.ISessionStats
-	heartbeatTimeout time.Duration // 心跳超时（0 = 禁用，默认 30s）
-	tlsConfig        *ziface.TLSConfig      // TLS 配置（nil = 不启用 TLS）
+	heartbeatTimeout    time.Duration     // 心跳超时（0 = 禁用，默认 30s）
+	tlsConfig           *ziface.TLSConfig // TLS 配置（nil = 不启用 TLS）
 }
 
 // NewBaseServer 创建网络层服务端基类。

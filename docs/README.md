@@ -15,6 +15,7 @@
 |------|------|
 | **[新手学习方案](BEGINNER_GUIDE.md)** | **推荐** 从零到 Echo 的完整学习路径与自检清单 |
 | [API 文档](API.md) | 各包 API 简要索引与使用说明 |
+| [国密 GM-TLS（zgmtls）](../zgmtls/README.md) | 套件、默认协商、ECDHE/ECC、服务端双证书与互通说明 |
 | [架构设计](ARCHITECTURE.md) | 模块划分、依赖关系、设计思路 |
 | [教程](TUTORIAL.md) | 常见场景的 step-by-step 指南 |
 | [基准测试](benchmark/) | 性能基准原始数据与复现说明 |

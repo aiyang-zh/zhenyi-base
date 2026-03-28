@@ -21,7 +21,8 @@
 
 - 遵循 Go 官方 [Effective Go](https://go.dev/doc/effective_go)
 - 新包需补充单元测试
-- 提交前运行 `make test` 或 `make test-unit` 确保通过（测试范围不包含 `examples/`、`ziface/`）
+- 提交前运行 `make test`（含 `go fmt` / `go vet` / `go mod tidy` 与功能与覆盖率测试）或更快的 `make test-unit` 确保通过（测试范围不包含 `examples/`、`ziface/`）；已执行 `make install-hooks` 时，提交前将跑完整 `make test`
+- **`go vet`** 为 `make test` 前置步骤，请勿跳过；**`zgmtls`**（国密 GM-TLS）等与协议/静态检查相关的说明见 **`CHANGELOG.md`**（例如 **`[1.1.0]`** 中 **`eccKeyAgreementGM`** 长度字段解析、`gm_key_agreement_test.go` 等）
 
 ## 提交信息格式
 

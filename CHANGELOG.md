@@ -9,23 +9,33 @@
 | 风险类型 | 说明 |
 |----------|------|
 | **zencrypt / SM2** | 不再对外暴露 `*sm2.PrivateKey` / 裸 `*ecdsa.PublicKey`。改为 **`SM2PrivateKey` / `SM2PublicKey`**；`GenerateSM2Key` 返回 `*SM2PrivateKey`；公钥使用 **`priv.PublicKey()`**；`SM2Encrypt` / `SM2Decrypt` / `SM2Sign` / `SM2Verify` / PEM 编解码均改为上述类型。 |
-| **ziface / GM-TLS** | **`TLSConfig.GMConfig`** 类型由 `*gmtls.Config` 改为 **`GMTLSConfig`**。勿直接改底层字段；请使用 **`SetInsecureSkipVerify`**、**`SetRootCAsPEM`**、**`Dial`**（客户端）等；**`WrapListener`** / **`znet.DialTLS`** 已适配。服务端构建除 **`znet.NewGMTLSConfig*`** 外，也可直接使用 **`ziface.NewGMTLSServerTLSFromFiles`** 等。 |
+| **ziface / GM-TLS** | **`TLSConfig.GMConfig`** 由 `*gmtls.Config` 改为 **`GMTLSConfig`**。勿直接持有 `*gmtls.Config`；通过 **`GMTLSConfig`** 的 **`Set*`** / **`Dial`** 使用；**`WrapListener`**、**`znet.DialTLS`** 已适配。 |
 | **TLSModeGM 且 GMConfig 未设置** | **`WrapListener`** 在 **`Mode==TLSModeGM` 且 `GMConfig==nil`** 时 **panic**（与误用明文 listener 区分）；**`znet.DialTLS`** 在相同条件下 **返回错误**，不再退回明文 TCP。 |
 
 ### 依赖说明
 
-- **国密实现两套并存（预期）**：业务与 **`zencrypt` / `zgmtls`** 使用 **`github.com/emmansun/gmsm`**；**`github.com/xtaci/kcp-go/v5`** 仍 **require** **`github.com/tjfoc/gmsm/sm4`**（`go mod graph` 中多为 **indirect**）。因此构建产物中可能同时出现 **tjfoc** 与 **emmansun** 两条 gmsm 相关依赖；**并非**本版 SM2/GM-TLS 封装逻辑错误。若需 **完全去掉 tjfoc**，需等待 **kcp-go 上游** 更换 SM4 实现、**fork/replace kcp-go**，或不再使用 **zkcp** 路径。
-- **`zgmtls/`**：源自 **tjfoc/gmsm** 的 GM-TLS 改编，文件头为 **Apache-2.0**；与仓库 **MIT** 正文并存。第三方说明见 **`zgmtls/NOTICE`**；合并/发版前请确保该目录 **已纳入版本控制**，CI 与本地均执行 **`go test ./...`**，避免「本机有目录、远端缺目录」导致无法构建。
+- **国密实现两套并存（预期）**：**`zencrypt` / `zgmtls`** 使用 **`github.com/emmansun/gmsm`**；**`github.com/xtaci/kcp-go/v5`** 仍 **require** **`github.com/tjfoc/gmsm/sm4`**（多为 **indirect**）。构建中可能同时出现 **tjfoc** 与 **emmansun**；**并非**本版封装错误。若需 **完全去掉 tjfoc**，依赖 **kcp-go** 上游调整、**fork/replace**，或不用 **zkcp**。
+- **`zgmtls/`**：改编自 **tjfoc/gmsm**，目录 **Apache-2.0**，与仓库 **MIT** 正文并存；见 **`zgmtls/NOTICE`**。发版前确保目录已入库，**`go test ./...`** 可通过。
 
 ### Added
-- **zencrypt**：**`SM2PrivateKey`**、**`SM2PublicKey`**，封装底层国密实现，便于后续替换实现而不破坏调用方。
-- **ziface**：**`GMTLSConfig`**（封装 `*gmtls.Config`）；**`NewGMTLSServerTLSFromFiles`**、**`NewGMTLSServerTLSFromSingleFile`**、**`NewGMTLSServerTLSFromPEM`**、**`NewGMTLSServerTLSFromPEMSingle`**、**`NewClientGMTLSTLS`**。
-- **ziface**：**`GMTLSConfig`**：**`Dial`**、**`SetInsecureSkipVerify`**、**`SetRootCAsPEM`**、**`IsInsecureSkipVerify`**（测试/诊断）。
+
+- **zencrypt**：**`SM2PrivateKey`**、**`SM2PublicKey`**，封装国密密钥类型，便于替换底层实现。
+- **ziface**：**`GMTLSConfig`**（封装 `*gmtls.Config`）；服务端 **`NewGMTLSServerTLSFromFiles`** / **`FromSingleFile`** / **`FromPEM`** / **`FromPEMSingle`**；客户端 **`NewClientGMTLSTLS`**；**`Dial`**、**`SetInsecureSkipVerify`**、**`SetRootCAsPEM`**、**`IsInsecureSkipVerify`**、**`SetCipherSuites`**（国密套件顺序）、**`SetServerName`**（客户端 SNI / 证书主机名校验名，对应 **`gmtls.Config.ServerName`**）。
+- **zgmtls**：**`GMTLS_ECDHE_SM2_WITH_SM4_SM3`**（**`ecdheKeyAgreementGM`**）全链路实现（见 **Changed · zgmtls**）。
+- **zgmtls / 测试**：在既有覆盖（双证书握手、**`GMX509KeyPairs*`**、**`Load*KeyPair`**、**`X509KeyPair`**、消息往返、`prf`、**`eccKeyAgreementGM`** 大端长度等）基础上补充：**`ecdhe_gm_test.go`**（**`hashForServerKeyExchange`** 的 GM+SM2 **SM3**、`ecdheKeyAgreementGM` 共享密钥往返、**`processServerKeyExchange`** 签名长度）；**`handshake_test`** 增加 **仅 ECDHE** / **仅 ECC** 握手用例；**`newTestGMServerCertificates`** 增加 **DNS SAN**（`zgmtls-test`），避免新版 **x509**「仅 CN、无 SAN」导致主机名校验失败。包级语句覆盖率约 **31%**（大量标准 TLS 遗留分支在纯 GM 场景不执行，属预期）。
+
+### Fixed
+
+- **zgmtls**：**`eccKeyAgreementGM.processClientKeyExchange`** / **`processServerKeyExchange`** 对密文/签名长度使用 **`uint16(hi)<<8 | uint16(lo)`**，修正 **`byte<<8`** 丢高位问题，满足 **`go vet`** 与协议大端语义。
 
 ### Changed
-- **ziface**：**`TLSConfig.WrapListener`** 在 `TLSModeGM` 下使用 **`GMTLSConfig`** 内部封装；**`TLSModeGM` 且 `GMConfig==nil`** 时 **panic**（见上表）。
-- **ziface**：单证书 GM 服务端（**`NewGMTLSServerTLSFromSingleFile`** / **`NewGMTLSServerTLSFromPEMSingle`**）对 **`[]gmtls.Certificate` 双槽** 使用 **`dupGMTLSCertificate`** 生成 **独立 DER 副本**，避免两槽共享同一 `[][]byte` 底层。
-- **znet**：**`NewGMTLSConfig`** / **`NewGMTLSConfigSingle`** / **`NewGMTLSConfigFromPEM`** / **`NewGMTLSConfigFromPEMSingle`**、**`DialTLS`**、**`NewClientTLSConfig`** 与上述 **`GMTLSConfig`** 行为对齐（实现委托至 **`ziface`**）；**`DialTLS`** 在 **`TLSModeGM` 且 `GMConfig==nil`** 时 **返回错误**。
+
+- **zgmtls**：**ECDHE 国密套件**：服务端 SM2 临时密钥、**`ServerKeyExchange`**（SM2 签名）、客户端 **`ClientKeyExchange`** 完成 **`sm2.P256()` ECDH**；**`key_agreement.hashForServerKeyExchange`** 在 **`VersionGMSSL`** 且 **`signatureSM2`** 时对 **client_random、server_random、ECDH 参数** 的字节拼接结果做 **SM3**；**`getCipherSuites` 默认** **ECDHE 优先**；**`makeClientHelloGM`** 在含 ECDHE 套件时附带 **`supportedCurves`**（**`CurveP256`**）；**`ecdheKeyAgreementGM.processServerKeyExchange`** 修正 **`pickSignatureAlgorithm`** 参数顺序。
+- **文档**：新增 **`zgmtls/README.md`**；**`README.md`**、**`docs/README.md`**、**`docs/API.md`** 引用 GM-TLS / ECDHE 说明。
+- **Makefile / Git 钩子**：**`make test`** 前执行 **`go fmt` / `go vet` / `go mod tidy`**；**`pre-commit`** 跑完整 **`make test`**；**`install-hooks`** 文案同步。
+- **CI / `make test`**：**`run_tests.sh`** 不再跑 **`go test -bench`**（基准仍用 **`go test -bench=...`** 或 **`make bench`**）。
+- **ziface**：**`TLSConfig.WrapListener`** 在 **`TLSModeGM`** 下走 **`GMTLSConfig.wrapListener`**；单证书 GM 服务端对双 **`Certificate`** 槽使用 **`dupGMTLSCertificate`**，DER 副本独立。
+- **znet**：**`NewGMTLSConfig*`**、**`DialTLS`**、**`NewClientTLSConfig`** 与 **`ziface`** 上述行为一致；**`DialTLS`** 在 **`TLSModeGM` 且 `GMConfig==nil`** 时返回错误。
 
 ## [1.0.6] - 2026-03-27
 

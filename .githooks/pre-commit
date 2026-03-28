@@ -1,8 +1,8 @@
 #!/bin/sh
-# 提交前执行 Makefile 中的单元测试，通过后才允许提交
+# 提交前执行 make test（fmt / vet / tidy / 功能与覆盖率），通过后才允许提交
 
 set -e
 cd "$(git rev-parse --show-toplevel)"
-echo "🔍 运行单元测试..."
-make test-unit
-echo "✅ 单元测试通过，允许提交。"
+echo "🔍 运行 make test（fmt / vet / tidy / 测试）..."
+make test
+echo "✅ 检查通过，允许提交。"

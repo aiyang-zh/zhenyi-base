@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/logo.png" alt="Zhenyi" width="120" />
+<img src="assets/logo.png" alt="zhenyi-base" width="120" />
 
 # zhenyi-base
 
@@ -248,6 +248,7 @@ zhenyi-base/
 ├── zerrs/         # 结构化错误处理
 ├── zlog/          # 高性能异步日志
 ├── zencrypt/      # 加密工具库（AES/RSA/XTEA/国密）
+├── zgmtls/        # 国密 GM-TLS（改编自 tjfoc/gmsm，Apache-2.0，见 zgmtls/NOTICE、[使用说明](zgmtls/README.md)）
 ├── zserialize/    # 多格式序列化
 ├── zbackoff/      # 退避策略
 ├── zlimiter/      # 令牌桶限流
@@ -266,7 +267,9 @@ zhenyi-base/
 
 ## 协议
 
-本项目采用 [MIT License](LICENSE)，可自由使用、修改、分发、商用，无需公开源代码。
+本项目**主体**采用 [MIT License](LICENSE)，可自由使用、修改、分发、商用，无需公开源代码。
+
+**第三方与依赖**：`zgmtls/` 内 GM-TLS 相关代码改编自 [tjfoc/gmsm](https://github.com/tjfoc/gmsm)，以 **Apache License 2.0** 授权，见 [`zgmtls/NOTICE`](zgmtls/NOTICE)。**套件、默认协商顺序、ECDHE 与双证书等**见 [`zgmtls/README.md`](zgmtls/README.md)。`go mod` 还可能经 **kcp-go** 间接引入 **tjfoc/gmsm**（与国密 **emmansun/gmsm** 并存），属当前依赖结构预期，详见 [CHANGELOG.md](CHANGELOG.md) 中 **1.1.0** 依赖说明。
 
 ---
 

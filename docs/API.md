@@ -76,6 +76,12 @@
 - AES-GCM、RSA、XTEA、国密 SM2/SM3/SM4
 - `bcrypt`、`argon2` 密码哈希
 
+### zgmtls（国密 GM-TLS）
+- 包名 **`gmtls`**：`Listen` / `Dial` / `Client` / `Server`、**`Config`**（**`GMSupport`**、**`CipherSuites`**、证书链等）。
+- **套件**：**`GMTLS_ECDHE_SM2_WITH_SM4_SM3`**（ECDHE 临时密钥）、**`GMTLS_SM2_WITH_SM4_SM3`**（静态 ECC 密钥封装）；未配置 **`CipherSuites`** 时默认 **ECDHE 优先**，再协商 ECC。
+- **服务端**：默认构建下需 **双证书**（签名 + 加密）；ECDHE 的 **ServerKeyExchange** 使用 **SM2 签名证书**。
+- 业务侧优先经 **`ziface.GMTLSConfig`** / **`znet.NewGMTLSConfig*`** 使用；直接使用 `gmtls` 的细节见 **[zgmtls/README.md](../zgmtls/README.md)**。
+
 ### zserialize
 - Protobuf、JSON(sonic)、**MsgPack**（**`github.com/vmihailenco/msgpack/v5`**，`MarshalMsgPack` / `UnmarshalMsgPack`）
 

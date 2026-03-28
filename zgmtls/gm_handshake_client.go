@@ -62,6 +62,13 @@ NextCipherSuite:
 		return nil, errors.New("tls: short read from Rand: " + err.Error())
 	}
 
+	for _, id := range hello.cipherSuites {
+		if id == GMTLS_ECDHE_SM2_WITH_SM4_SM3 {
+			hello.supportedCurves = []CurveID{CurveP256}
+			break
+		}
+	}
+
 	return hello, nil
 }
 

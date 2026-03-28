@@ -1,6 +1,6 @@
 #!/bin/bash
-# 极简版测试脚本：运行功能、基准、覆盖率测试，结果归档到日期目录
-# 应由 Makefile 在仓库根目录调用：make test
+# 极简版测试脚本：运行功能、覆盖率测试，结果归档到日期目录
+# 应由 Makefile 在仓库根目录调用：make test（基准测试请用 make bench 或 go test -bench）
 
 set -e
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -23,13 +23,7 @@ go test -race $PACKAGES -v 2>&1 | tee "$OUTPUT_DIR/unit_tests.log"
 [[ ${PIPESTATUS[0]} -ne 0 ]] && exit ${PIPESTATUS[0]}
 echo "✅ 功能测试完成（耗时 $((SECONDS - START)) 秒）"
 
-# 2. 基准测试
-echo "⏱️ 运行基准测试..."
-START=$SECONDS
-go test -race -bench=. -benchmem $PACKAGES > "$OUTPUT_DIR/bench_tests.log" 2>&1
-echo "✅ 基准测试完成（耗时 $((SECONDS - START)) 秒）"
-
-# 3. 覆盖率测试
+# 2. 覆盖率测试
 echo "📊 运行覆盖率测试..."
 START=$SECONDS
 go test -race -cover $PACKAGES > "$OUTPUT_DIR/cover.log" 2>&1

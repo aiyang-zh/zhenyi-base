@@ -58,6 +58,24 @@ func (g *GMTLSConfig) IsInsecureSkipVerify() bool {
 	return g.inner.InsecureSkipVerify
 }
 
+// SetCipherSuites 设置国密套件协商顺序。传 nil 表示使用 zgmtls 默认（优先 GMTLS_ECDHE_SM2_WITH_SM4_SM3，其次 GMTLS_SM2_WITH_SM4_SM3）。
+// 须在服务端监听前、与 SetGMTLS 类配置配合使用。
+func (g *GMTLSConfig) SetCipherSuites(suites []uint16) {
+	if g == nil || g.inner == nil {
+		return
+	}
+	g.inner.CipherSuites = suites
+}
+
+// SetServerName 设置客户端 TLS Server Name（SNI）及证书主机名校验所用名称，对应 gmtls.Config.ServerName。
+// 按 IP 地址拨号而服务端证书未包含该 IP 的 SAN 时，应通过本字段指定与证书 CN/DNS SAN 一致的名称以便通过校验。
+func (g *GMTLSConfig) SetServerName(name string) {
+	if g == nil || g.inner == nil {
+		return
+	}
+	g.inner.ServerName = name
+}
+
 func newGMTLSConfig(inner *gmtls.Config) *GMTLSConfig {
 	if inner == nil {
 		return nil

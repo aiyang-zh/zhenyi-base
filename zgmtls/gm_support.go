@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strings"
-	"sync"
 
 	"github.com/emmansun/gmsm/sm2"
 	"github.com/emmansun/gmsm/sm3"
@@ -24,80 +23,9 @@ import (
 
 const VersionGMSSL = 0x0101 // GM/T 0024-2014
 
-var pemCAs = []struct {
-	name string
-	pem  string
-}{
-	{
-		name: "CFCA",
-		pem: `-----BEGIN CERTIFICATE-----
-MIICezCCAh6gAwIBAgIQJRABs1dlPn+86pb7bT74wjAMBggqgRzPVQGDdQUAMFgx
-CzAJBgNVBAYTAkNOMTAwLgYDVQQKDCdDaGluYSBGaW5hbmNpYWwgQ2VydGlmaWNh
-dGlvbiBBdXRob3JpdHkxFzAVBgNVBAMMDkNGQ0EgQ1MgU00yIENBMB4XDTE1MDcx
-MTAzMTUxM1oXDTM1MDcwNDAzMTUxM1owJTELMAkGA1UEBhMCQ04xFjAUBgNVBAoM
-DUNGQ0EgU00yIE9DQTEwWTATBgcqhkjOPQIBBggqgRzPVQGCLQNCAAR8mpCijT4m
-jIJHLSaxLZibTvrydXWlIu4r261LWKPfyhtYPKarSgxFHBTMMwRAjX0JqOjclSgY
-XE6+wD5ha7dco4H6MIH3MB8GA1UdIwQYMBaAFOSO3dSj57YP7h0nls113CUlcmnd
-MA8GA1UdEwEB/wQFMAMBAf8wgZMGA1UdHwSBizCBiDBVoFOgUaRPME0xCzAJBgNV
-BAYTAkNOMRMwEQYDVQQKDApDRkNBIENTIENBMQwwCgYDVQQLDANDUkwxDDAKBgNV
-BAsMA1NNMjENMAsGA1UEAwwEY3JsMTAvoC2gK4YpaHR0cDovL2NybC5jZmNhLmNv
-bS5jbi9jc3JjYS9TTTIvY3JsMS5jcmwwDgYDVR0PAQH/BAQDAgEGMB0GA1UdDgQW
-BBRck1ggWiRzVhAbZFAQ7OmnygdBETAMBggqgRzPVQGDdQUAA0kAMEYCIQCka+W4
-lEDJGbdoQKfMyMIrwkuRjxV4fXu+CQZIsYGFnQIhAKFs1nR4OHFxsdjHPXG0CBx+
-1C++KMPnVTWTsfH9fKPf
------END CERTIFICATE-----`,
-	},
-	{
-		name: "TEST",
-		pem: `-----BEGIN CERTIFICATE-----
-MIIBgTCCASegAwIBAgIRAJa6ZDaSc3wau4+2sLM2zhMwCgYIKoEcz1UBg3UwJTEL
-MAkGA1UEBhMCQ04xFjAUBgNVBAoTDWNhLmNldGNzYy5jb20wHhcNMTgxMjI0MDk1
-NDMyWhcNMzgxMjE5MDk1NDMyWjAlMQswCQYDVQQGEwJDTjEWMBQGA1UEChMNY2Eu
-Y2V0Y3NjLmNvbTBZMBMGByqGSM49AgEGCCqBHM9VAYItA0IABNzzDdS5/RMcpbYW
-d+hzCdocFpSOynYzalPvPWdyINM/7AP3DKYrYKyfa4jtW5xqYTpufWUabhSkvG3C
-DGBbmE6jODA2MA4GA1UdDwEB/wQEAwIChDATBgNVHSUEDDAKBggrBgEFBQcDATAP
-BgNVHRMBAf8EBTADAQH/MAoGCCqBHM9VAYN1A0gAMEUCIQCsbtt9tJOtgwO6iavS
-NB8Cs3U2so5gFQq6YdtX7d4EtgIgcVu9SQzlDmmmk61AaEES9UJgENmxrdhkon2T
-vHTeE7Y=
------END CERTIFICATE-----`,
-	},
-	{
-		name: "FABRIC",
-		pem: `-----BEGIN CERTIFICATE-----
-MIICMDCCAdagAwIBAgIRANnwbA2SIB/k0VNSkTi7TYUwCgYIKoEcz1UBg3UwaTEL
-MAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDVNhbiBG
-cmFuY2lzY28xFDASBgNVBAoTC2V4YW1wbGUuY29tMRcwFQYDVQQDEw5jYS5leGFt
-cGxlLmNvbTAeFw0xODEyMjcwNzE3MzBaFw0yODEyMjQwNzE3MzBaMGkxCzAJBgNV
-BAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQHEw1TYW4gRnJhbmNp
-c2NvMRQwEgYDVQQKEwtleGFtcGxlLmNvbTEXMBUGA1UEAxMOY2EuZXhhbXBsZS5j
-b20wWTATBgcqhkjOPQIBBggqgRzPVQGCLQNCAARAp0oXL9xvWjkipnru0gsuL95g
-jpjscT5fQw0bHXPBSzYSq0+hoJf7C3t6tzjnI6pN0156KZg8Y1Bg7fx9xxOHo18w
-XTAOBgNVHQ8BAf8EBAMCAaYwDwYDVR0lBAgwBgYEVR0lADAPBgNVHRMBAf8EBTAD
-AQH/MCkGA1UdDgQiBCAt1zWEo9mUfmTAZlZthCkppNjgQlpQ9A77ylguCH4tRDAK
-BggqgRzPVQGDdQNIADBFAiBFx066bqQswz5eFA6IWZjj7GmdAyypq48IUaI8cs+b
-AwIhAPKX+rTHK3IHmZ3MHU2ajoJcGwq0h7aWpcpljF6cld4r
------END CERTIFICATE-----`,
-	},
-}
-
-var certCAs []*x509.Certificate
-
-var initonce sync.Once
-
 func getCAs() []*x509.Certificate {
-	// mod by syl remove pre insert ca certs
+	// 不注入内置 CA；信任根仅来自 Config.RootCAs（历史修改：remove pre insert ca certs）。
 	return nil
-	initonce.Do(func() {
-		for _, pemca := range pemCAs {
-			block, _ := pem.Decode([]byte(pemca.pem))
-			ca, err := x509.ParseCertificate(block.Bytes)
-			if err != nil {
-				panic(err)
-			}
-			certCAs = append(certCAs, ca)
-		}
-	})
-	return certCAs
 }
 
 // A list of cipher suite IDs that are, or have been, implemented by this
@@ -126,7 +54,8 @@ var gmCipherSuites = []*cipherSuite{
 func getCipherSuites(c *Config) []uint16 {
 	s := c.CipherSuites
 	if s == nil {
-		s = []uint16{GMTLS_SM2_WITH_SM4_SM3, GMTLS_ECDHE_SM2_WITH_SM4_SM3}
+		// 优先 ECDHE_SM2（临时密钥），回退 ECC_SM2（加密证书密钥封装）
+		s = []uint16{GMTLS_ECDHE_SM2_WITH_SM4_SM3, GMTLS_SM2_WITH_SM4_SM3}
 	}
 	return s
 }

@@ -3,8 +3,11 @@
 # 默认跑测试
 all: test
 
-# 统一测试入口：功能、基准、覆盖率
+# 统一测试入口：fmt → vet → tidy → 功能与覆盖率（基准见 make bench）
 test:
+	go fmt ./...
+	go vet ./...
+	go mod tidy
 	bash scripts/run_tests.sh
 
 # 仅单元测试（供 pre-commit 等快速检查），排除 examples
@@ -43,8 +46,8 @@ vet:
 tidy:
 	go mod tidy
 
-# 启用 Git 钩子（提交前运行 make test-unit）
+# 启用 Git 钩子（提交前运行 make test：fmt / vet / tidy / 测试）
 install-hooks:
 	git config core.hooksPath .githooks
-	@echo "已启用 .githooks，提交前将运行 make test-unit"
+	@echo "已启用 .githooks，提交前将运行 make test"
 

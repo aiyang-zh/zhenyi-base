@@ -59,6 +59,14 @@ NextCipherSuite:
 		return nil, errors.New("tls: short read from Rand: " + err.Error())
 	}
 
+	// ECDHE_SM2 需要 Supported Elliptic Curves 扩展；曲线与 SM2 一致，使用 secp256r1 曲线 ID（与 sm2.P256() 参数一致）
+	for _, id := range hello.cipherSuites {
+		if id == GMTLS_ECDHE_SM2_WITH_SM4_SM3 {
+			hello.supportedCurves = []CurveID{CurveP256}
+			break
+		}
+	}
+
 	return hello, nil
 }
 
