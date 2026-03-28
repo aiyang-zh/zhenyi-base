@@ -51,8 +51,7 @@ install-hooks:
 	git config core.hooksPath .githooks
 	@echo "已启用 .githooks，提交前将运行 make test"
 
-# 本地 CodeQL：需已安装 CLI 并 export CODEQL=…/codeql；默认只跑 go/weak-sensitive-data-hashing
-# 跑完整 go-code-scanning：CODEQL_LOCAL_SUITE=1 make codeql-local
+# 本地 CodeQL：需已安装 CLI 并 export CODEQL=…/codeql；使用 .github/codeql/codeql-config.yml（与 Code scanning 对齐）
 codeql-local:
 	bash scripts/run_codeql_local.sh
 

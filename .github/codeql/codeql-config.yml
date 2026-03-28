@@ -1,0 +1,7 @@
+# GitHub Code scanning（Default setup）会读取仓库内 CodeQL 配置；本地 database create 通过 --codescanning-config 对齐。
+# 排除 go/weak-sensitive-data-hashing：误报集中出现在 zgmtls/prf.go（RFC 规定的 SSL3/TLS1.0–1.1 PRF/Finished 使用 MD5/SHA-1）。
+# 说明：CodeQL 2.25 下 query-filters 带 paths 的 exclude 在 interpret 阶段未过滤 prf.go 结果；若仅 paths 排除，GitHub/CodeQL 行为亦不可靠。本仓库其余 Go 代码不依赖该规则做主要防护，故采用按规则 ID 全局排除。
+name: "zhenyi-base-codeql"
+query-filters:
+  - exclude:
+      id: go/weak-sensitive-data-hashing

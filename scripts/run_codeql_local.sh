@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# 本地跑 CodeQL（Go），默认只跑与 GitHub 相同的 weak-sensitive-data-hashing，避免反复 push 试扫描。
+# 本地跑 CodeQL（Go），与仓库根目录 `.github/codeql/codeql-config.yml`（含 query-filters）对齐，便于对照 GitHub Code scanning。
 # 依赖：安装 CodeQL CLI，并 export CODEQL=…/codeql（或包含 codeql 可执行文件的目录）。
 # 首次会下载查询包，需联网：codeql pack download codeql/go-queries
+#
+# 注意：database analyze 时请勿显式传入 .qls / 单条 .ql，否则 query-filters 不会作用于解释结果（弱哈希等仍会出现在 CSV）。
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
@@ -22,36 +24,34 @@ if [[ ! -x "$CODEQL_BIN" ]]; then
 	exit 1
 fi
 
+CONFIG="${ROOT}/.github/codeql/codeql-config.yml"
+if [[ ! -f "$CONFIG" ]]; then
+	echo "缺少 CodeQL 配置文件: $CONFIG" >&2
+	exit 1
+fi
+
 mkdir -p "${ROOT}/.codeql"
 DB="${ROOT}/.codeql/go-db"
 rm -rf "$DB"
 
-echo "==> codeql database create (go build ./...)"
+echo "==> codeql database create (--codescanning-config + go build ./...)"
 "$CODEQL_BIN" database create "$DB" --language=go --source-root="$ROOT" \
+	--codescanning-config="$CONFIG" \
 	--command="go build -o /dev/null ./..."
 
 echo "==> codeql pack download codeql/go-queries（首次或缺包时下载）"
 "$CODEQL_BIN" pack download codeql/go-queries
 
-# 默认仅跑 weak-hash 与 GitHub Code scanning 对齐；设 CODEQL_LOCAL_SUITE=1 可跑完整 go-code-scanning 套件（较慢）
-# CodeQL 2.25+ 不再支持 --format=text，改用 csv 打印到终端（或设 CODEQL_LOCAL_FORMAT=sarif-latest 写 SARIF）
+# CodeQL 2.25+ 不再支持 --format=text；不设查询列表，使用 create 时写入 DB 的套件 + query-filters
 FMT="${CODEQL_LOCAL_FORMAT:-csv}"
 OUT="${ROOT}/.codeql/analyze-out.${FMT}"
-if [[ "${CODEQL_LOCAL_SUITE:-}" == "1" ]]; then
-	echo "==> analyze: codeql/go-queries codeql-suites/go-code-scanning.qls (format=$FMT)"
-	"$CODEQL_BIN" database analyze "$DB" --format="$FMT" --output="$OUT" \
-		codeql/go-queries:codeql-suites/go-code-scanning.qls
-else
-	# 必须同时跑 AlertSuppression.ql，interpret 才会应用 // codeql[rule-id]；只跑单条 Weak*.ql 时抑制不会生效（CSV/SARIF 仍列告警）。
-	echo "==> analyze: AlertSuppression.ql + go/weak-sensitive-data-hashing (format=$FMT)"
-	"$CODEQL_BIN" database analyze "$DB" --format="$FMT" --output="$OUT" \
-		codeql/go-queries:AlertSuppression.ql \
-		codeql/go-queries:Security/CWE-327/WeakSensitiveDataHashing.ql
-fi
+echo "==> codeql database analyze（默认套件 + 应用 codeql-config 中的 query-filters；format=$FMT）"
+"$CODEQL_BIN" database analyze "$DB" --format="$FMT" --output="$OUT"
+
 echo "==> 结果文件: $OUT"
 if [[ "$FMT" == "csv" ]] && [[ -f "$OUT" ]]; then
 	if [[ ! -s "$OUT" ]]; then
-		echo "（无 CSV 行：未命中告警，或已全部被源码 // codeql[...] 抑制）"
+		echo "（CSV 无数据行：当前套件下无告警输出）"
 	else
 		head -50 "$OUT"
 		[[ "$(wc -l <"$OUT" | tr -d ' ')" -gt 50 ]] && echo "...（行数多，请打开 $OUT 查看全文）"
