@@ -81,6 +81,7 @@
 - **套件**：**`GMTLS_ECDHE_SM2_WITH_SM4_SM3`**（ECDHE 临时密钥）、**`GMTLS_SM2_WITH_SM4_SM3`**（静态 ECC 密钥封装）；未配置 **`CipherSuites`** 时默认 **ECDHE 优先**，再协商 ECC。
 - **服务端**：默认构建下需 **双证书**（签名 + 加密）；ECDHE 的 **ServerKeyExchange** 使用 **SM2 签名证书**。
 - 业务侧优先经 **`ziface.GMTLSConfig`** / **`znet.NewGMTLSConfig*`** 使用；直接使用 `gmtls` 的细节见 **[zgmtls/README.md](../zgmtls/README.md)**。
+- **静态分析**：遗留 TLS 路径含 RFC 规定的 MD5/SHA-1；**VersionGMSSL** 为 SM3。CodeQL 等工具若报弱哈希，见根目录 **[SECURITY.md](../SECURITY.md)**。
 
 ### zserialize
 - Protobuf、JSON(sonic)、**MsgPack**（**`github.com/vmihailenco/msgpack/v5`**，`MarshalMsgPack` / `UnmarshalMsgPack`）

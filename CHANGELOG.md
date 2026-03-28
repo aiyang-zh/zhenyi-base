@@ -28,12 +28,12 @@
 
 - **zgmtls**：**`eccKeyAgreementGM.processClientKeyExchange`** / **`processServerKeyExchange`** 对密文/签名长度使用 **`uint16(hi)<<8 | uint16(lo)`**，修正 **`byte<<8`** 丢高位问题，满足 **`go vet`** 与协议大端语义。
 - **zgmtls**：**`eccKeyAgreementGM.generateClientKeyExchange`** 对密文分配增加长度上限，避免 **`len(encrypted)+2` 整数溢出**（CodeQL **`go/allocation-size-overflow`**）。
-- **zgmtls / CodeQL**：**`prf.go`** 中 SSL 3.0 / TLS 1.0–1.1 的 MD5/SHA-1 为 **RFC 6101/2246 协议要求**；**VersionGMSSL** 仅 **SM3**（见 **`prfForVersion`** / **`newFinishedHash`** GM 分支）。补充注释与 **`// codeql[go/weak-sensitive-data-hashing]`** 源内抑制，避免与 GM 无关的弱哈希告警噪声。
+- **zgmtls / 安全扫描**：**`prf.go`** 中 SSL3/TLS1.0 路径按 RFC 使用 MD5/SHA-1；**VersionGMSSL** 仅 **SM3**。第三方 CodeQL 可能对 **`go/weak-sensitive-data-hashing`** 误报，处理方式见 **`SECURITY.md`**。
 
 ### Changed
 
 - **zgmtls**：**ECDHE 国密套件**：服务端 SM2 临时密钥、**`ServerKeyExchange`**（SM2 签名）、客户端 **`ClientKeyExchange`** 完成 **`sm2.P256()` ECDH**；**`key_agreement.hashForServerKeyExchange`** 在 **`VersionGMSSL`** 且 **`signatureSM2`** 时对 **client_random、server_random、ECDH 参数** 的字节拼接结果做 **SM3**；**`getCipherSuites` 默认** **ECDHE 优先**；**`makeClientHelloGM`** 在含 ECDHE 套件时附带 **`supportedCurves`**（**`CurveP256`**）；**`ecdheKeyAgreementGM.processServerKeyExchange`** 修正 **`pickSignatureAlgorithm`** 参数顺序。
-- **文档**：新增 **`zgmtls/README.md`**；**`README.md`**、**`docs/README.md`**、**`docs/API.md`** 引用 GM-TLS / ECDHE 说明。
+- **文档**：新增 **`zgmtls/README.md`**；**`README.md`**、**`docs/README.md`**、**`docs/API.md`** 引用 GM-TLS / ECDHE 说明；**`SECURITY.md`**、**`docs/API.md`** 补充 CodeQL / 弱哈希与 **`zgmtls`** 的说明。
 - **Makefile / Git 钩子**：**`make test`** 前执行 **`go fmt` / `go vet` / `go mod tidy`**；**`pre-commit`** 跑完整 **`make test`**；**`install-hooks`** 文案同步。
 - **CI / `make test`**：**`run_tests.sh`** 不再跑 **`go test -bench`**（基准仍用 **`go test -bench=...`** 或 **`make bench`**）。
 - **ziface**：**`TLSConfig.WrapListener`** 在 **`TLSModeGM`** 下走 **`GMTLSConfig.wrapListener`**；单证书 GM 服务端对双 **`Certificate`** 槽使用 **`dupGMTLSCertificate`**，DER 副本独立。

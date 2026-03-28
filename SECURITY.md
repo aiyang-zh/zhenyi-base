@@ -25,3 +25,9 @@
 - 是否允许公开致谢
 
 感谢你帮助 zhenyi-base 更安全！
+
+## CodeQL 与 `zgmtls`（弱哈希类告警）
+
+`zgmtls` 中 **SSL 3.0 / TLS 1.0–1.1** 的 PRF、Finished 等实现按 **RFC 6101 / RFC 2246** 使用 **MD5、SHA-1**，属**协议规定**，不是实现上「改用 SHA-256」即可修复的问题。**国密 `VersionGMSSL`** 仅使用 **SM3**（见 `prfForVersion`、`newFinishedHash` 等 GM 分支）。
+
+若启用 **GitHub CodeQL**，规则 **`go/weak-sensitive-data-hashing`** 可能对此类代码产生**误报**。可在 CodeQL 高级配置的 **`query-filters`** 中 **`exclude`** 该规则 id，或在仓库中维护 **`.github/codeql/codeql-config.yml`**（由 CI 引用）统一排除；**勿**将此类告警当作「可独立修补的密码学漏洞」而修改协议实现。

@@ -65,8 +65,7 @@ func pHash(result, secret, seed []byte, hash func() hash.Hash) {
 }
 
 // prf10 implements the TLS 1.0 pseudo-random function, as defined in RFC 2246, section 5.
-//
-// codeql[go/weak-sensitive-data-hashing]: TLS 1.0 PRF requires MD5+SHA1 per RFC 2246; not used for VersionGMSSL (SM3).
+// 算法为 MD5+SHA1 组合；国密 VersionGMSSL 不使用本路径（见 prfForVersion）。
 func prf10(result, secret, label, seed []byte) {
 	hashSHA1 := sha1.New
 	hashMD5 := md5.New
@@ -98,8 +97,7 @@ func prf12(hashFunc func() hash.Hash) func(result, secret, label, seed []byte) {
 
 // prf30 implements the SSL 3.0 pseudo-random function, as defined in
 // www.mozilla.org/projects/security/pki/nss/ssl/draft302.txt section 6.
-//
-// codeql[go/weak-sensitive-data-hashing]: SSL 3.0 PRF requires MD5+SHA1 per draft302; not used for VersionGMSSL (SM3).
+// 使用 MD5 与 SHA-1；国密 VersionGMSSL 不使用本路径。
 func prf30(result, secret, label, seed []byte) {
 	hashSHA1 := sha1.New()
 	hashMD5 := md5.New()
@@ -243,8 +241,7 @@ func newFinishedHash(version uint16, cipherSuite *cipherSuite) finishedHash {
 		}
 	}
 
-	// TLS 1.0–1.1 Finished：RFC 2246 要求握手 transcript 的 MD5+SHA1 组合；GM 走上方 VersionGMSSL 分支（SM3）。
-	// codeql[go/weak-sensitive-data-hashing]: RFC-required transcript hash for TLS 1.0–1.1; GM uses SM3 only (branch above).
+	// TLS 1.0–1.1 Finished：RFC 2246 要求 transcript 的 MD5+SHA1 组合；国密走上方 VersionGMSSL 分支（SM3）。
 	return finishedHash{sha1.New(), sha1.New(), md5.New(), md5.New(), buffer, version, prf}
 }
 
@@ -293,9 +290,7 @@ func (h finishedHash) Sum() []byte {
 
 // finishedSum30 calculates the contents of the verify_data member of a SSLv3
 // Finished message given the MD5 and SHA1 hashes of a set of handshake
-// messages.
-//
-// codeql[go/weak-sensitive-data-hashing]: SSL 3.0 Finished uses MD5+SHA1 per RFC 6101; not used for VersionGMSSL (SM3).
+// messages（RFC 6101 规定的 MD5/SHA-1 运算；国密不使用本函数）。
 func finishedSum30(md5, sha1 hash.Hash, masterSecret []byte, magic []byte) []byte {
 	md5.Write(magic)
 	md5.Write(masterSecret)
