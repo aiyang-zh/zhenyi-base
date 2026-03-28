@@ -30,4 +30,4 @@
 
 `zgmtls` 中 **SSL 3.0 / TLS 1.0–1.1** 的 PRF、Finished 等实现按 **RFC 6101 / RFC 2246** 使用 **MD5、SHA-1**，属**协议规定**，不是实现上「改用 SHA-256」即可修复的问题。**国密 `VersionGMSSL`** 仅使用 **SM3**（见 `prfForVersion`、`newFinishedHash` 等 GM 分支）。
 
-若启用 **GitHub CodeQL**，规则 **`go/weak-sensitive-data-hashing`** 可能对此类代码产生**误报**。可在 CodeQL 高级配置的 **`query-filters`** 中 **`exclude`** 该规则 id，或在仓库中维护 **`.github/codeql/codeql-config.yml`**（由 CI 引用）统一排除；**勿**将此类告警当作「可独立修补的密码学漏洞」而修改协议实现。
+若启用 **GitHub CodeQL**，规则 **`go/weak-sensitive-data-hashing`** 可能对此类代码产生**误报**。本仓库已在 **`.github/codeql/codeql-config.yml`** 中通过 **`query-filters`** 排除该规则，并由 **`.github/workflows/codeql.yml`** 引用；**勿**将此类告警当作「可独立修补的密码学漏洞」而修改协议实现。若你在仓库设置里仍开启 Code scanning 的 **Default setup**，请关闭以免与上述工作流**重复扫描**。

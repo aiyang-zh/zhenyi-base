@@ -1,0 +1,9 @@
+# CodeQL 自定义配置
+#
+# zgmtls/prf.go 中 SSL 3.0 / TLS 1.0–1.1 的 PRF、Finished 按 RFC 必须使用 MD5/SHA-1，
+# 规则 go/weak-sensitive-data-hashing 会误报；国密 VersionGMSSL 走 SM3，不经过该路径。
+# 见仓库根目录 SECURITY.md「CodeQL 与 zgmtls」。
+name: zhenyi-base
+query-filters:
+  - exclude:
+      id: go/weak-sensitive-data-hashing
