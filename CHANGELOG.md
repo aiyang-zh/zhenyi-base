@@ -29,7 +29,7 @@
 
 - **zgmtls**：**`eccKeyAgreementGM.processClientKeyExchange`** / **`processServerKeyExchange`** 对密文/签名长度使用 **`uint16(hi)<<8 | uint16(lo)`**，修正 **`byte<<8`** 丢高位问题，满足 **`go vet`** 与协议大端语义。
 - **zgmtls**：**`eccKeyAgreementGM.generateClientKeyExchange`** 对密文分配增加长度上限，避免 **`len(encrypted)+2` 整数溢出**（CodeQL **`go/allocation-size-overflow`**）。
-- **zgmtls / CodeQL**：**`prf.go`** 中 SSL3/TLS1.0 路径按 RFC 使用 MD5/SHA-1；**VersionGMSSL** 仅 **SM3**。对 **`go/weak-sensitive-data-hashing`** 采用源码 **`// codeql[...]`** 抑制误报；说明见 **`SECURITY.md`**。
+- **zgmtls / CodeQL**：**`prf.go`** 中 SSL3/TLS1.0 路径按 RFC 使用 MD5/SHA-1；**VersionGMSSL** 仅 **SM3**。对 **`go/weak-sensitive-data-hashing`** 采用源码 **`// codeql[...]`** 抑制误报；抑制须写在**各 sink 紧邻上一行**（path-problem 对每个 **`Write(secret)` / `Write(masterSecret)`** 等可能各需一条），说明见 **`SECURITY.md`**。
 
 ### Changed
 

@@ -118,12 +118,14 @@ func prf30(result, secret, label, seed []byte) {
 
 		hashSHA1.Reset()
 		hashSHA1.Write(b[:i+1])
+		// codeql[go/weak-sensitive-data-hashing]
 		hashSHA1.Write(secret)
 		hashSHA1.Write(seed)
 		// codeql[go/weak-sensitive-data-hashing]
 		digest := hashSHA1.Sum(nil)
 
 		hashMD5.Reset()
+		// codeql[go/weak-sensitive-data-hashing]
 		hashMD5.Write(secret)
 		hashMD5.Write(digest)
 
@@ -299,12 +301,14 @@ func (h finishedHash) Sum() []byte {
 // messages（RFC 6101 规定的 MD5/SHA-1 运算；国密不使用本函数）。
 func finishedSum30(md5, sha1 hash.Hash, masterSecret []byte, magic []byte) []byte {
 	md5.Write(magic)
+	// codeql[go/weak-sensitive-data-hashing]
 	md5.Write(masterSecret)
 	md5.Write(ssl30Pad1[:])
 	// codeql[go/weak-sensitive-data-hashing]
 	md5Digest := md5.Sum(nil)
 
 	md5.Reset()
+	// codeql[go/weak-sensitive-data-hashing]
 	md5.Write(masterSecret)
 	md5.Write(ssl30Pad2[:])
 	md5.Write(md5Digest)
@@ -312,12 +316,14 @@ func finishedSum30(md5, sha1 hash.Hash, masterSecret []byte, magic []byte) []byt
 	md5Digest = md5.Sum(nil)
 
 	sha1.Write(magic)
+	// codeql[go/weak-sensitive-data-hashing]
 	sha1.Write(masterSecret)
 	sha1.Write(ssl30Pad1[:40])
 	// codeql[go/weak-sensitive-data-hashing]
 	sha1Digest := sha1.Sum(nil)
 
 	sha1.Reset()
+	// codeql[go/weak-sensitive-data-hashing]
 	sha1.Write(masterSecret)
 	sha1.Write(ssl30Pad2[:40])
 	sha1.Write(sha1Digest)
