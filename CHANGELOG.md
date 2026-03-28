@@ -1,6 +1,35 @@
 # Changelog
 
+## [1.1.0] - 2026-03-28
+
+### 升级风险说明
+
+本版含 **编译级破坏性变更**（封装 SM2 / GM-TLS 对外类型）；暂不升级可继续固定 **`v1.0.5`**（或当前所用 tag；远端尚无 **`v1.0.6`** tag）。
+
+| 风险类型 | 说明 |
+|----------|------|
+| **zencrypt / SM2** | 不再对外暴露 `*sm2.PrivateKey` / 裸 `*ecdsa.PublicKey`。改为 **`SM2PrivateKey` / `SM2PublicKey`**；`GenerateSM2Key` 返回 `*SM2PrivateKey`；公钥使用 **`priv.PublicKey()`**；`SM2Encrypt` / `SM2Decrypt` / `SM2Sign` / `SM2Verify` / PEM 编解码均改为上述类型。 |
+| **ziface / GM-TLS** | **`TLSConfig.GMConfig`** 类型由 `*gmtls.Config` 改为 **`GMTLSConfig`**。勿直接改底层字段；请使用 **`SetInsecureSkipVerify`**、**`SetRootCAsPEM`**、**`Dial`**（客户端）等；**`WrapListener`** / **`znet.DialTLS`** 已适配。服务端构建除 **`znet.NewGMTLSConfig*`** 外，也可直接使用 **`ziface.NewGMTLSServerTLSFromFiles`** 等。 |
+| **TLSModeGM 且 GMConfig 未设置** | **`WrapListener`** 在 **`Mode==TLSModeGM` 且 `GMConfig==nil`** 时 **panic**（与误用明文 listener 区分）；**`znet.DialTLS`** 在相同条件下 **返回错误**，不再退回明文 TCP。 |
+
+### 依赖说明
+
+- **国密实现两套并存（预期）**：业务与 **`zencrypt` / `zgmtls`** 使用 **`github.com/emmansun/gmsm`**；**`github.com/xtaci/kcp-go/v5`** 仍 **require** **`github.com/tjfoc/gmsm/sm4`**（`go mod graph` 中多为 **indirect**）。因此构建产物中可能同时出现 **tjfoc** 与 **emmansun** 两条 gmsm 相关依赖；**并非**本版 SM2/GM-TLS 封装逻辑错误。若需 **完全去掉 tjfoc**，需等待 **kcp-go 上游** 更换 SM4 实现、**fork/replace kcp-go**，或不再使用 **zkcp** 路径。
+- **`zgmtls/`**：源自 **tjfoc/gmsm** 的 GM-TLS 改编，文件头为 **Apache-2.0**；与仓库 **MIT** 正文并存。第三方说明见 **`zgmtls/NOTICE`**；合并/发版前请确保该目录 **已纳入版本控制**，CI 与本地均执行 **`go test ./...`**，避免「本机有目录、远端缺目录」导致无法构建。
+
+### Added
+- **zencrypt**：**`SM2PrivateKey`**、**`SM2PublicKey`**，封装底层国密实现，便于后续替换实现而不破坏调用方。
+- **ziface**：**`GMTLSConfig`**（封装 `*gmtls.Config`）；**`NewGMTLSServerTLSFromFiles`**、**`NewGMTLSServerTLSFromSingleFile`**、**`NewGMTLSServerTLSFromPEM`**、**`NewGMTLSServerTLSFromPEMSingle`**、**`NewClientGMTLSTLS`**。
+- **ziface**：**`GMTLSConfig`**：**`Dial`**、**`SetInsecureSkipVerify`**、**`SetRootCAsPEM`**、**`IsInsecureSkipVerify`**（测试/诊断）。
+
+### Changed
+- **ziface**：**`TLSConfig.WrapListener`** 在 `TLSModeGM` 下使用 **`GMTLSConfig`** 内部封装；**`TLSModeGM` 且 `GMConfig==nil`** 时 **panic**（见上表）。
+- **ziface**：单证书 GM 服务端（**`NewGMTLSServerTLSFromSingleFile`** / **`NewGMTLSServerTLSFromPEMSingle`**）对 **`[]gmtls.Certificate` 双槽** 使用 **`dupGMTLSCertificate`** 生成 **独立 DER 副本**，避免两槽共享同一 `[][]byte` 底层。
+- **znet**：**`NewGMTLSConfig`** / **`NewGMTLSConfigSingle`** / **`NewGMTLSConfigFromPEM`** / **`NewGMTLSConfigFromPEMSingle`**、**`DialTLS`**、**`NewClientTLSConfig`** 与上述 **`GMTLSConfig`** 行为对齐（实现委托至 **`ziface`**）；**`DialTLS`** 在 **`TLSModeGM` 且 `GMConfig==nil`** 时 **返回错误**。
+
 ## [1.0.6] - 2026-03-27
+
+> **说明**：以下变更曾按「1.0.6」记录在案，但**未在仓库打 `v1.0.6` git tag**；当前远端**最新 tag 为 `v1.0.5`**。若需与已发布 tag 对齐的旧基线，请使用 **`v1.0.5`**。
 
 ### Added
 - **znet**：新增 `SendLoopTuning`（`znet/send_tuning.go`），提供 `SetSendLoopTuning` / `GetSendLoopTuning`，可在启动期调整 `BaseChannel.runSend` 的 batch/backoff/shrink 参数。

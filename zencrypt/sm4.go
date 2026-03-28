@@ -44,7 +44,7 @@ import (
 	"io"
 
 	"github.com/aiyang-zh/zhenyi-base/zpool"
-	"github.com/tjfoc/gmsm/sm4"
+	"github.com/emmansun/gmsm/sm4"
 )
 
 // SM4Encrypt SM4-CBC加密器

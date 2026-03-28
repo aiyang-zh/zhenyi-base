@@ -20,7 +20,7 @@ import (
 	"encoding/base64"
 	"io"
 
-	"github.com/tjfoc/gmsm/sm3"
+	"github.com/emmansun/gmsm/sm3"
 )
 
 const (

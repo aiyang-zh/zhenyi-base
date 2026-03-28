@@ -240,7 +240,7 @@ func TestClientTLSConfig_DefaultIsGM(t *testing.T) {
 	if cfg.GMConfig == nil {
 		t.Fatal("GMConfig should not be nil")
 	}
-	if cfg.GMConfig.InsecureSkipVerify {
+	if cfg.GMConfig.IsInsecureSkipVerify() {
 		t.Fatal("client config should not skip verify by default")
 	}
 }

@@ -13,8 +13,9 @@ func TestSM2_GenerateKey(t *testing.T) {
 	if privKey == nil {
 		t.Fatal("private key should not be nil")
 	}
-	if privKey.PublicKey.X == nil || privKey.PublicKey.Y == nil {
-		t.Fatal("public key coordinates should not be nil")
+	pub := privKey.PublicKey()
+	if pub == nil {
+		t.Fatal("public key should not be nil")
 	}
 }
 
@@ -25,7 +26,7 @@ func TestSM2_EncryptDecrypt(t *testing.T) {
 	}
 
 	plaintext := []byte("Hello SM2 国密加密")
-	ciphertext, err := SM2Encrypt(&privKey.PublicKey, plaintext)
+	ciphertext, err := SM2Encrypt(privKey.PublicKey(), plaintext)
 	if err != nil {
 		t.Fatalf("SM2Encrypt failed: %v", err)
 	}
@@ -53,7 +54,7 @@ func TestSM2_EncryptDecrypt_VariousSizes(t *testing.T) {
 			data[i] = byte(i % 256)
 		}
 
-		ciphertext, err := SM2Encrypt(&privKey.PublicKey, data)
+		ciphertext, err := SM2Encrypt(privKey.PublicKey(), data)
 		if err != nil {
 			t.Fatalf("size %d: encrypt failed: %v", size, err)
 		}
@@ -78,7 +79,7 @@ func TestSM2_EncryptNilKey(t *testing.T) {
 
 func TestSM2_EncryptEmptyData(t *testing.T) {
 	privKey, _ := GenerateSM2Key()
-	_, err := SM2Encrypt(&privKey.PublicKey, nil)
+	_, err := SM2Encrypt(privKey.PublicKey(), nil)
 	if err == nil {
 		t.Fatal("expected error for empty data")
 	}
@@ -104,7 +105,7 @@ func TestSM2_SignVerify(t *testing.T) {
 		t.Fatal("signature should not be empty")
 	}
 
-	err = SM2Verify(&privKey.PublicKey, data, signature)
+	err = SM2Verify(privKey.PublicKey(), data, signature)
 	if err != nil {
 		t.Fatalf("SM2Verify failed: %v", err)
 	}
@@ -116,7 +117,7 @@ func TestSM2_VerifyTampered(t *testing.T) {
 	data := []byte("original data")
 	signature, _ := SM2Sign(privKey, data)
 
-	err := SM2Verify(&privKey.PublicKey, []byte("tampered data"), signature)
+	err := SM2Verify(privKey.PublicKey(), []byte("tampered data"), signature)
 	if err == nil {
 		t.Fatal("expected error for tampered data")
 	}
@@ -129,7 +130,7 @@ func TestSM2_VerifyWrongKey(t *testing.T) {
 	data := []byte("test data")
 	signature, _ := SM2Sign(privKey1, data)
 
-	err := SM2Verify(&privKey2.PublicKey, data, signature)
+	err := SM2Verify(privKey2.PublicKey(), data, signature)
 	if err == nil {
 		t.Fatal("expected error for wrong key")
 	}
@@ -163,7 +164,7 @@ func TestSM2_MarshalUnmarshalPrivateKey(t *testing.T) {
 	}
 
 	data := []byte("round-trip test")
-	ciphertext, _ := SM2Encrypt(&privKey.PublicKey, data)
+	ciphertext, _ := SM2Encrypt(privKey.PublicKey(), data)
 	decrypted, err := SM2Decrypt(parsed, ciphertext)
 	if err != nil {
 		t.Fatalf("decrypt with parsed key failed: %v", err)
@@ -176,7 +177,7 @@ func TestSM2_MarshalUnmarshalPrivateKey(t *testing.T) {
 func TestSM2_MarshalUnmarshalPublicKey(t *testing.T) {
 	privKey, _ := GenerateSM2Key()
 
-	pem, err := SM2MarshalPublicKey(&privKey.PublicKey)
+	pem, err := SM2MarshalPublicKey(privKey.PublicKey())
 	if err != nil {
 		t.Fatalf("marshal public key failed: %v", err)
 	}
@@ -217,14 +218,14 @@ func BenchmarkSM2_Encrypt_64B(b *testing.B) {
 	data := make([]byte, 64)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		SM2Encrypt(&privKey.PublicKey, data)
+		SM2Encrypt(privKey.PublicKey(), data)
 	}
 }
 
 func BenchmarkSM2_Decrypt_64B(b *testing.B) {
 	privKey, _ := GenerateSM2Key()
 	data := make([]byte, 64)
-	ciphertext, _ := SM2Encrypt(&privKey.PublicKey, data)
+	ciphertext, _ := SM2Encrypt(privKey.PublicKey(), data)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		SM2Decrypt(privKey, ciphertext)
@@ -246,6 +247,6 @@ func BenchmarkSM2_Verify(b *testing.B) {
 	sig, _ := SM2Sign(privKey, data)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		SM2Verify(&privKey.PublicKey, data, sig)
+		SM2Verify(privKey.PublicKey(), data, sig)
 	}
 }

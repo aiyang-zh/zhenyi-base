@@ -18,7 +18,7 @@ package zencrypt
 import (
 	"encoding/hex"
 
-	"github.com/tjfoc/gmsm/sm3"
+	"github.com/emmansun/gmsm/sm3"
 )
 
 // SM3 计算字符串的SM3哈希，返回32字节摘要。

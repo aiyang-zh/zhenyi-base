@@ -26,10 +26,9 @@ package znet
 import (
 	"crypto/tls"
 	"errors"
-	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"net"
 
-	"github.com/tjfoc/gmsm/gmtls"
+	"github.com/aiyang-zh/zhenyi-base/ziface"
 )
 
 // NewStandardTLSConfig 从证书文件创建标准 TLS 配置。
@@ -67,63 +66,27 @@ func NewStandardTLSConfigFromPEM(certPEM, keyPEM []byte) (*ziface.TLSConfig, err
 // GM-TLS 使用双证书体系：签名证书 + 加密证书。
 // signCertFile/signKeyFile: SM2 签名证书和私钥
 // encCertFile/encKeyFile:   SM2 加密证书和私钥
+//
+// GM-TLS 服务端握手要求底层 Certificates 至少两条（签名与加密各一条），
+// 不能将双证合并为单个 Certificate 再只传一项。
 func NewGMTLSConfig(signCertFile, signKeyFile, encCertFile, encKeyFile string) (*ziface.TLSConfig, error) {
-	sigCert, err := gmtls.LoadGMX509KeyPairs(signCertFile, signKeyFile, encCertFile, encKeyFile)
-	if err != nil {
-		return nil, errors.New("gmtls: failed to load GM certificate pair: " + err.Error())
-	}
-	return &ziface.TLSConfig{
-		Mode: ziface.TLSModeGM,
-		GMConfig: &gmtls.Config{
-			GMSupport:    gmtls.NewGMSupport(),
-			Certificates: []gmtls.Certificate{sigCert},
-		},
-	}, nil
+	return ziface.NewGMTLSServerTLSFromFiles(signCertFile, signKeyFile, encCertFile, encKeyFile)
 }
 
 // NewGMTLSConfigSingle 从单个 SM2 证书创建 GM-TLS 配置（签名和加密使用同一证书）。
+// 底层在默认构建下需要 Certificates 中两条记录，此处将同一证书对复制为签名与加密各一条。
 func NewGMTLSConfigSingle(certFile, keyFile string) (*ziface.TLSConfig, error) {
-	cert, err := gmtls.LoadGMX509KeyPair(certFile, keyFile)
-	if err != nil {
-		return nil, errors.New("gmtls: failed to load GM certificate: " + err.Error())
-	}
-	return &ziface.TLSConfig{
-		Mode: ziface.TLSModeGM,
-		GMConfig: &gmtls.Config{
-			GMSupport:    gmtls.NewGMSupport(),
-			Certificates: []gmtls.Certificate{cert},
-		},
-	}, nil
+	return ziface.NewGMTLSServerTLSFromSingleFile(certFile, keyFile)
 }
 
 // NewGMTLSConfigFromPEM 从 PEM 字节创建 GM-TLS 配置（双证书）。
 func NewGMTLSConfigFromPEM(signCertPEM, signKeyPEM, encCertPEM, encKeyPEM []byte) (*ziface.TLSConfig, error) {
-	sigCert, err := gmtls.GMX509KeyPairs(signCertPEM, signKeyPEM, encCertPEM, encKeyPEM)
-	if err != nil {
-		return nil, errors.New("gmtls: failed to parse GM certificate pair: " + err.Error())
-	}
-	return &ziface.TLSConfig{
-		Mode: ziface.TLSModeGM,
-		GMConfig: &gmtls.Config{
-			GMSupport:    gmtls.NewGMSupport(),
-			Certificates: []gmtls.Certificate{sigCert},
-		},
-	}, nil
+	return ziface.NewGMTLSServerTLSFromPEM(signCertPEM, signKeyPEM, encCertPEM, encKeyPEM)
 }
 
 // NewGMTLSConfigFromPEMSingle 从 PEM 字节创建 GM-TLS 配置（单证书）。
 func NewGMTLSConfigFromPEMSingle(certPEM, keyPEM []byte) (*ziface.TLSConfig, error) {
-	cert, err := gmtls.GMX509KeyPairsSingle(certPEM, keyPEM)
-	if err != nil {
-		return nil, errors.New("gmtls: failed to parse GM certificate: " + err.Error())
-	}
-	return &ziface.TLSConfig{
-		Mode: ziface.TLSModeGM,
-		GMConfig: &gmtls.Config{
-			GMSupport:    gmtls.NewGMSupport(),
-			Certificates: []gmtls.Certificate{cert},
-		},
-	}, nil
+	return ziface.NewGMTLSServerTLSFromPEMSingle(certPEM, keyPEM)
 }
 
 // DialTLS 建立 TLS 连接。
@@ -136,7 +99,10 @@ func DialTLS(network, addr string, cfg *ziface.TLSConfig) (net.Conn, error) {
 	case ziface.TLSModeStandard:
 		return tls.Dial(network, addr, cfg.StdConfig)
 	case ziface.TLSModeGM:
-		return gmtls.Dial(network, addr, cfg.GMConfig)
+		if cfg.GMConfig == nil {
+			return nil, errors.New("znet: TLSModeGM requires non-nil GMConfig")
+		}
+		return cfg.GMConfig.Dial(network, addr)
 	default:
 		return net.Dial(network, addr)
 	}
@@ -144,12 +110,7 @@ func DialTLS(network, addr string, cfg *ziface.TLSConfig) (net.Conn, error) {
 
 // NewClientTLSConfig 创建客户端 GM-TLS 配置（信创默认，启用证书验证）。
 func NewClientTLSConfig() *ziface.TLSConfig {
-	return &ziface.TLSConfig{
-		Mode: ziface.TLSModeGM,
-		GMConfig: &gmtls.Config{
-			GMSupport: gmtls.NewGMSupport(),
-		},
-	}
+	return ziface.NewClientGMTLSTLS()
 }
 
 // NewClientStandardTLSConfig 创建客户端标准 TLS 配置（非信创场景，启用证书验证）。
