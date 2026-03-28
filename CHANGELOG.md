@@ -27,6 +27,8 @@
 ### Fixed
 
 - **zgmtls**：**`eccKeyAgreementGM.processClientKeyExchange`** / **`processServerKeyExchange`** 对密文/签名长度使用 **`uint16(hi)<<8 | uint16(lo)`**，修正 **`byte<<8`** 丢高位问题，满足 **`go vet`** 与协议大端语义。
+- **zgmtls**：**`eccKeyAgreementGM.generateClientKeyExchange`** 对密文分配增加长度上限，避免 **`len(encrypted)+2` 整数溢出**（CodeQL **`go/allocation-size-overflow`**）。
+- **zgmtls / CodeQL**：**`prf.go`** 中 SSL 3.0 / TLS 1.0–1.1 的 MD5/SHA-1 为 **RFC 6101/2246 协议要求**；**VersionGMSSL** 仅 **SM3**（见 **`prfForVersion`** / **`newFinishedHash`** GM 分支）。补充注释与 **`// codeql[go/weak-sensitive-data-hashing]`** 源内抑制，避免与 GM 无关的弱哈希告警噪声。
 
 ### Changed
 

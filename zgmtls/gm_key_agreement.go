@@ -398,8 +398,14 @@ func (ka *eccKeyAgreementGM) generateClientKeyExchange(config *Config, clientHel
 	if err != nil {
 		return nil, nil, err
 	}
+	// Upper bound avoids int overflow on len(encrypted)+2 and matches reasonable SM2 ciphertext size.
+	const maxECCCKXCiphertext = 1 << 20 // 1 MiB
+	if len(encrypted) > maxECCCKXCiphertext {
+		return nil, nil, errors.New("tls: encrypted premaster ciphertext too large")
+	}
+	n := len(encrypted) + 2
 	ckx := new(clientKeyExchangeMsg)
-	ckx.ciphertext = make([]byte, len(encrypted)+2)
+	ckx.ciphertext = make([]byte, n)
 	ckx.ciphertext[0] = byte(len(encrypted) >> 8)
 	ckx.ciphertext[1] = byte(len(encrypted))
 	copy(ckx.ciphertext[2:], encrypted)

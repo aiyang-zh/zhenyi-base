@@ -29,6 +29,9 @@ import (
 	"github.com/emmansun/gmsm/sm3"
 )
 
+// TLS 1.0–1.1 与 SSL 3.0 的 PRF / Finished 摘要按 RFC 2246/5246/6101 使用 MD5/SHA-1（本文件内实现）。
+// 国密 GM/T（VersionGMSSL）仅使用 SM3：见 prfForVersion / prfAndHashForGM / newFinishedHash 中 GM 分支。
+
 // Split a premaster secret in two as specified in RFC 4346, section 5.
 func splitPreMasterSecret(secret []byte) (s1, s2 []byte) {
 	s1 = secret[0 : (len(secret)+1)/2]
@@ -62,6 +65,8 @@ func pHash(result, secret, seed []byte, hash func() hash.Hash) {
 }
 
 // prf10 implements the TLS 1.0 pseudo-random function, as defined in RFC 2246, section 5.
+//
+// codeql[go/weak-sensitive-data-hashing]: TLS 1.0 PRF requires MD5+SHA1 per RFC 2246; not used for VersionGMSSL (SM3).
 func prf10(result, secret, label, seed []byte) {
 	hashSHA1 := sha1.New
 	hashMD5 := md5.New
@@ -93,6 +98,8 @@ func prf12(hashFunc func() hash.Hash) func(result, secret, label, seed []byte) {
 
 // prf30 implements the SSL 3.0 pseudo-random function, as defined in
 // www.mozilla.org/projects/security/pki/nss/ssl/draft302.txt section 6.
+//
+// codeql[go/weak-sensitive-data-hashing]: SSL 3.0 PRF requires MD5+SHA1 per draft302; not used for VersionGMSSL (SM3).
 func prf30(result, secret, label, seed []byte) {
 	hashSHA1 := sha1.New()
 	hashMD5 := md5.New()
@@ -236,6 +243,8 @@ func newFinishedHash(version uint16, cipherSuite *cipherSuite) finishedHash {
 		}
 	}
 
+	// TLS 1.0–1.1 Finished：RFC 2246 要求握手 transcript 的 MD5+SHA1 组合；GM 走上方 VersionGMSSL 分支（SM3）。
+	// codeql[go/weak-sensitive-data-hashing]: RFC-required transcript hash for TLS 1.0–1.1; GM uses SM3 only (branch above).
 	return finishedHash{sha1.New(), sha1.New(), md5.New(), md5.New(), buffer, version, prf}
 }
 
@@ -285,6 +294,8 @@ func (h finishedHash) Sum() []byte {
 // finishedSum30 calculates the contents of the verify_data member of a SSLv3
 // Finished message given the MD5 and SHA1 hashes of a set of handshake
 // messages.
+//
+// codeql[go/weak-sensitive-data-hashing]: SSL 3.0 Finished uses MD5+SHA1 per RFC 6101; not used for VersionGMSSL (SM3).
 func finishedSum30(md5, sha1 hash.Hash, masterSecret []byte, magic []byte) []byte {
 	md5.Write(magic)
 	md5.Write(masterSecret)
