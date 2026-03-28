@@ -67,6 +67,7 @@ func pHash(result, secret, seed []byte, hash func() hash.Hash) {
 // prf10 implements the TLS 1.0 pseudo-random function, as defined in RFC 2246, section 5.
 // 算法为 MD5+SHA1 组合；国密 VersionGMSSL 不使用本路径（见 prfForVersion）。
 func prf10(result, secret, label, seed []byte) {
+	// codeql[go/weak-sensitive-data-hashing]: TLS 1.0 PRF 按 RFC 2246 使用 MD5+SHA1，非通用弱哈希误用。
 	hashSHA1 := sha1.New
 	hashMD5 := md5.New
 
@@ -99,6 +100,7 @@ func prf12(hashFunc func() hash.Hash) func(result, secret, label, seed []byte) {
 // www.mozilla.org/projects/security/pki/nss/ssl/draft302.txt section 6.
 // 使用 MD5 与 SHA-1；国密 VersionGMSSL 不使用本路径。
 func prf30(result, secret, label, seed []byte) {
+	// codeql[go/weak-sensitive-data-hashing]: SSL 3.0 PRF 按 RFC 6101 / draft302 使用 MD5+SHA1。
 	hashSHA1 := sha1.New()
 	hashMD5 := md5.New()
 
@@ -118,12 +120,14 @@ func prf30(result, secret, label, seed []byte) {
 		hashSHA1.Write(b[:i+1])
 		hashSHA1.Write(secret)
 		hashSHA1.Write(seed)
+		// codeql[go/weak-sensitive-data-hashing]
 		digest := hashSHA1.Sum(nil)
 
 		hashMD5.Reset()
 		hashMD5.Write(secret)
 		hashMD5.Write(digest)
 
+		// codeql[go/weak-sensitive-data-hashing]
 		done += copy(result[done:], hashMD5.Sum(nil))
 		i++
 	}
@@ -242,6 +246,7 @@ func newFinishedHash(version uint16, cipherSuite *cipherSuite) finishedHash {
 	}
 
 	// TLS 1.0–1.1 Finished：RFC 2246 要求 transcript 的 MD5+SHA1 组合；国密走上方 VersionGMSSL 分支（SM3）。
+	// codeql[go/weak-sensitive-data-hashing]: TLS1.0–1.1 Finished 哈希状态为 RFC 2246 规定的 MD5+SHA1。
 	return finishedHash{sha1.New(), sha1.New(), md5.New(), md5.New(), buffer, version, prf}
 }
 
@@ -283,6 +288,7 @@ func (h finishedHash) Sum() []byte {
 		return h.client.Sum(nil)
 	}
 
+	// codeql[go/weak-sensitive-data-hashing]: TLS1.0–1.1 Finished transcript 为 RFC 2246 规定的 MD5+SHA1 拼接。
 	out := make([]byte, 0, md5.Size+sha1.Size)
 	out = h.clientMD5.Sum(out)
 	return h.client.Sum(out)
@@ -295,23 +301,27 @@ func finishedSum30(md5, sha1 hash.Hash, masterSecret []byte, magic []byte) []byt
 	md5.Write(magic)
 	md5.Write(masterSecret)
 	md5.Write(ssl30Pad1[:])
+	// codeql[go/weak-sensitive-data-hashing]
 	md5Digest := md5.Sum(nil)
 
 	md5.Reset()
 	md5.Write(masterSecret)
 	md5.Write(ssl30Pad2[:])
 	md5.Write(md5Digest)
+	// codeql[go/weak-sensitive-data-hashing]
 	md5Digest = md5.Sum(nil)
 
 	sha1.Write(magic)
 	sha1.Write(masterSecret)
 	sha1.Write(ssl30Pad1[:40])
+	// codeql[go/weak-sensitive-data-hashing]
 	sha1Digest := sha1.Sum(nil)
 
 	sha1.Reset()
 	sha1.Write(masterSecret)
 	sha1.Write(ssl30Pad2[:40])
 	sha1.Write(sha1Digest)
+	// codeql[go/weak-sensitive-data-hashing]
 	sha1Digest = sha1.Sum(nil)
 
 	ret := make([]byte, len(md5Digest)+len(sha1Digest))
@@ -359,6 +369,7 @@ func (h finishedHash) hashForClientCertificate(sigType uint8, hashAlg crypto.Has
 			return nil, errors.New("tls: unsupported signature type for client certificate")
 		}
 
+		// codeql[go/weak-sensitive-data-hashing]: SSL3 客户端证书摘要为 RFC 规定的 MD5+SHA1（finishedSum30）。
 		md5Hash := md5.New()
 		md5Hash.Write(h.buffer)
 		sha1Hash := sha1.New()

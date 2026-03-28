@@ -23,18 +23,18 @@
 - **ziface**：**`GMTLSConfig`**（封装 `*gmtls.Config`）；服务端 **`NewGMTLSServerTLSFromFiles`** / **`FromSingleFile`** / **`FromPEM`** / **`FromPEMSingle`**；客户端 **`NewClientGMTLSTLS`**；**`Dial`**、**`SetInsecureSkipVerify`**、**`SetRootCAsPEM`**、**`IsInsecureSkipVerify`**、**`SetCipherSuites`**（国密套件顺序）、**`SetServerName`**（客户端 SNI / 证书主机名校验名，对应 **`gmtls.Config.ServerName`**）。
 - **zgmtls**：**`GMTLS_ECDHE_SM2_WITH_SM4_SM3`**（**`ecdheKeyAgreementGM`**）全链路实现（见 **Changed · zgmtls**）。
 - **zgmtls / 测试**：在既有覆盖（双证书握手、**`GMX509KeyPairs*`**、**`Load*KeyPair`**、**`X509KeyPair`**、消息往返、`prf`、**`eccKeyAgreementGM`** 大端长度等）基础上补充：**`ecdhe_gm_test.go`**（**`hashForServerKeyExchange`** 的 GM+SM2 **SM3**、`ecdheKeyAgreementGM` 共享密钥往返、**`processServerKeyExchange`** 签名长度）；**`handshake_test`** 增加 **仅 ECDHE** / **仅 ECC** 握手用例；**`newTestGMServerCertificates`** 增加 **DNS SAN**（`zgmtls-test`），避免新版 **x509**「仅 CN、无 SAN」导致主机名校验失败。包级语句覆盖率约 **31%**（大量标准 TLS 遗留分支在纯 GM 场景不执行，属预期）。
-- **CI / CodeQL**：**`.github/workflows/codeql.yml`**（**`init`** 引用 **`config-file`**）；**`.github/codeql/codeql-config.yml`** 以 **`query-filters`** 排除 **`go/weak-sensitive-data-hashing`**（**`zgmtls/prf.go`** 中 RFC 规定的 SSL3/TLS1.0–1.1 **MD5/SHA-1** 误报）。若仓库另启 Code scanning **Default setup**，应关闭以免重复扫描。
+- **CodeQL**：**不再全局**排除 **`go/weak-sensitive-data-hashing`**，**`zgmtls/prf.go`** 中对 RFC 路径使用 **`// codeql[go/weak-sensitive-data-hashing]`** 行内抑制，其余文件仍走该规则；在 **Code scanning** 使用 **Default setup** 即可（本仓库不附带 CodeQL Actions 工作流）。
 
 ### Fixed
 
 - **zgmtls**：**`eccKeyAgreementGM.processClientKeyExchange`** / **`processServerKeyExchange`** 对密文/签名长度使用 **`uint16(hi)<<8 | uint16(lo)`**，修正 **`byte<<8`** 丢高位问题，满足 **`go vet`** 与协议大端语义。
 - **zgmtls**：**`eccKeyAgreementGM.generateClientKeyExchange`** 对密文分配增加长度上限，避免 **`len(encrypted)+2` 整数溢出**（CodeQL **`go/allocation-size-overflow`**）。
-- **zgmtls / CodeQL**：**`prf.go`** 中 SSL3/TLS1.0 路径按 RFC 使用 MD5/SHA-1；**VersionGMSSL** 仅 **SM3**。仓库已用 **`.github/codeql/codeql-config.yml`** 排除 **`go/weak-sensitive-data-hashing`**；说明与运维注意见 **`SECURITY.md`**。
+- **zgmtls / CodeQL**：**`prf.go`** 中 SSL3/TLS1.0 路径按 RFC 使用 MD5/SHA-1；**VersionGMSSL** 仅 **SM3**。对 **`go/weak-sensitive-data-hashing`** 采用源码 **`// codeql[...]`** 抑制误报；说明见 **`SECURITY.md`**。
 
 ### Changed
 
 - **zgmtls**：**ECDHE 国密套件**：服务端 SM2 临时密钥、**`ServerKeyExchange`**（SM2 签名）、客户端 **`ClientKeyExchange`** 完成 **`sm2.P256()` ECDH**；**`key_agreement.hashForServerKeyExchange`** 在 **`VersionGMSSL`** 且 **`signatureSM2`** 时对 **client_random、server_random、ECDH 参数** 的字节拼接结果做 **SM3**；**`getCipherSuites` 默认** **ECDHE 优先**；**`makeClientHelloGM`** 在含 ECDHE 套件时附带 **`supportedCurves`**（**`CurveP256`**）；**`ecdheKeyAgreementGM.processServerKeyExchange`** 修正 **`pickSignatureAlgorithm`** 参数顺序。
-- **文档**：新增 **`zgmtls/README.md`**；**`README.md`**、**`docs/README.md`**、**`docs/API.md`** 引用 GM-TLS / ECDHE 说明；**`SECURITY.md`**、**`docs/API.md`** 补充 CodeQL / 弱哈希与 **`zgmtls`** 的说明；**`SECURITY.md`** 同步 **CodeQL 配置文件与工作流**已入库及勿与 **Default setup** 重复扫描。
+- **文档**：新增 **`zgmtls/README.md`**；**`README.md`**、**`docs/README.md`**、**`docs/API.md`** 引用 GM-TLS / ECDHE 说明；**`SECURITY.md`**、**`docs/API.md`** 补充 CodeQL / 弱哈希与 **`zgmtls`** 的说明；**`SECURITY.md`** 同步 CodeQL 与 **`prf.go`** 行内抑制说明。
 - **Makefile / Git 钩子**：**`make test`** 前执行 **`go fmt` / `go vet` / `go mod tidy`**；**`pre-commit`** 跑完整 **`make test`**；**`install-hooks`** 文案同步。
 - **CI / `make test`**：**`run_tests.sh`** 不再跑 **`go test -bench`**（基准仍用 **`go test -bench=...`** 或 **`make bench`**）。
 - **ziface**：**`TLSConfig.WrapListener`** 在 **`TLSModeGM`** 下走 **`GMTLSConfig.wrapListener`**；单证书 GM 服务端对双 **`Certificate`** 槽使用 **`dupGMTLSCertificate`**，DER 副本独立。
