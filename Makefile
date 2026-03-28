@@ -1,4 +1,4 @@
-.PHONY: all test test-unit bench fmt vet tidy install-hooks test-docker check-xinchuang check-xinchuang-amd64 check-xinchuang-arm64 check-xinchuang-loong64
+.PHONY: all test test-unit bench fmt vet tidy install-hooks test-docker check-xinchuang check-xinchuang-amd64 check-xinchuang-arm64 check-xinchuang-loong64 codeql-local
 
 # 默认跑测试
 all: test
@@ -50,4 +50,9 @@ tidy:
 install-hooks:
 	git config core.hooksPath .githooks
 	@echo "已启用 .githooks，提交前将运行 make test"
+
+# 本地 CodeQL：需已安装 CLI 并 export CODEQL=…/codeql；默认只跑 go/weak-sensitive-data-hashing
+# 跑完整 go-code-scanning：CODEQL_LOCAL_SUITE=1 make codeql-local
+codeql-local:
+	bash scripts/run_codeql_local.sh
 

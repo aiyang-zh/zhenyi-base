@@ -33,3 +33,6 @@ go.work.sum
 */logs
 test_results/
 /logs/
+
+# 本地 CodeQL（make codeql-local / scripts/run_codeql_local.sh）
+.codeql/

@@ -23,7 +23,8 @@
 - **ziface**：**`GMTLSConfig`**（封装 `*gmtls.Config`）；服务端 **`NewGMTLSServerTLSFromFiles`** / **`FromSingleFile`** / **`FromPEM`** / **`FromPEMSingle`**；客户端 **`NewClientGMTLSTLS`**；**`Dial`**、**`SetInsecureSkipVerify`**、**`SetRootCAsPEM`**、**`IsInsecureSkipVerify`**、**`SetCipherSuites`**（国密套件顺序）、**`SetServerName`**（客户端 SNI / 证书主机名校验名，对应 **`gmtls.Config.ServerName`**）。
 - **zgmtls**：**`GMTLS_ECDHE_SM2_WITH_SM4_SM3`**（**`ecdheKeyAgreementGM`**）全链路实现（见 **Changed · zgmtls**）。
 - **zgmtls / 测试**：在既有覆盖（双证书握手、**`GMX509KeyPairs*`**、**`Load*KeyPair`**、**`X509KeyPair`**、消息往返、`prf`、**`eccKeyAgreementGM`** 大端长度等）基础上补充：**`ecdhe_gm_test.go`**（**`hashForServerKeyExchange`** 的 GM+SM2 **SM3**、`ecdheKeyAgreementGM` 共享密钥往返、**`processServerKeyExchange`** 签名长度）；**`handshake_test`** 增加 **仅 ECDHE** / **仅 ECC** 握手用例；**`newTestGMServerCertificates`** 增加 **DNS SAN**（`zgmtls-test`），避免新版 **x509**「仅 CN、无 SAN」导致主机名校验失败。包级语句覆盖率约 **31%**（大量标准 TLS 遗留分支在纯 GM 场景不执行，属预期）。
-- **CodeQL**：**不再全局**排除 **`go/weak-sensitive-data-hashing`**，**`zgmtls/prf.go`** 中对 RFC 路径使用 **`// codeql[go/weak-sensitive-data-hashing]`** 行内抑制，其余文件仍走该规则；在 **Code scanning** 使用 **Default setup** 即可（本仓库不附带 CodeQL Actions 工作流）。
+- **CodeQL**：**不再全局**排除 **`go/weak-sensitive-data-hashing`**，**`zgmtls/prf.go`** 中对 RFC 路径使用 **`// codeql[go/weak-sensitive-data-hashing]`**（**上一行单独注释**，见 **`SECURITY.md`**），其余文件仍走该规则；在 **Code scanning** 使用 **Default setup** 即可（本仓库不附带 CodeQL Actions 工作流）。
+- **开发**：**`make codeql-local`** / **`scripts/run_codeql_local.sh`** 在本地创建 Go CodeQL 数据库并默认只跑 **`go/weak-sensitive-data-hashing`**（需安装 **CodeQL CLI** 并 **`export CODEQL`**）；**`CODEQL_LOCAL_SUITE=1`** 可跑完整 **`go-code-scanning`**；产物在 **`.codeql/`**（已 **gitignore**）。
 
 ### Fixed
 
@@ -34,7 +35,7 @@
 ### Changed
 
 - **zgmtls**：**ECDHE 国密套件**：服务端 SM2 临时密钥、**`ServerKeyExchange`**（SM2 签名）、客户端 **`ClientKeyExchange`** 完成 **`sm2.P256()` ECDH**；**`key_agreement.hashForServerKeyExchange`** 在 **`VersionGMSSL`** 且 **`signatureSM2`** 时对 **client_random、server_random、ECDH 参数** 的字节拼接结果做 **SM3**；**`getCipherSuites` 默认** **ECDHE 优先**；**`makeClientHelloGM`** 在含 ECDHE 套件时附带 **`supportedCurves`**（**`CurveP256`**）；**`ecdheKeyAgreementGM.processServerKeyExchange`** 修正 **`pickSignatureAlgorithm`** 参数顺序。
-- **文档**：新增 **`zgmtls/README.md`**；**`README.md`**、**`docs/README.md`**、**`docs/API.md`** 引用 GM-TLS / ECDHE 说明；**`SECURITY.md`**、**`docs/API.md`** 补充 CodeQL / 弱哈希与 **`zgmtls`** 的说明；**`SECURITY.md`** 同步 CodeQL 与 **`prf.go`** 行内抑制说明。
+- **文档**：新增 **`zgmtls/README.md`**；**`README.md`**、**`docs/README.md`**、**`docs/API.md`** 引用 GM-TLS / ECDHE 说明；**`SECURITY.md`**、**`docs/API.md`** 补充 CodeQL / 弱哈希与 **`zgmtls`** 的说明；**`SECURITY.md`** 同步 CodeQL 与 **`prf.go`** 源码抑制说明。
 - **Makefile / Git 钩子**：**`make test`** 前执行 **`go fmt` / `go vet` / `go mod tidy`**；**`pre-commit`** 跑完整 **`make test`**；**`install-hooks`** 文案同步。
 - **CI / `make test`**：**`run_tests.sh`** 不再跑 **`go test -bench`**（基准仍用 **`go test -bench=...`** 或 **`make bench`**）。
 - **ziface**：**`TLSConfig.WrapListener`** 在 **`TLSModeGM`** 下走 **`GMTLSConfig.wrapListener`**；单证书 GM 服务端对双 **`Certificate`** 槽使用 **`dupGMTLSCertificate`**，DER 副本独立。

@@ -13,3 +13,4 @@
 | `run_tests_docker.sh` | `make test-docker` | Docker 内跑完整测试，复现 CI（含 Linux 专用代码） |
 | `check_xinchuang_compat.sh` | `make check-xinchuang` | 信创多架构适配检查（amd64/arm64/loong64） |
 | （同上） | `make check-xinchuang-amd64` / `-arm64` / `-loong64` | 仅跑指定架构；或 `make check-xinchuang PLATFORM=linux/amd64` |
+| `run_codeql_local.sh` | `make codeql-local` | **本地 CodeQL**（需安装 [CodeQL CLI](https://github.com/github/codeql-cli-binaries/releases) 并 `export CODEQL=…/codeql`）；默认 **`AlertSuppression.ql` + `go/weak-sensitive-data-hashing`**，CSV 无行表示未命中或已抑制。完整 **`go-code-scanning`**：`CODEQL_LOCAL_SUITE=1 make codeql-local`。数据库在 **`.codeql/`**（已 gitignore） |
