@@ -20,13 +20,9 @@
 | [教程](TUTORIAL.md) | 常见场景的 step-by-step 指南 |
 | [基准测试](benchmark/) | 性能基准原始数据与复现说明 |
 
-## 技术专栏
+## 技术专栏（推广底稿）
 
-| 平台 | 说明 |
-|------|------|
-| [掘金](juejin/) | 掘金技术社区 |
-| [知乎](zhihu/) | 知乎专栏 |
-| [微信公众号](wechat/) | 公众号 |
+专栏 Markdown 底稿统一维护在 **zhenyi-site** [`docs/promo/`](https://github.com/aiyang-zh/zhenyi-site/tree/main/docs/promo)（掘金 / 知乎 / 微信子目录及索引 README）。
 
 ## 快速链接
 

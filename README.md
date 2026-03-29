@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/logo.png" alt="zhenyi-base" width="120" />
+<img src="docs/logo.png" alt="zhenyi-base" width="120" />
 
 # zhenyi-base
 
@@ -10,7 +10,7 @@
 
 [![Tests](https://github.com/aiyang-zh/zhenyi-base/actions/workflows/test.yml/badge.svg)](https://github.com/aiyang-zh/zhenyi-base/actions)
 [![Go Reference](https://pkg.go.dev/badge/github.com/aiyang-zh/zhenyi-base.svg)](https://pkg.go.dev/github.com/aiyang-zh/zhenyi-base)
-[![Go Report Card](https://goreportcard.com/badge/github.com/aiyang-zh/zhenyi-base?style=flat-square)](https://goreportcard.com/report/github.com/aiyang-zh/zhenyi-base)
+[![Go Report Card](https://img.shields.io/badge/go%20report-A+-brightgreen?style=flat-square)](https://goreportcard.com/report/github.com/aiyang-zh/zhenyi-base)
 [![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=flat-square&logo=go)](https://golang.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE)
 [![GitHub Stars](https://img.shields.io/github/stars/aiyang-zh/zhenyi-base?style=flat-square)](https://github.com/aiyang-zh/zhenyi-base/stargazers)
