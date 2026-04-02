@@ -44,9 +44,12 @@ type BaseServer struct {
 	iMetrics        ziface.IMetrics
 	iChannelMetrics ziface.IChannelMetrics // 单连接维度指标，AddChannel 时注入到支持 IChannelMetricsSetter 的 channel
 	// sessionStatsFactory 非 nil 时，NewBaseChannel 为每条连接创建独立 ISessionStats（如业务层会话计数）。
-	sessionStatsFactory func() ziface.ISessionStats
-	heartbeatTimeout    time.Duration     // 心跳超时（0 = 禁用，默认 30s）
-	tlsConfig           *ziface.TLSConfig // TLS 配置（nil = 不启用 TLS）
+	sessionStatsFactory  func() ziface.ISessionStats
+	heartbeatTimeout     time.Duration     // 心跳超时（0 = 禁用，默认 30s）
+	tlsConfig            *ziface.TLSConfig // TLS 配置（nil = 不启用 TLS）
+	sharedSendWorkerMode bool
+	sharedSendWorkersMu  sync.Mutex
+	sharedSendWorkers    *sharedSendWorkers
 }
 
 // NewBaseServer 创建网络层服务端基类。
@@ -148,17 +151,57 @@ func (b *BaseServer) SyncMode() bool {
 	return b.handlers.SyncMode
 }
 
+// SetSharedSendWorkerMode 设置是否启用共享写 worker 模式（默认 false）。
+// 启用后（且非 SyncMode），连接发送改为共享 worker 批量 flush，而不是每连接 runSend goroutine。
+func (b *BaseServer) SetSharedSendWorkerMode(enabled bool) {
+	b.sharedSendWorkerMode = enabled
+}
+
+// SharedSendWorkerMode 返回当前共享写 worker 开关状态。
+func (b *BaseServer) SharedSendWorkerMode() bool {
+	return b.sharedSendWorkerMode
+}
+
 // ChannelRunner 启动 channel 需实现此接口（StartSend + Start）
 type ChannelRunner interface {
 	StartSend(ctx context.Context)
 	Start()
 }
 
+type sharedSendHookSetter interface {
+	SetSharedSendHook(func(*BaseChannel))
+}
+
+func (b *BaseServer) ensureSharedSendWorkers(ctx context.Context) *sharedSendWorkers {
+	b.sharedSendWorkersMu.Lock()
+	defer b.sharedSendWorkersMu.Unlock()
+	if b.sharedSendWorkers == nil {
+		b.sharedSendWorkers = newSharedSendWorkers(ctx)
+	}
+	return b.sharedSendWorkers
+}
+
+// BindSharedSendHook 尝试为 channel 绑定共享写 worker。
+// 返回 true 表示已绑定；返回 false 表示未启用或 channel 不支持该能力。
+func (b *BaseServer) BindSharedSendHook(ctx context.Context, ch any) bool {
+	if !b.sharedSendWorkerMode {
+		return false
+	}
+	setter, ok := ch.(sharedSendHookSetter)
+	if !ok {
+		return false
+	}
+	setter.SetSharedSendHook(b.ensureSharedSendWorkers(ctx).enqueue)
+	return true
+}
+
 // RunChannel 启动 channel 读写循环。SyncMode 时无 runSend（无发送队列）。
 // ztcp/zws/zkcp 统一调用此方法，避免各协议重复判断。
 func (b *BaseServer) RunChannel(ctx context.Context, ch ChannelRunner) {
 	if !b.SyncMode() {
-		ch.StartSend(ctx)
+		if !b.BindSharedSendHook(ctx, ch) {
+			ch.StartSend(ctx)
+		}
 	}
 	ch.Start()
 }

@@ -19,6 +19,7 @@
 | [架构设计](ARCHITECTURE.md) | 模块划分、依赖关系、设计思路 |
 | [教程](TUTORIAL.md) | 常见场景的 step-by-step 指南 |
 | [基准测试](benchmark/) | 性能基准原始数据与复现说明 |
+| 模糊测试 | 见 [API 文档 · 模糊测试](API.md#模糊测试可选)（`go test -fuzz`） |
 
 ## 技术专栏（推广底稿）
 

@@ -1,4 +1,4 @@
-//go:build linux
+//go:build darwin
 
 package ztcp
 
@@ -11,9 +11,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// ServerReactor 使用 reactor（epoll）驱动读，减少 goroutine 数量；仅 Linux。
-// 与 Server() 二选一：本方法阻塞直到 ctx 取消；不启动每连接读 goroutine。
-// 当前不支持 TLS（listener 须为 *net.TCPListener）。
+// ServerReactor 使用 reactor（kqueue）驱动 TCP 读，减少 goroutine 数；仅 darwin。
+// 与 Server() 二选一：本方法阻塞直到 ctx 取消；不支持 TLS（listener 需为 *net.TCPListener）。
 func (ser *Server) ServerReactor(ctx context.Context) {
 	listener, err := net.Listen("tcp", ser.GetAddr())
 	if err != nil {
@@ -23,10 +22,11 @@ func (ser *Server) ServerReactor(ctx context.Context) {
 		return
 	}
 	if ser.GetTLSConfig() != nil && ser.GetTLSConfig().Mode != 0 {
-		listener.Close()
+		_ = listener.Close()
 		zlog.Error("TCP reactor mode does not support TLS")
 		return
 	}
+
 	zlog.Info("TCP reactor server started", zap.String("addr", listener.Addr().String()))
 	ser.SetListener(listener)
 	ser.SetSharedSendWorkerMode(true)
@@ -40,7 +40,7 @@ func (ser *Server) ServerReactor(ctx context.Context) {
 		channelId := ser.NextId()
 		channel := NewChannel(channelId, conn, ser)
 		if !ser.HandleAccept(channel) {
-			channel.Close() // 拒绝连接时释放 channel 持有的 readBuffer 等资源
+			_ = conn.Close()
 			return nil, false
 		}
 		ser.AddChannel(channel)
@@ -49,7 +49,9 @@ func (ser *Server) ServerReactor(ctx context.Context) {
 		}
 		return channel, true
 	}
+
 	metrics := ser.reactorMetrics
+	// BatchRead 在高连接数 + 高频小包场景下能显著降低 fd 切换与函数调度开销。
 	_ = zreactor.ServeWithConfig(ctx, listener, acceptFn, metrics, &zreactor.ServeConfig{
 		MinEvents: 1024,
 		BatchRead: true,

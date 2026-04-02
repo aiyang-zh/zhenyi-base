@@ -22,6 +22,12 @@ type SendLoopTuning struct {
 	// Shrink on prolonged idle.
 	IdleShrinkAfter int
 	IdleShrinkEvery time.Duration
+
+	// Reactor shared-write protection knobs.
+	// ReactorMaxQueuedMsgs：单连接发送队列软上限（超过则打 Warn，并可配合 BaseChannel.SetSendQueueOverflowHook 选择断链；0 表示不在 SetSendLoopTuning 中覆盖当前值）。
+	ReactorMaxQueuedMsgs int
+	// ReactorFlushBatchesPerTurn：共享写 worker 单次轮转内对单连接最多连续 flush 的批次数（公平性）。
+	ReactorFlushBatchesPerTurn int
 }
 
 var sendLoopTuning atomic.Value // SendLoopTuning
@@ -39,6 +45,9 @@ func init() {
 
 		IdleShrinkAfter: 100,
 		IdleShrinkEvery: 30 * time.Second,
+
+		ReactorMaxQueuedMsgs:       8192,
+		ReactorFlushBatchesPerTurn: 8,
 	})
 }
 
@@ -72,6 +81,12 @@ func SetSendLoopTuning(t SendLoopTuning) {
 	}
 	if t.IdleShrinkEvery > 0 {
 		cur.IdleShrinkEvery = t.IdleShrinkEvery
+	}
+	if t.ReactorMaxQueuedMsgs > 0 {
+		cur.ReactorMaxQueuedMsgs = t.ReactorMaxQueuedMsgs
+	}
+	if t.ReactorFlushBatchesPerTurn > 0 {
+		cur.ReactorFlushBatchesPerTurn = t.ReactorFlushBatchesPerTurn
 	}
 	sendLoopTuning.Store(cur)
 }

@@ -125,7 +125,11 @@ func (q *Queue[T]) EnqueueBatch(items []T) bool {
 
 	requiredSpace := len(items)
 	currentCap := len(q.items)
-	availableSpace := currentCap - q.count
+	// Ring buffer 使用 head/tail + next==head 区分满与空，因此可容纳的最大元素数是 (capacity-1)。
+	// Enqueue 侧的满判断基于 next==head（即最多 q.mask 个元素），所以这里也必须对齐该语义，
+	// 否则会出现 EnqueueBatch 允许 count 达到 capacity 导致后续 FIFO 顺序错误。
+	maxCount := currentCap - 1
+	availableSpace := maxCount - q.count
 
 	// 注意：环形队列实际可用空间通常认为是 capacity - 1 (为了区分空和满)，
 	// 但我们这里用 count 计数，实际上 resize 也是基于 count 的。
@@ -141,7 +145,7 @@ func (q *Queue[T]) EnqueueBatch(items []T) bool {
 		// 尝试计算需要扩容到多大
 		targetSize := currentCap
 		// 循环翻倍直到能装下或者超过 MaxSize
-		for (targetSize - q.count) < requiredSpace {
+		for (targetSize - 1 - q.count) < requiredSpace {
 			targetSize *= 2
 			// 如果超过了最大限制，且最大限制被设置了
 			if q.maxSize > 0 && targetSize > nextPowerOfTwo(q.maxSize) {

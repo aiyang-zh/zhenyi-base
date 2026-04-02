@@ -290,23 +290,18 @@ func (b *BaseClient) read() int {
 		}
 	}
 
-	b.connMu.RLock()
-	defer b.connMu.RUnlock()
-	if b.readBuffer == nil {
-		return 1
-	}
 	// 循环解析所有完整消息（复用 b.parseData，零池化开销）
 	for {
 		b.parseData.ResetForReuse()
 
-		parsed, parseErr := b.socketParser.ParseFromRingBuffer(b.readBuffer, &b.parseData)
+		parsed, parseErr := b.socketParser.ParseFromRingBuffer(rb, &b.parseData)
 		if parseErr != nil {
 			zlog.Warn("ParseFromRingBuffer error", zap.Error(parseErr))
 			return 1
 		}
 
 		if !parsed {
-			if b.readBuffer.IsFull() {
+			if rb.IsFull() {
 				zlog.Warn("single packet exceeds buffer capacity")
 				return 1
 			}
@@ -324,12 +319,7 @@ func (b *BaseClient) read() int {
 		}
 
 		if b.readCall != nil {
-			b.connMu.RUnlock()
 			b.readCall(wireMsg)
-			b.connMu.RLock()
-			if b.conn == nil || b.readBuffer == nil {
-				return 1
-			}
 		}
 	}
 

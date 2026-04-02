@@ -148,13 +148,13 @@ s.Run()
 
 ---
 
-## 6. 使用 zreactor（仅 Linux，TCP 单循环）
+## 6. 使用 zreactor（Linux / macOS，TCP 单循环）
 
-zreactor 用 epoll 单循环驱动所有连接的读，不每连接起 goroutine，适合高连接数、Linux 部署。**仅 Linux 可用**，且当前仅 TCP（不支持 TLS）。
+**zreactor** 用 **单循环**（**Linux：epoll**，**macOS：kqueue**）驱动所有连接的读，不每连接起读 goroutine，适合高连接数。**仅 TCP**（不支持 TLS）。**Windows 等** 仅 stub，请用普通 **`Server`** / 每连接模型。
 
 ### 通过 zserver 使用（推荐，3 步与现有 API 一致）
 
-在 zserver 上打开 reactor 模式：`WithReactorMode()`，仅 TCP、且未配 TLS 时在 Linux 下生效；非 Linux 自动回退为普通每连接一 goroutine。
+在 **zserver** 上打开 reactor 模式：**`WithReactorMode()`**，在 **Linux 或 macOS**、**TCP**、**未配置 TLS** 时生效；其它环境自动回退为普通每连接 goroutine。
 
 ```go
 import "github.com/aiyang-zh/zhenyi-base/zserver"
@@ -162,7 +162,7 @@ import "github.com/aiyang-zh/zhenyi-base/zreactor"
 
 s := zserver.New(
     zserver.WithAddr(":9001"),
-    zserver.WithReactorMode(), // 仅 Linux + TCP 时用 epoll 单循环
+    zserver.WithReactorMode(), // Linux/macOS + TCP：epoll 或 kqueue 单循环
 )
 s.Handle(1, func(req *zserver.Request) { req.Reply(1, req.Data()) })
 s.SetReactorMetrics(&zreactor.Metrics{OnAccept: fn, OnClose: fn, ...}) // 可选
@@ -208,7 +208,12 @@ func main() {
 
 ### 直接使用 zreactor 包
 
-需要自己创建 `*net.TCPListener`，并实现 `zreactor.AcceptFunc`，返回实现 `zreactor.ReactorChannel` 的 channel（如 `*znet.BaseChannel` 通过 ztcp.NewChannel 得到）。示例见 [zreactor 包文档](https://pkg.go.dev/github.com/aiyang-zh/zhenyi-base/zreactor)：Serve 返回后需自行 `listener.Close()`。
+需要自己创建 `*net.TCPListener`，并实现 `zreactor.AcceptFunc`，返回实现 `zreactor.ReactorChannel` 的 channel（如 `*znet.BaseChannel` 通过 ztcp.NewChannel 得到）。示例见 [zreactor 包文档](https://pkg.go.dev/github.com/aiyang-zh/zhenyi-base/zreactor)：**Serve** 返回后需自行 **`listener.Close()`**。
+
+### 共享写与压测调参
+
+- **`ztcp.ServerReactor`** 会默认 **`SetSharedSendWorkerMode(true)`**，async 发送由 **znet** 内共享 worker 批量 flush，可与 reactor 读模型搭配。
+- **`znet.SetSendLoopTuning`** 可调整 **`ReactorMaxQueuedMsgs`**、**`ReactorFlushBatchesPerTurn`** 等（见 **`SendLoopTuning`**）；业务可对 **`BaseChannel.SetSendQueueOverflowHook`** 在队列软上限时选择是否断连。
 
 ---
 
@@ -220,7 +225,7 @@ func main() {
 | 浏览器/跨域 | zws      | WebSocket                |
 | 弱网/丢包  | zkcp     | KCP 可靠 UDP             |
 
-底层均基于 znet，接口一致，切换协议只需改 `NewServer` 的包名。Linux 下 TCP 还可选 ztcp.ServerReactor（见上一节）。
+底层均基于 znet，接口一致，切换协议只需改 `NewServer` 的包名。**Linux / macOS** 下 TCP 还可选 **`ztcp.ServerReactor`** 或 **`zserver.WithReactorMode`**（见上一节）。
 
 ---
 

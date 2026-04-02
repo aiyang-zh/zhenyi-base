@@ -73,6 +73,14 @@ type BaseChannel struct {
 	headersBuf []byte      // runSend 单协程复用，避免每次从 bytespool Get/Put
 	writeBufs  net.Buffers // runSend 单协程复用，避免每次池化 net.Buffers
 
+	// ========== reactor 共享写（仅在 ServerReactor 路径启用）==========
+	// sharedSendHook 非 nil 时，Send() 在首次入队后会触发一次 hook，将当前 channel 投递到共享写 worker。
+	// sharedSendPending 用于避免重复投递；共享写 worker 在队列清空后会清除该标记。
+	sharedSendHook    func(*BaseChannel)
+	sharedSendPending atomic.Bool
+	queuedMsgs        int64 // 当前发送队列近似长度（入队+1，批量写后-批次大小）
+	overflowHook      func(*BaseChannel, int64, int64) SendQueueOverflowAction
+
 	// ========== 复杂类型 ==========
 	addr      string
 	closeChan chan struct {
@@ -81,6 +89,16 @@ type BaseChannel struct {
 	closeOnce sync.Once      // 确保只关闭一次
 	isClose   atomic.Bool    // 是否已关闭
 }
+
+// SendQueueOverflowAction 定义发送队列超限时的处理动作。
+type SendQueueOverflowAction uint8
+
+const (
+	// OverflowDropMessage 仅丢弃当前消息，不关闭连接（默认行为，交由业务决定后续策略）。
+	OverflowDropMessage SendQueueOverflowAction = iota
+	// OverflowCloseChannel 关闭当前连接。
+	OverflowCloseChannel
+)
 
 // NewBaseChannel 创建基础通道（已合并 Session 职责）
 // 两种原生模式：async（默认，有发送队列+runSend） / sync（无队列，ReplyImmediate 直写）
@@ -650,7 +668,86 @@ func (c *BaseChannel) Send(msg ziface.IMessage) {
 		msg.Release()
 		return
 	}
-	// ✅ 无锁设计：无需通知，无需计数，runSend 轮询队列（消费结果驱动）
+	queued := atomic.AddInt64(&c.queuedMsgs, 1)
+	if c.sharedSendHook != nil {
+		maxQueued := int64(GetSendLoopTuning().ReactorMaxQueuedMsgs)
+		if maxQueued > 0 && queued > maxQueued {
+			// 超限仅告警/回调，不默认丢消息；是否断链由业务 hook 决定。
+			c.onSendQueueOverflow(queued, maxQueued)
+		}
+	}
+	// reactor 共享写：只在启用 sharedSendHook 时，做一次“从空闲到活跃”的投递通知
+	if c.sharedSendHook != nil && c.sharedSendPending.CompareAndSwap(false, true) {
+		c.sharedSendHook(c)
+	}
+	// ✅ 默认无锁设计：无需通知，无需计数，runSend 轮询队列（消费结果驱动）
+}
+
+// SetSharedSendHook 设置 reactor 共享写投递 hook。
+// 仅在 reactor 模式下使用：调用方需确保不会与 StartSend/runSend 同时启用。
+func (c *BaseChannel) SetSharedSendHook(h func(*BaseChannel)) {
+	c.sharedSendHook = h
+	// hook 切换时不强制改变 pending：pending 的生命周期由 worker 控制。
+}
+
+// SharedSendDequeueBatch 从发送队列批量取消息（仅供 reactor 共享写 worker 使用）。
+// 调用方必须保证同一条连接不会并发调用（通过 sharedSendPending 做串行化）。
+func (c *BaseChannel) SharedSendDequeueBatch(dst []ziface.IMessage) int {
+	if c.mailBoxQueue == nil || len(dst) == 0 {
+		return 0
+	}
+	return c.mailBoxQueue.DequeueBatch(dst)
+}
+
+// SharedSendProcessBatch 批量写出并 Release（仅供 reactor 共享写 worker 使用）。
+// 调用方必须保证同一条连接不会并发调用（通过 sharedSendPending 做串行化）。
+func (c *BaseChannel) SharedSendProcessBatch(msgs []ziface.IMessage) {
+	if len(msgs) == 0 {
+		return
+	}
+	c.SendBatchMsg(msgs)
+
+	totalBytes := 0
+	for i := 0; i < len(msgs); i++ {
+		totalBytes += len(msgs[i].GetMessageData())
+		msgs[i].Release()
+		msgs[i] = nil
+	}
+
+	if c.stats != nil {
+		c.stats.RecordSend(len(msgs), totalBytes)
+	}
+	atomic.AddInt64(&c.queuedMsgs, -int64(len(msgs)))
+}
+
+// SharedSendClearPending 清除 reactor 共享写投递标记（仅供 reactor 共享写 worker 使用）。
+func (c *BaseChannel) SharedSendClearPending() {
+	c.sharedSendPending.Store(false)
+}
+
+// SharedSendSetPending 设置 reactor 共享写投递标记（仅供 reactor 共享写 worker 使用）。
+func (c *BaseChannel) SharedSendSetPending() {
+	c.sharedSendPending.Store(true)
+}
+
+// SetSendQueueOverflowHook 设置发送队列超限处理钩子（仅 reactor 共享写路径生效）。
+// 若未设置，默认动作为仅丢弃当前消息（不主动断链）。
+func (c *BaseChannel) SetSendQueueOverflowHook(h func(*BaseChannel, int64, int64) SendQueueOverflowAction) {
+	c.overflowHook = h
+}
+
+func (c *BaseChannel) onSendQueueOverflow(queued, limit int64) {
+	zlog.Warn("reactor channel send queue overflow",
+		zap.Uint64("channelId", c.channelId),
+		zap.Int64("queued", queued),
+		zap.Int64("limit", limit))
+
+	if c.overflowHook == nil {
+		return
+	}
+	if c.overflowHook(c, queued, limit) == OverflowCloseChannel {
+		c.Close()
+	}
 }
 
 // StartSend 启动异步发送 goroutine
@@ -697,6 +794,7 @@ func (c *BaseChannel) runSend(ctx context.Context) {
 			c.stats.RecordSend(count, totalBytes)
 		}
 		totalMsgsSent += int64(count)
+		atomic.AddInt64(&c.queuedMsgs, -int64(count))
 	}
 
 	// processBatch: 每次处理一批消息（防止信号检查饿死）

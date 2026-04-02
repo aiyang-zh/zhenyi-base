@@ -45,7 +45,7 @@ type Server struct {
 	heartbeatTimeout  *time.Duration  // nil=使用底层默认 30s；非 nil 则 Start 时设置
 	showBanner        bool
 	tlsConfig         *ziface.TLSConfig
-	useReactor        bool               // 仅 TCP + Linux 时用 ztcp.ServerReactor
+	useReactor        bool               // 仅 TCP、且无 TLS 时在 Linux/macOS 上用 ztcp.ServerReactor
 	reactorMetrics    *zreactor.Metrics  // 仅 useReactor 时生效，可选
 	pool              *ants.PoolWithFunc // 零闭包分配
 	ctx               context.Context
@@ -129,8 +129,8 @@ func (s *Server) Start() {
 		s.net.SetHeartbeatTimeout(*s.heartbeatTimeout)
 	}
 
-	// reactor 模式：仅 TCP、且未启用 TLS、且 Linux 时，用 ztcp.ServerReactor 阻塞运行；非 Linux 回退为普通 Server
-	if s.useReactor && s.protocol == znet.TCP && s.tlsConfig == nil && runtime.GOOS == "linux" {
+	// reactor 模式：仅 TCP、且未启用 TLS、且 Linux/macOS 时，用 ztcp.ServerReactor 阻塞运行；否则回退为普通 Server
+	if s.useReactor && s.protocol == znet.TCP && s.tlsConfig == nil && (runtime.GOOS == "linux" || runtime.GOOS == "darwin") {
 		if tcpServer, ok := s.net.(*ztcp.Server); ok {
 			if s.reactorMetrics != nil {
 				tcpServer.SetReactorMetrics(s.reactorMetrics)
@@ -155,7 +155,7 @@ func (s *Server) Start() {
 // Run 启动服务器（阻塞，直到收到 SIGINT/SIGTERM）。
 // 若使用了 WithReactorMode 且协议为 TCP，Start 会在 reactor 循环内阻塞；Run 在子 goroutine 中执行 Start，主 goroutine 等信号后 Stop 并等待 Start 退出。
 func (s *Server) Run() {
-	if s.useReactor && s.protocol == znet.TCP && s.tlsConfig == nil && runtime.GOOS == "linux" {
+	if s.useReactor && s.protocol == znet.TCP && s.tlsConfig == nil && (runtime.GOOS == "linux" || runtime.GOOS == "darwin") {
 		cm := zgrace.New()
 		cm.Register(func(ctx context.Context) {
 			_ = ctx

@@ -55,7 +55,7 @@ make bench                            # 默认 all + 全协议 (tcp/ws/kcp)
 go run ./examples/echobench/server -p tcp -addr :9001
 
 # 终端 2：压测客户端
-go run ./examples/echobench/client -bench -p tcp -addr 127.0.0.1:9001 -n 100000 -c 1000 -size 1024
+go run ./examples/echobench/client -bench -p tcp -addr 127.0.0.1:9001 -n 100000 -c 100 -size 23
 ```
 
 参数：

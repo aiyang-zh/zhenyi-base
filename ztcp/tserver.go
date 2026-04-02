@@ -15,7 +15,7 @@ import (
 // Server 为 TCP 协议的服务端实现，嵌入 BaseServer 并完成 Listen/Accept 与 TLS 包装。
 type Server struct {
 	*znet.BaseServer
-	reactorMetrics *zreactor.Metrics // 仅 ServerReactor（Linux）时使用；通过 SetReactorMetrics 注入。
+	reactorMetrics *zreactor.Metrics // 仅 ServerReactor（Linux/macOS）时使用；通过 SetReactorMetrics 注入。
 }
 
 // SetReactorMetrics 设置 reactor 模式的监控回调；仅在使用 ServerReactor 时生效，传 nil 表示不埋点。

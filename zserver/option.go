@@ -113,8 +113,8 @@ func WithTLSConfig(cfg *ziface.TLSConfig) Option {
 	return func(s *Server) { s.tlsConfig = cfg }
 }
 
-// WithReactorMode 使用 reactor（epoll）单循环驱动 TCP 读，仅 Linux、仅 TCP 时生效；与 TLS 互斥（启用时 reactor 不生效）。
-// 高连接数场景可减少 goroutine 数量。非 Linux 或协议非 TCP 时忽略。
+// WithReactorMode 使用 reactor 单循环驱动 TCP 读：Linux 为 epoll，macOS 为 kqueue；仅 TCP、未启用 TLS 时生效；与 TLS 互斥。
+// 高连接数场景可减少 goroutine 数量。非 Linux/macOS 或协议非 TCP 时忽略（回退普通 Server）。
 func WithReactorMode() Option {
 	return func(s *Server) { s.useReactor = true }
 }

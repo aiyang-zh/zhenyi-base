@@ -1,4 +1,5 @@
-// Package zreactor 提供基于 Linux epoll 的 reactor 模式 TCP 服务循环（仅 Linux，listener 须为 *net.TCPListener）。
+// Package zreactor 提供 reactor 模式 TCP 服务循环（Linux: epoll；macOS(darwin): kqueue）。
+// listener 须为 *net.TCPListener。
 //
 // # 使用方式
 //
@@ -12,7 +13,9 @@
 //
 // # 优雅退出与 FD 防护
 //
-// Serve/ServeWithConfig 在 ctx 取消时通过 eventfd 唤醒 epoll 并 return，退出前通过 defer 释放：
-// listener 的 File() 句柄、wakeFd、poller（epfd）。每个连接在 closeConn 中依次 poller.Remove(fd)、
+// Serve/ServeWithConfig 在 ctx 取消时通过唤醒机制唤醒事件循环并 return，退出前通过 defer 释放：
+// - Linux：eventfd
+// - macOS(darwin)：pipe
+// 以及 poller 实例。每个连接在 closeConn 中依次 poller.Remove(fd)、
 // ch.Close()、file.Close()、conn.Close()、归还读缓冲、从 fdMap 删除，确保无 FD 泄漏。
 package zreactor

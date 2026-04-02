@@ -1,11 +1,10 @@
-//go:build linux
+//go:build darwin
 
 package zreactor
 
 import (
 	"context"
 	"net"
-	"os"
 	"strings"
 	"sync"
 	"syscall"
@@ -26,7 +25,6 @@ type connEntry struct {
 	readBuf []byte
 }
 
-// readResult 批量读时暂存单次 Read 的结果
 type readResult struct {
 	n   int
 	err error
@@ -72,8 +70,7 @@ func putBatchSlices(w *batchWork) {
 	batchPool.Put(w)
 }
 
-// Serve 在调用方 goroutine 中运行 reactor 循环；仅 Linux，listener 须为 *net.TCPListener。
-// 等价于 ServeWithConfig(ctx, listener, accept, metrics, nil)。
+// Serve 在调用方 goroutine 中运行 reactor 循环；仅 darwin 实现（kqueue）。
 func Serve(ctx context.Context, listener net.Listener, accept AcceptFunc, metrics *Metrics) error {
 	return ServeWithConfig(ctx, listener, accept, metrics, nil)
 }
@@ -91,33 +88,37 @@ func ServeWithConfig(ctx context.Context, listener net.Listener, accept AcceptFu
 	}
 	defer listenerFile.Close()
 	listenerFd := int(listenerFile.Fd())
-	// accept4 的 nonblock 标志只作用于“新连接 fd”，不会让监听 fd 变成非阻塞。
-	// 监听 fd 若仍是阻塞模式，drain backlog 到空后会卡在 accept4，导致 reactor 主循环不再回到 epoll_wait。
-	if err := unix.SetNonblock(listenerFd, true); err != nil {
-		return err
-	}
 
-	wakeFd, err := unix.Eventfd(0, unix.EFD_NONBLOCK|unix.EFD_CLOEXEC)
-	if err != nil {
+	// wakeup: use unix.Pipe instead of eventfd (not available on darwin).
+	// unix.Pipe2 在部分 x/sys 版本里不可用，这里用 Pipe + SetNonblock/CloseOnExec 组合实现。
+	wakeFds := []int{0, 0}
+	if err := unix.Pipe(wakeFds); err != nil {
 		return err
 	}
-	defer unix.Close(wakeFd)
+	wakeR, wakeW := wakeFds[0], wakeFds[1]
+	_ = unix.SetNonblock(wakeR, true)
+	_ = unix.SetNonblock(wakeW, true)
+	unix.CloseOnExec(wakeR)
+	unix.CloseOnExec(wakeW)
+	defer unix.Close(wakeR)
+	defer unix.Close(wakeW)
 
 	poller, err := NewPollerWithSize(cfg.MinEvents)
 	if err != nil {
 		return err
 	}
 	defer poller.Close()
+
 	if err := poller.Add(listenerFd); err != nil {
 		return err
 	}
-	if err := poller.Add(wakeFd); err != nil {
+	if err := poller.Add(wakeR); err != nil {
 		return err
 	}
 
 	go func() {
 		<-ctx.Done()
-		_, _ = unix.Write(wakeFd, []byte{1, 0, 0, 0, 0, 0, 0, 0})
+		_, _ = unix.Write(wakeW, []byte{1})
 	}()
 
 	fdMap := newShardedFDMap()
@@ -135,16 +136,22 @@ func ServeWithConfig(ctx context.Context, listener net.Listener, accept AcceptFu
 		var connReady []ReadyEvent
 		for _, re := range ready {
 			fd, ev := re.Fd, re.Events
-			if fd == wakeFd {
+			if fd == wakeR {
 				return nil
 			}
 			if fd == listenerFd {
-				if err := acceptConn(listenerFd, accept, poller, fdMap, metrics, cfg, connEvents); err != nil {
+				// kqueue listener 事件为 EV_CLEAR（边沿触发），并且 kevent.Data 对 listener socket 表示待 accept 数量。
+				// 我们按 Data 次数尽量 drain backlog，避免漏触发导致“丢连接/少接入”。
+				toAccept := int(re.Data)
+				if toAccept <= 0 {
+					toAccept = 1
+				}
+				if err := acceptConn(tcpListener, toAccept, accept, poller, fdMap, metrics, cfg, connEvents); err != nil {
 					return err
 				}
 				continue
 			}
-			// 显式处理 EPOLLHUP/EPOLLERR，避免 fd 已删但 epoll 仍上报事件的极端场景下空转或重复处理
+			// Explicitly handle EOF/ERROR-like events to avoid read loop relying only on read result.
 			if ev&ErrHup != 0 {
 				if entry, ok := fdMap.Get(fd); ok {
 					closeConn(poller, fd, entry, fdMap, metrics, cfg.ReadBufSize)
@@ -173,29 +180,13 @@ func connEventsForAdd(enableWrite bool) uint32 {
 	return ReadEvent
 }
 
-func acceptConn(listenerFd int, accept AcceptFunc, poller *Poller, fdMap *shardedFDMap, metrics *Metrics, cfg *ServeConfig, connEvents uint32) error {
-	// 使用 accept4(nonblock) drain backlog，避免 net.TCPListener.Accept 在 reactor goroutine 中阻塞。
-	// 但在持续新连接涌入时，“一直 accept 到 EAGAIN”会饿死读事件处理；
-	// 因此每次 listener 事件最多接入一批，随后返回主循环继续处理连接读。
-	const maxAcceptPerTurn = 64
-	acceptedThisTurn := 0
-	for {
+func acceptConn(tcpListener *net.TCPListener, toAccept int, accept AcceptFunc, poller *Poller, fdMap *shardedFDMap, metrics *Metrics, cfg *ServeConfig, connEvents uint32) error {
+	for i := 0; i < toAccept; i++ {
 		if cfg.MaxConns > 0 && fdMap.Len() >= cfg.MaxConns {
 			return nil
 		}
-		if acceptedThisTurn >= maxAcceptPerTurn {
-			return nil
-		}
-
-		nfd, _, err := unix.Accept4(listenerFd, unix.SOCK_NONBLOCK|unix.SOCK_CLOEXEC)
+		conn, err := tcpListener.Accept()
 		if err != nil {
-			if err == syscall.EINTR {
-				continue
-			}
-			// drained
-			if err == syscall.EAGAIN || err == syscall.EWOULDBLOCK {
-				return nil
-			}
 			if isListenerClosed(err) {
 				return err
 			}
@@ -205,59 +196,54 @@ func acceptConn(listenerFd int, accept AcceptFunc, poller *Poller, fdMap *sharde
 			}
 			return nil
 		}
-		acceptedThisTurn++
-
-		// 将 fd 转为 net.Conn 交给上层 acceptFn；FileConn 会 dup fd，因此要关闭原始 file 防泄漏。
-		f := os.NewFile(uintptr(nfd), "zreactor-accepted")
-		conn, ferr := net.FileConn(f)
-		_ = f.Close()
-		if ferr != nil {
-			_ = unix.Close(nfd)
-			continue
-		}
 
 		tcpConn, ok := conn.(*net.TCPConn)
 		if !ok {
 			_ = conn.Close()
 			continue
 		}
-
 		rawConn, err := tcpConn.SyscallConn()
 		if err != nil {
-			conn.Close()
+			_ = conn.Close()
 			continue
 		}
+
 		connFd := -1
 		if err := rawConn.Control(func(fd uintptr) {
 			connFd = int(fd)
 		}); err != nil || connFd < 0 {
-			conn.Close()
+			_ = conn.Close()
 			continue
 		}
 		if err := unix.SetNonblock(connFd, true); err != nil {
-			conn.Close()
+			_ = conn.Close()
 			continue
 		}
+
 		ch, ok := accept(conn)
 		if !ok {
-			conn.Close()
+			_ = conn.Close()
 			continue
 		}
+
 		if err := poller.Add(connFd, connEvents); err != nil {
 			ch.Close()
-			conn.Close()
+			_ = conn.Close()
 			continue
 		}
+
 		buf := allocReadBuf(cfg.ReadBufSize)
 		fdMap.Set(connFd, &connEntry{
 			conn:    conn,
 			ch:      ch,
 			readBuf: buf,
 		})
+
 		if metrics != nil && metrics.OnAccept != nil {
 			metrics.OnAccept()
 		}
 	}
+	return nil
 }
 
 func allocReadBuf(size int) []byte {
@@ -271,7 +257,6 @@ func allocReadBuf(size int) []byte {
 	return make([]byte, size)
 }
 
-// parseAndDispatchSafe 调用 ch.ParseAndDispatch()；若发生 panic 则恢复并返回 true，由调用方关闭该连接。
 func parseAndDispatchSafe(entry *connEntry, poller *Poller, fd int, fdMap *shardedFDMap, metrics *Metrics, cfg *ServeConfig) (shouldClose bool) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -319,17 +304,17 @@ func reportReadBytes(metrics *Metrics, fd, n int) {
 	}
 }
 
-// batchReadAndParse 批量收集就绪 FD → 统一 Read → 统一 ParseAndDispatch，减少跨 FD 切换。
-// entry 为 nil 时（fd 已从 fdMap 删除）会从 epoll 移除该 fd，避免后续空转。
 func batchReadAndParse(poller *Poller, connReady []ReadyEvent, fdMap *shardedFDMap, metrics *Metrics, cfg *ServeConfig) {
 	n := len(connReady)
 	w := getBatchSlices(n)
 	defer putBatchSlices(w)
+
 	results, entries := w.results, w.entries
 	for i := range results {
 		results[i] = readResult{}
 		entries[i] = nil
 	}
+
 	for i, re := range connReady {
 		fd := re.Fd
 		entry, ok := fdMap.Get(fd)
@@ -340,6 +325,7 @@ func batchReadAndParse(poller *Poller, connReady []ReadyEvent, fdMap *shardedFDM
 		entries[i] = entry
 		results[i].n, results[i].err = syscall.Read(fd, entry.readBuf)
 	}
+
 	for i, re := range connReady {
 		fd := re.Fd
 		entry := entries[i]
@@ -347,6 +333,7 @@ func batchReadAndParse(poller *Poller, connReady []ReadyEvent, fdMap *shardedFDM
 			_ = poller.Remove(fd)
 			continue
 		}
+
 		rn, err := results[i].n, results[i].err
 		if rn > 0 {
 			reportReadBytes(metrics, fd, rn)
@@ -356,6 +343,7 @@ func batchReadAndParse(poller *Poller, connReady []ReadyEvent, fdMap *shardedFDM
 			}
 			continue
 		}
+
 		if err != nil {
 			if err == syscall.EAGAIN {
 				continue
@@ -396,8 +384,7 @@ func isListenerClosed(err error) bool {
 func closeConn(poller *Poller, fd int, entry *connEntry, fdMap *shardedFDMap, metrics *Metrics, readBufSize int) {
 	_ = poller.Remove(fd)
 	entry.ch.Close()
-	entry.conn.Close()
-	// 按 cap 归还缓冲：截断后 len 可能小于 defaultReadBufSize，只要 cap 足够即可复用
+	_ = entry.conn.Close()
 	if readBufSize == defaultReadBufSize && cap(entry.readBuf) >= defaultReadBufSize {
 		readBufPool.Put(entry.readBuf)
 	}

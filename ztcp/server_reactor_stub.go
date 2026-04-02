@@ -1,10 +1,10 @@
-//go:build !linux
+//go:build !linux && !darwin
 
 package ztcp
 
 import "context"
 
-// ServerReactor 仅在 Linux 可用；非 Linux 调用会 panic。
+// ServerReactor 仅在 Linux 与 macOS 可用；其它 GOOS 调用会 panic。
 func (ser *Server) ServerReactor(ctx context.Context) {
-	panic("ztcp.ServerReactor is only available on Linux (zreactor/epoll)")
+	panic("ztcp.ServerReactor is only available on Linux (epoll) and macOS (kqueue)")
 }

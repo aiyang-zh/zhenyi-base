@@ -15,27 +15,36 @@
 - **AdaptiveWriter**（`buff.go`）：按写频率在多档缓冲间自适应；**默认偏保守**（升档较快、降档需缓冲已空且超过 `idleTimeout` 空闲后再逐级缩小）。档位评估依赖 `Write` 路径（与 `ztime` 取时）；**长时间无写不会触发 tryAdapt**，`Flush`/`Close` 也不评估档位，静默连接可能长期保持较高档位直至下次写入或 `Close`/`Reset`。频率阈值、检查间隔、`idleTimeout` 等为**包内常量**，未通过 Option 暴露，调参需改源码或 fork；详见类型注释。
 - **BaseChannel.Send / Close（async）**：`Close` 在 `runSend` 退出前对发送队列 **StopEnqueue**，与 `Send` 的 **TryEnqueue** 配合，避免「已停写仍永久挂起在队列里」。与关闭并发时 **TryEnqueue 可能失败**，此时 `Send` 会立即对 `IMessage` 做 **Release**，**不保证消息已发出**；成功入队的消息由 `runSend` 在写出后 **Release**（每条一次）。若业务需要「必达或显式错误码」，须在协议/业务层处理。**Sync 模式**无发送队列，应使用 **ReplyImmediate**，勿用 `Send`。详见 `znet` 包内 `Send`/`Close` 注释。
 - **RingBuffer**：**单协程**使用；**Peek\*** 返回底层 **slice 视图**（零拷贝），在 **Discard / 后续读写 / Reset** 前不得长期持有该切片引用。池化归还前会 **Reset（含 clear）**。
-- **BaseServer**：`SetMetrics(IMetrics)` 服务级指标；`SetChannelMetrics(IChannelMetrics)` 单连接指标，AddChannel 时注入到实现 `IChannelMetricsSetter` 的 channel。
-- **BaseChannel**：实现 `IChannelMetricsSetter`，`SetChannelMetrics(m)` 由 AddChannel 自动调用；供 reactor 驱动时实现 `WriteToReadBuffer`、`ParseAndDispatch`、`GetChannelId`、`Close`。
+- **BaseServer**：`SetMetrics(IMetrics)` 服务级指标；`SetChannelMetrics(IChannelMetrics)` 单连接指标，AddChannel 时注入到实现 `IChannelMetricsSetter` 的 channel；**`SetSharedSendWorkerMode` / `SharedSendWorkerMode`** 切换 async 发送实现；**`BindSharedSendHook`**、`RunChannel` 在非 SyncMode 下自动选用「每连接 `runSend`」或「共享写 worker」（由开关决定）。**`SendLoopTuning`**（`GetSendLoopTuning` / `SetSendLoopTuning`）含 **`ReactorMaxQueuedMsgs`**、**`ReactorFlushBatchesPerTurn`**，用于 reactor 共享写路径的队列告警与公平性（见 `send_tuning.go`）。
+- **BaseChannel**：实现 `IChannelMetricsSetter`，`SetChannelMetrics(m)` 由 AddChannel 自动调用；供 reactor 驱动时实现 `WriteToReadBuffer`、`ParseAndDispatch`、`GetChannelId`、`Close`。**reactor 共享写**下可设置 **`SetSendQueueOverflowHook`**（超限默认打 Warn，可选 **`OverflowCloseChannel`** 断链）；生产者 API 仍以 **`Send`** 为主，共享写 dequeue/process 仅供框架内部使用。
 - **客户端**：`NewBaseClient(opts...)`、`WithAsyncMode()`；默认 sync（Request），可选 async（Read），与 ziface.ModeSync/ModeAsync 对应。
 - **直写**：`WriteImmediate`、`PreparePacketFromWire`（读协程内同步直写，sync/RPC 场景原生支持）。
 
 ### ztcp / zws / zkcp
 传输实现：`Server`、`Client`、`Channel`，`NewServer`、`NewClient(addr, opts...)`、`NewChannel`。
 - **zws**：业务读写经 **WebSocket 二进制帧**（`zws` 内部 `wsConn` 适配 `net.Conn`），与浏览器 `WebSocket` 发送的二进制负载互通；线协议仍为 `msgId+seqId+len+data`（见 `znet.BaseSocket`）。
-- **ztcp.Server**：`SetReactorMetrics(*zreactor.Metrics)` 仅在使用 `ServerReactor`（Linux）时生效，传 nil 表示不埋点。
+- **ztcp.Server**：**`ServerReactor(ctx)`** 在 **Linux / macOS** 使用 **`zreactor`** 单循环驱动读（**epoll / kqueue**），并默认 **`SetSharedSendWorkerMode(true)`**；**`SetReactorMetrics(*zreactor.Metrics)`** 在使用 **`ServerReactor`** 时生效，传 nil 表示不埋点。**其它 GOOS** 调用 **`ServerReactor`** 会 panic，请使用普通 **`Server(ctx)`**。
 - `NewClient(addr)` 默认 sync；`NewClient(addr, znet.WithAsyncMode())` 启用 async（Read），与 server WithAsyncMode 共用 ziface.ModeAsync。
 
-### zreactor（仅 Linux）
-基于 epoll 的 reactor 模式 TCP 服务循环：`Serve`、`ServeWithConfig`，listener 须为 `*net.TCPListener`。`Metrics` 为可选监控回调（OnAccept/OnClose/OnReadErr/OnReadBytes 等），由调用方实现并传入；ztcp 使用 reactor 时通过 `SetReactorMetrics(m)` 注入。包内 doc 说明优雅退出与 FD 释放；核心流程（accept/close/read error）打 zlog。单连接 `ParseAndDispatch` panic 时自动恢复并关闭该连接，不拖垮进程。
+### zreactor（Linux / macOS）
+**Linux**：epoll；**macOS（darwin）**：kqueue。TCP 服务循环：**`Serve`**、**`ServeWithConfig`**，listener 须为 **`*net.TCPListener`**。**`Metrics`** 为可选监控回调（**OnAccept** / **OnClose** / **OnReadErr** / **OnReadBytes** 等）；**ztcp** 通过 **`SetReactorMetrics(m)`** 注入。包内 **doc.go** 说明优雅退出与 FD 释放（Linux：eventfd；Darwin：pipe）；单连接 **`ParseAndDispatch`** panic 时恢复并关连接。**`!linux && !darwin`** 构建为 stub。
 
 ### zserver
 轻量服务器：`New`、`Handle`、`Run`、`Request`、`Conn`，3 步启动。
 - **Request/Conn**：`Request` 为服务端请求封装；`Reply` 在 sync 下直写、async 下入队；`ReplyImmediate` 读协程内直写（配合 `WithDirectDispatch`）。
-- **Option**：`WithDirectDispatch`、`WithDirectDispatchRef`；默认 sync；`WithAsyncMode`；`WithContext`；`WithReactorMode`（Linux + TCP）；**`WithBanner(show bool)`**（默认 true）；**`WithName(name string)`**（横幅第二行）。ASCII：**`zbrand.Banner`**。
+- **Option**：`WithDirectDispatch`、`WithDirectDispatchRef`；默认 sync；`WithAsyncMode`；`WithContext`；**`WithReactorMode`**（**Linux / macOS**、**TCP**、**无 TLS** 时走 **`ztcp.ServerReactor`**，否则忽略）；**`WithBanner(show bool)`**（默认 true）；**`WithName(name string)`**（横幅第二行）。ASCII：**`zbrand.Banner`**。
 
 ### zbrand
 - **`Banner`**：`const`；`zserver.printBanner`、示例客户端使用。
+
+### 模糊测试（可选）
+
+若干包提供 **`Fuzz*`** 用例，可对序列化、缓冲、国密、`zgmtls` 握手解析、队列语义等做 **`go test -fuzz`**。示例（任选包与用例名，详见各包 `fuzz_test.go`）：
+
+```bash
+go test ./zserialize -fuzz=FuzzMarshalJsonRoundtrip -fuzztime=30s
+go test ./zqueue -fuzz=FuzzQueueOps -fuzztime=30s
+```
 
 ---
 

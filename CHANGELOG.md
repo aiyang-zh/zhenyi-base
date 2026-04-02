@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.1.1] - 2026-04-02
+
+### Added
+
+- **zreactor**：**macOS（darwin）** 实现基于 **kqueue** 的 reactor 循环（与 Linux **epoll** 并列）；`!linux && !darwin` 构建仍为 stub。
+- **ztcp**：**`ServerReactor`** 在 **Linux / macOS** 可用；启动时 **`SetSharedSendWorkerMode(true)`**，与其它平台 stub 的 panic 文案对齐（其它 GOOS 需用普通 `Server`）。
+- **测试**：`zserialize`、`znet`、`zencrypt`、`zgmtls`、`zpool`、`zlimiter`、`zerrs`、`zqueue`、`zbatch` 增加 **`go test -fuzz`** 入口（JSON/MsgPack、`BaseSocket`/`RingBuffer`、SM2/SM3/SM4/Base64、`zgmtls` 握手消息 `unmarshal`、PEM KeyPair、分级 bytes 池、令牌桶、`zerrs` 构造与包装、`Queue`/`SPSCQueue`/`MPSCQueue`/`UnboundedSPSC`/`UnboundedMPSC`/`FastAdaptiveBatcher` 等语义）。
+- **znet**：**共享写 worker**：**`BaseServer.SetSharedSendWorkerMode` / `SharedSendWorkerMode`**、**`BindSharedSendHook`**；非 **SyncMode** 时 **`RunChannel`** 可在「每连接 `runSend`」与「共享 worker 分片 flush」间切换。**`BaseChannel`** 增加 reactor 共享写仅供内部/reactor 路径使用的 dequeue/process API、**`SetSendQueueOverflowHook`** 与 **`SendQueueOverflowAction`**（超限默认仅告警，可选断链）。**`SendLoopTuning`** 增加 **`ReactorMaxQueuedMsgs`**、**`ReactorFlushBatchesPerTurn`**（默认 8192 / 8），由 **`SetSendLoopTuning`** 合并写入。
+- **ziface**：**`IServer`** 增加 **`SetSharedSendWorkerMode` / `SharedSendWorkerMode`**，与 **`znet.BaseServer`** 对齐。
+
+### Changed
+
+- **zserver**：**`WithReactorMode`** 在 **Linux 与 macOS**、**TCP**、**无 TLS** 时走 **`ztcp.ServerReactor`**（与 **`ztcp`** 能力一致）；其它环境仍回退普通 **`Server`**。
+- **zreactor（Linux）**：accept 路径 **`TCPListener.SetDeadline`** 配合短超时 **耗尽 backlog**；连接 fd 通过 **`SyscallConn` + `Control`** 注册 **epoll**，避免 **`TCPConn.File()`** 额外 dup 句柄；**`ztcp.ServerReactor`** 使用 **`ServeWithConfig`**（如 **`MinEvents`/`BatchRead`**）替代裸 **`Serve`**。
+- **ztcp**：**`server_reactor_stub`** 构建标签为 **`!linux && !darwin`**。
+
+### Fixed
+
+- **zqueue**：**`EnqueueBatch`** 满队列语义与 **`Enqueue`** 对齐（环形缓冲预留 1 槽区分空/满），避免混用批量与单入队时 **FIFO 错序**。
+- **znet**：**`BaseClient.read`** 在 **`readCall` 回调期间**不再持有 **`connMu` 读锁**，避免与回调内可能触发的重连/清理 **死锁**；环形缓冲变量统一使用局部 **`rb`** 引用。
+
+### Documentation
+
+- **README.md**、**docs/API.md**、**docs/TUTORIAL.md**、**CONTRIBUTING.md**：同步 **reactor**（Linux epoll / macOS kqueue、**`ztcp.ServerReactor`** 与 **`zserver.WithReactorMode`**）、**共享写 worker** 与 **`go test -fuzz`** 使用说明。
+
 ## [1.1.0] - 2026-03-28
 
 ### 升级风险说明
@@ -65,7 +90,6 @@
 
 ### Removed
 - **zserialize**：删除 `json_generic.go`（由统一的 `json_std.go` 覆盖默认实现）。
-
 ## [1.0.5] - 2026-03-22
 
 ### 升级风险说明

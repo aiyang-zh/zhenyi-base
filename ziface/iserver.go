@@ -54,4 +54,11 @@ type IServer interface {
 
 	// SyncMode 是否同步模式（无发送队列，handler 用 ReplyImmediate 直写）。
 	SyncMode() bool
+
+	// SetSharedSendWorkerMode 设置是否启用共享写 worker 模式（默认 false）。
+	// 启用后（且非 SyncMode）发送路径改为共享 worker flush，而非每连接 runSend goroutine。
+	SetSharedSendWorkerMode(enabled bool)
+
+	// SharedSendWorkerMode 返回当前共享写 worker 开关状态。
+	SharedSendWorkerMode() bool
 }
