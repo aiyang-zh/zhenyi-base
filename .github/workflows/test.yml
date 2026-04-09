@@ -55,9 +55,15 @@ jobs:
           go-version: '1.24'
 
       - name: Run fuzz tests
-        uses: form3tech-oss/go-ci-fuzz/ci/github-actions/fuzz@v0.1.3
+        env:
+          FUZZTIME: 5s
+        run: bash ./scripts/run_fuzz_all.sh
+
+      - name: Upload failing inputs
+        if: failure()
+        uses: actions/upload-artifact@v6
         with:
-          source-path: "."
-          fuzz-time: 3m
-          fail-fast: "false"
-          artifact-name: zhenyi-base-failing-inputs
+          name: zhenyi-base-failing-inputs
+          path: |
+            **/testdata/fuzz/**
+          if-no-files-found: ignore
