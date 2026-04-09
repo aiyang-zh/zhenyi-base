@@ -42,3 +42,22 @@ jobs:
         with:
           name: test-results-${{ github.sha }}
           path: test_results/
+
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.24'
+
+      - name: Run fuzz tests
+        uses: form3tech-oss/go-ci-fuzz/ci/github-actions/fuzz@v0.1.3
+        with:
+          source-path: "."
+          fuzz-time: 3m
+          fail-fast: "false"
+          artifact-name: zhenyi-base-failing-inputs

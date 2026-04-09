@@ -17,7 +17,12 @@ func FuzzErrsConstructors(f *testing.F) {
 		types := []ErrorType{
 			ErrTypeInternal, ErrTypeTimeout, ErrTypeValidation, ErrTypeNetwork,
 		}
-		typ := types[int(code)%len(types)]
+		// Normalize signed fuzz input to a non-negative index.
+		idx := int(code % int32(len(types)))
+		if idx < 0 {
+			idx = -idx
+		}
+		typ := types[idx]
 
 		_ = New(typ, msg)
 		_ = Newf(typ, "f %d %s", code, msg)
