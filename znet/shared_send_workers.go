@@ -62,6 +62,7 @@ func (sh *sharedSendShard) loop(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
+			sh.drainShardQueue(batch)
 			return
 		case <-sh.wakeup:
 			for {
@@ -72,6 +73,16 @@ func (sh *sharedSendShard) loop(ctx context.Context) {
 				sh.flushChannel(batch, ch)
 			}
 		}
+	}
+}
+
+func (sh *sharedSendShard) drainShardQueue(batch []ziface.IMessage) {
+	for {
+		ch, ok := sh.q.Dequeue()
+		if !ok || ch == nil {
+			break
+		}
+		sh.flushChannel(batch, ch)
 	}
 }
 
