@@ -1,6 +1,7 @@
 package zencrypt
 
 import (
+	"runtime"
 	"sync"
 )
 
@@ -11,37 +12,7 @@ func (a *AesGcmEncrypt) BatchEncrypt(plaintexts [][]byte) ([][]byte, error) {
 	if count == 0 {
 		return nil, nil
 	}
-
-	// 结果缓冲
-	results := make([][]byte, count)
-	errors := make([]error, count)
-
-	// 使用 WaitGroup 等待所有任务完成
-	var wg sync.WaitGroup
-	wg.Add(count)
-
-	// 并行加密（每个 goroutine 处理一个消息）
-	for i := 0; i < count; i++ {
-		i := i // 捕获循环变量
-		go func() {
-			defer wg.Done()
-			encrypted, err := a.Encrypt(plaintexts[i])
-			results[i] = encrypted
-			errors[i] = err
-		}()
-	}
-
-	wg.Wait()
-
-	// 检查是否有错误
-	for i, err := range errors {
-		if err != nil {
-			return nil, err
-		}
-		_ = i
-	}
-
-	return results, nil
+	return a.BatchEncryptPooled(plaintexts, defaultBatchWorkerSize(count))
 }
 
 // BatchDecrypt 批量并行解密
@@ -50,32 +21,7 @@ func (a *AesGcmEncrypt) BatchDecrypt(ciphertexts [][]byte) ([][]byte, error) {
 	if count == 0 {
 		return nil, nil
 	}
-
-	results := make([][]byte, count)
-	errors := make([]error, count)
-
-	var wg sync.WaitGroup
-	wg.Add(count)
-
-	for i := 0; i < count; i++ {
-		i := i
-		go func() {
-			defer wg.Done()
-			decrypted, err := a.Decrypt(ciphertexts[i])
-			results[i] = decrypted
-			errors[i] = err
-		}()
-	}
-
-	wg.Wait()
-
-	for _, err := range errors {
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return results, nil
+	return a.batchDecryptPooled(ciphertexts, defaultBatchWorkerSize(count))
 }
 
 // BatchEncryptPooled 使用 goroutine 池的批量加密（更高效）
@@ -88,7 +34,7 @@ func (a *AesGcmEncrypt) BatchEncryptPooled(plaintexts [][]byte, poolSize int) ([
 
 	// 限制并发数量，避免创建过多 goroutine
 	if poolSize <= 0 {
-		poolSize = 8 // 默认 8 个 worker
+		poolSize = defaultBatchWorkerSize(count)
 	}
 
 	results := make([][]byte, count)
@@ -124,6 +70,60 @@ func (a *AesGcmEncrypt) BatchEncryptPooled(plaintexts [][]byte, poolSize int) ([
 		}
 	}
 
+	return results, nil
+}
+
+func defaultBatchWorkerSize(count int) int {
+	if count <= 0 {
+		return 1
+	}
+	// Keep bounded concurrency by default; avoid one-goroutine-per-message spikes.
+	size := runtime.GOMAXPROCS(0) * 2
+	if size < 1 {
+		size = 1
+	}
+	if size > count {
+		size = count
+	}
+	return size
+}
+
+func (a *AesGcmEncrypt) batchDecryptPooled(ciphertexts [][]byte, poolSize int) ([][]byte, error) {
+	count := len(ciphertexts)
+	if count == 0 {
+		return nil, nil
+	}
+	if poolSize <= 0 {
+		poolSize = defaultBatchWorkerSize(count)
+	}
+	results := make([][]byte, count)
+	errors := make([]error, count)
+
+	taskChan := make(chan int, count)
+	for i := 0; i < count; i++ {
+		taskChan <- i
+	}
+	close(taskChan)
+
+	var wg sync.WaitGroup
+	wg.Add(poolSize)
+	for w := 0; w < poolSize; w++ {
+		go func() {
+			defer wg.Done()
+			for idx := range taskChan {
+				decrypted, err := a.Decrypt(ciphertexts[idx])
+				results[idx] = decrypted
+				errors[idx] = err
+			}
+		}()
+	}
+	wg.Wait()
+
+	for _, err := range errors {
+		if err != nil {
+			return nil, err
+		}
+	}
 	return results, nil
 }
 

@@ -18,6 +18,8 @@ type Server struct {
 	*znet.BaseServer
 	upgrader websocket.Upgrader
 	sl       atomic.Pointer[http.Server] // 无锁：start 时 Store，Close 时 Swap(nil) 后 Shutdown
+	// allowedOrigins: optional allowlist for CheckOrigin. Empty means allow all (backward compatible default).
+	allowedOrigins map[string]struct{}
 }
 
 // NewServer 创建 WebSocket 服务端；addr 为监听地址，handlers 必须提供 OnAccept 与 OnRead。
@@ -25,12 +27,43 @@ func NewServer(addr string, handlers znet.ServerHandlers) *Server {
 	return &Server{BaseServer: znet.NewBaseServer(addr, handlers)}
 }
 
+// SetAllowedOrigins configures an Origin allowlist for WebSocket upgrades.
+// Empty list keeps backward-compatible behavior (allow all).
+func (ser *Server) SetAllowedOrigins(origins ...string) {
+	if ser == nil {
+		return
+	}
+	if len(origins) == 0 {
+		ser.allowedOrigins = nil
+		return
+	}
+	m := make(map[string]struct{}, len(origins))
+	for _, o := range origins {
+		if o == "" {
+			continue
+		}
+		m[o] = struct{}{}
+	}
+	ser.allowedOrigins = m
+}
+
 // CheckOrigin 用于 Upgrader，默认允许任意 Origin。
 //
 // 生产环境建议按需覆盖并校验 Origin，避免 CSWS（跨站 WebSocket）风险。
 // 可按需覆盖。
 func (ser *Server) CheckOrigin(r *http.Request) bool {
-	return true
+	if ser == nil || len(ser.allowedOrigins) == 0 {
+		return true
+	}
+	if r == nil {
+		return false
+	}
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return false
+	}
+	_, ok := ser.allowedOrigins[origin]
+	return ok
 }
 
 // start 启动 HTTP 服务并在 "/" 上处理 WebSocket 升级与连接。
@@ -46,8 +79,9 @@ func (ser *Server) start(ctx context.Context) {
 		ser.handler(ctx, w, r)
 	})
 	sl := &http.Server{
-		Addr:    ser.GetAddr(),
-		Handler: s,
+		Addr:              ser.GetAddr(),
+		Handler:           s,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 	ser.sl.Store(sl)
 

@@ -7,10 +7,20 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type wsMessageConn interface {
+	ReadMessage() (messageType int, p []byte, err error)
+	WriteMessage(messageType int, data []byte) error
+	Close() error
+	LocalAddr() net.Addr
+	RemoteAddr() net.Addr
+	SetReadDeadline(t time.Time) error
+	SetWriteDeadline(t time.Time) error
+}
+
 // wsConn 将 *websocket.Conn 适配为 net.Conn：Read/Write 走二进制 WebSocket 帧，
 // 与浏览器及标准 WebSocket 对端互通。勿再使用 conn.NetConn() 做裸 TCP 读写（会破坏帧同步）。
 type wsConn struct {
-	c       *websocket.Conn
+	c       wsMessageConn
 	readBuf []byte
 }
 
@@ -39,7 +49,7 @@ func (w *wsConn) Read(p []byte) (int, error) {
 			}
 			n := copy(p, data)
 			if n < len(data) {
-				w.readBuf = data[n:]
+				w.readBuf = append([]byte(nil), data[n:]...)
 			}
 			return n, nil
 		default:

@@ -206,7 +206,7 @@ func (b *BaseClient) Request(msg ziface.IMessage) (ziface.IWireMessage, error) {
 	dataLen := binary.BigEndian.Uint32(hdr[8:12])
 	var body []byte
 	if dataLen > 0 {
-		if dataLen > 1024*1024 {
+		if dataLen > uint32(DefaultMaxDataLength) {
 			return nil, ErrBufferFull
 		}
 		body = make([]byte, dataLen)

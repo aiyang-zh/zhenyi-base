@@ -3,6 +3,7 @@ package zencrypt
 import (
 	"bytes"
 	"fmt"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -323,4 +324,32 @@ func BenchmarkBatchEncrypt_DifferentSizes(b *testing.B) {
 			}
 		})
 	}
+}
+
+func TestDefaultBatchWorkerSize(t *testing.T) {
+	if got := defaultBatchWorkerSize(0); got != 1 {
+		t.Fatalf("count=0: expected 1, got %d", got)
+	}
+	if got := defaultBatchWorkerSize(1); got != 1 {
+		t.Fatalf("count=1: expected 1, got %d", got)
+	}
+
+	limit := runtime.GOMAXPROCS(0) * 2
+	if limit < 1 {
+		limit = 1
+	}
+
+	if got := defaultBatchWorkerSize(limit * 10); got != limit {
+		t.Fatalf("large count: expected %d, got %d", limit, got)
+	}
+	if got := defaultBatchWorkerSize(3); got != minInt(3, limit) {
+		t.Fatalf("small count: expected %d, got %d", minInt(3, limit), got)
+	}
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

@@ -501,15 +501,17 @@ func (b *block) readFromUntil(r io.Reader, n int) error {
 		m, err := r.Read(b.data[len(b.data):cap(b.data)])
 		b.data = b.data[0 : len(b.data)+m]
 		if len(b.data) >= n {
-			// TODO(bradfitz,agl): slightly suspicious
-			// that we're throwing away r.Read's err here.
-			break
+			// If we already have enough data, treat EOF as success (caller will observe EOF later),
+			// but keep non-EOF errors to avoid masking underlying issues.
+			if err != nil && err != io.EOF {
+				return err
+			}
+			return nil
 		}
 		if err != nil {
 			return err
 		}
 	}
-	return nil
 }
 
 func (b *block) Read(p []byte) (n int, err error) {
@@ -1301,7 +1303,6 @@ func (c *Conn) Handshake() error {
 		// If an error occurred during the hadshake try to flush the
 		// alert that might be left in the buffer.
 		c.flush()
-		fmt.Println("handshake error :", c.handshakeErr)
 	}
 
 	if c.handshakeErr == nil && !c.handshakeComplete() {

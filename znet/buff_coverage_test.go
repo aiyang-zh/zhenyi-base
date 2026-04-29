@@ -686,6 +686,35 @@ func TestBaseClient_Request_WithAsyncMode_ReturnsError(t *testing.T) {
 	}
 }
 
+func TestBaseClient_Request_UsesDefaultMaxDataLength(t *testing.T) {
+	clientConn, serverConn := net.Pipe()
+	defer serverConn.Close()
+	client := NewBaseClient()
+	client.SetConn(clientConn)
+	defer client.Close()
+
+	go func() {
+		// Drain one client request packet first (header 12B + body 1B),
+		// otherwise both ends may block on net.Pipe writes.
+		reqBuf := make([]byte, 13)
+		_, _ = io.ReadFull(serverConn, reqBuf)
+
+		// msgId=1, seqId=1, dataLen=DefaultMaxDataLength+1
+		header := []byte{
+			0x00, 0x00, 0x00, 0x01,
+			0x00, 0x00, 0x00, 0x01,
+			0x00, 0x10, 0x00, 0x01,
+		}
+		_, _ = serverConn.Write(header)
+		_ = serverConn.Close()
+	}()
+
+	_, err := client.Request(&NetMessage{MsgId: 1, Data: []byte("x")})
+	if !errors.Is(err, ErrBufferFull) {
+		t.Fatalf("expected ErrBufferFull when dataLen > DefaultMaxDataLength, got %v", err)
+	}
+}
+
 func TestBaseClient_Read_BufferFull_SinglePacketTooBig(t *testing.T) {
 	client := NewBaseClient()
 	serverConn, clientConn := net.Pipe()

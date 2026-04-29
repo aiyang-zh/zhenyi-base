@@ -44,7 +44,8 @@ func WithBanner(show bool) Option {
 
 // WithDirectDispatch 直连模式：handler 在读 goroutine 内直接执行，
 // 不经过 worker pool。适用于 handler 极轻量且无阻塞的场景（如 Echo）。
-// 默认会 copy req.Data，保证 handler 内可异步持有；可选 WithDirectDispatchRef 不 copy 以提升性能。
+// 默认会 copy 到 Request 内部缓冲以降低帧复用风险；但 req.Data() 仍仅在当前 handler 同步阶段有效。
+// 如需异步持有请使用 req.DataCopy()；可选 WithDirectDispatchRef 不 copy 以进一步提升性能。
 func WithDirectDispatch() Option {
 	return func(s *Server) { s.directDispatch = true }
 }

@@ -416,7 +416,6 @@ func (hs *serverHandshakeStateGM) doFullHandshake() error {
 
 	msg, err := c.readHandshake()
 	if err != nil {
-		fmt.Println("readHandshake error:", err)
 		return err
 	}
 
@@ -538,9 +537,8 @@ func (hs *serverHandshakeStateGM) establishKeys() error {
 func (hs *serverHandshakeStateGM) readFinished(out []byte) error {
 	c := hs.c
 
-	c.readRecord(recordTypeChangeCipherSpec)
-	if c.in.err != nil {
-		return c.in.err
+	if err := c.readRecord(recordTypeChangeCipherSpec); err != nil {
+		return err
 	}
 
 	if hs.hello.nextProtoNeg {

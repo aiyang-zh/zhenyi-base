@@ -13,7 +13,8 @@ type Grace struct {
 	ch chan os.Signal
 	fs []func(context.Context)
 	// ctx 为执行关闭回调时传入的上下文；未设置时在 Wait 中使用 context.Background。
-	ctx context.Context
+	ctx        context.Context
+	notifyOnce sync.Once
 }
 
 func New() *Grace {
@@ -31,11 +32,19 @@ func (g *Grace) SetContext(ctx context.Context) {
 	g.mu.Unlock()
 }
 
+// EnableSignalNotify enables process signal forwarding into Grace channel once.
+// EnableSignalNotify 启用进程信号到 Grace 通道的转发（幂等，只注册一次）。
+func (g *Grace) EnableSignalNotify() {
+	g.notifyOnce.Do(func() {
+		signal.Notify(g.ch, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+	})
+}
+
 // Wait 阻塞直到收到退出信号，然后按注册顺序执行关闭函数。
 // 每个回调接收 SetContext 设置的上下文（若未设置则为 Background）。
 // 单个回调若 panic，会被捕获，后续回调仍会继续执行。
 func (g *Grace) Wait() {
-	signal.Notify(g.ch, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+	g.EnableSignalNotify()
 	<-g.ch
 	g.mu.RLock()
 	runFs := make([]func(context.Context), len(g.fs))
@@ -55,7 +64,11 @@ func (g *Grace) Wait() {
 
 // Stop 主动触发退出信号（用于测试或内部调用）
 func (g *Grace) Stop() {
-	g.ch <- &customSignal{}
+	select {
+	case g.ch <- &customSignal{}:
+	default:
+		// already stopped / signal pending
+	}
 }
 
 // Register 注册关闭时执行的函数，参数为本次停机使用的 context。

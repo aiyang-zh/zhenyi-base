@@ -27,6 +27,14 @@ func (r *Request) SeqId() uint32 { return r.seqId }
 // 如需异步使用，请自行拷贝：copy(dst, req.Data())
 func (r *Request) Data() []byte { return r.data }
 
+// DataCopy 返回请求 payload 的独立拷贝，适用于异步持有/跨 goroutine 使用场景。
+func (r *Request) DataCopy() []byte {
+	if len(r.data) == 0 {
+		return nil
+	}
+	return append([]byte(nil), r.data...)
+}
+
 // Conn 返回本次请求所在的连接封装。
 func (r *Request) Conn() *Conn { return r.conn }
 

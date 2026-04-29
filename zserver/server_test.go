@@ -72,6 +72,18 @@ func TestRequest_Fields(t *testing.T) {
 	}
 }
 
+func TestRequest_DataCopy_Independent(t *testing.T) {
+	req := &Request{data: []byte("hello")}
+	cp := req.DataCopy()
+	if string(cp) != "hello" {
+		t.Fatalf("DataCopy: got %q", string(cp))
+	}
+	req.data[0] = 'X'
+	if string(cp) != "hello" {
+		t.Fatalf("DataCopy should be independent, got %q", string(cp))
+	}
+}
+
 func TestEchoRequestMode(t *testing.T) {
 	s := New(WithAddr("127.0.0.1:0"))
 

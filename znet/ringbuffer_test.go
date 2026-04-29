@@ -180,6 +180,15 @@ func TestRingBuffer_PeekHeader12_WrapAround(t *testing.T) {
 	}
 }
 
+func TestRingBuffer_PeekHeader12Checked_InsufficientData(t *testing.T) {
+	rb := NewRingBuffer(RingBufferConfig{Size: 16})
+	rb.Write([]byte{0x00, 0x01, 0x02, 0x03, 0x04})
+	_, _, _, err := rb.PeekHeader12Checked(0)
+	if err != ErrInsufficientData {
+		t.Fatalf("expected ErrInsufficientData, got %v", err)
+	}
+}
+
 func TestRingBuffer_WriteFromReader(t *testing.T) {
 	rb := NewRingBuffer(RingBufferConfig{Size: 64})
 
@@ -195,6 +204,98 @@ func TestRingBuffer_WriteFromReader(t *testing.T) {
 	peeked, _ := rb.Peek(11)
 	if string(peeked) != "hello world" {
 		t.Errorf("expected 'hello world', got '%s'", string(peeked))
+	}
+}
+
+type shortReader struct {
+	b []byte
+	// maxPerRead controls maximum bytes returned per Read, even if buf is larger.
+	maxPerRead int
+}
+
+func (r *shortReader) Read(p []byte) (int, error) {
+	if len(r.b) == 0 {
+		return 0, io.EOF
+	}
+	n := len(p)
+	if r.maxPerRead > 0 && n > r.maxPerRead {
+		n = r.maxPerRead
+	}
+	if n > len(r.b) {
+		n = len(r.b)
+	}
+	copy(p, r.b[:n])
+	r.b = r.b[n:]
+	// Return short read with err=nil to simulate non-blocking/fragmented readers.
+	return n, nil
+}
+
+func TestRingBuffer_WriteFromReader_WrapAroundShortReads(t *testing.T) {
+	rb := NewRingBuffer(RingBufferConfig{Size: 16, MaxSize: 16})
+	// Move write position near end so that next WriteFromReader crosses boundary.
+	_, _ = rb.Write([]byte("0123456789")) // write=10
+	_ = rb.Discard(8)                     // read=8, len=2, free=14, writePos=10
+
+	r := &shortReader{b: []byte("ABCDEFGHIJ"), maxPerRead: 2}
+	total := 0
+	for {
+		n, err := rb.WriteFromReader(r, 0)
+		total += n
+		if err != nil && err != io.EOF {
+			t.Fatalf("WriteFromReader failed: %v", err)
+		}
+		if err == io.EOF || total == 10 {
+			break
+		}
+		if n == 0 {
+			t.Fatalf("unexpected short progress: n=0 err=nil total=%d", total)
+		}
+	}
+	if total != 10 {
+		t.Fatalf("expected to write 10 bytes, got %d (len=%d free=%d)", total, rb.Len(), rb.Free())
+	}
+	// Expect existing "89" + appended "ABCDEFGHIJ"
+	first, second := rb.PeekAll()
+	got := append(append([]byte(nil), first...), second...)
+	if string(got) != "89ABCDEFGHIJ" {
+		t.Fatalf("unexpected data: %q", string(got))
+	}
+}
+
+type eofAfterDataReader struct {
+	b []byte
+}
+
+func (r *eofAfterDataReader) Read(p []byte) (int, error) {
+	if len(r.b) == 0 {
+		return 0, io.EOF
+	}
+	n := len(p)
+	if n > len(r.b) {
+		n = len(r.b)
+	}
+	copy(p, r.b[:n])
+	r.b = r.b[n:]
+	// Return EOF together with data in the same call.
+	return n, io.EOF
+}
+
+func TestRingBuffer_WriteFromReader_DataWithEOF_ReturnsNilErr(t *testing.T) {
+	rb := NewRingBuffer(RingBufferConfig{Size: 16, MaxSize: 16})
+	r := &eofAfterDataReader{b: []byte("hello")}
+	n, err := rb.WriteFromReader(r, 0)
+	if err != nil {
+		t.Fatalf("expected err=nil when n>0 and underlying reader returns EOF, got %v", err)
+	}
+	if n != 5 {
+		t.Fatalf("expected n=5, got %d", n)
+	}
+	got, gerr := rb.Peek(5)
+	if gerr != nil {
+		t.Fatalf("Peek: %v", gerr)
+	}
+	if string(got) != "hello" {
+		t.Fatalf("unexpected data: %q", string(got))
 	}
 }
 

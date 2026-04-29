@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.2] - 2026-04-29
+
+### Fixed
+
+- **zcoll**：修复 `ShardMap.Range` 在回调内触发 `Load` 过期清理时的潜在死锁（改为锁内快照、锁外回调），并补充回归测试。
+- **znet**：修复 `RingBuffer.WriteFromReader` 跨边界短读与“读到数据同时 EOF”语义，避免消息漏解析；新增对应回归测试。`BaseClient.Request` 的 body 长度上限校验改为复用 `DefaultMaxDataLength` 常量，去除硬编码偏差。
+- **zws**：`wsConn` 读取帧尾时改为深拷贝，避免底层缓冲复用导致脏读；补充可复现回归测试。`wserver` 增加 `ReadHeaderTimeout` 与 Origin allowlist 测试覆盖。
+- **zgmtls**：移除握手路径的 stdout 打印；修正 `readFromUntil`/`readFinished` 错误处理，避免吞错与隐式状态依赖。
+- **zgrace**：`Stop()` 改为非阻塞发送，避免通道已满时阻塞；新增回归测试。
+- **zencrypt**：`BatchEncrypt/BatchDecrypt` 默认改为有上限并发（受 `defaultBatchWorkerSize` 控制），避免按消息数无上限起 goroutine；统一 pooled 路径默认 worker 语义。
+- **zserver**：新增 `Request.DataCopy()`，明确 `Data()` 生命周期语义，降低 `directDispatchRef` 误用风险。
+
 ## [1.1.1] - 2026-04-02
 
 ### Added

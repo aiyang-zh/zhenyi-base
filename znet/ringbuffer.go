@@ -399,10 +399,12 @@ func (rb *RingBuffer) WriteFromReader(r io.Reader, maxRead int) (n int, err erro
 	} else {
 		// 跨越边界，先读第一段
 		firstPart := int(rb.size - writePos)
-		n, err = r.Read(rb.buf[writePos:rb.size])
+		var n1 int
+		n1, err = r.Read(rb.buf[writePos:rb.size])
+		n += n1
 
-		// 如果第一段读满了且还有空间，继续读第二段
-		if n == firstPart && err == nil {
+		// 如果第一段读满了且还有空间，继续读第二段（一次尝试，避免阻塞填满导致热路径抖动）。
+		if n1 == firstPart && free > firstPart && err == nil {
 			var n2 int
 			n2, err = r.Read(rb.buf[:free-firstPart])
 			n += n2
@@ -414,6 +416,11 @@ func (rb *RingBuffer) WriteFromReader(r io.Reader, maxRead int) (n int, err erro
 		atomic.AddUint64(&rb.totalWrite, uint64(n))
 	}
 
+	// If we read some bytes and hit EOF in the same call, surface bytes first.
+	// Caller will see EOF on next read attempt.
+	if n > 0 && err == io.EOF {
+		err = nil
+	}
 	return n, err
 }
 
@@ -574,6 +581,16 @@ func (rb *RingBuffer) PeekHeader12(offset int) (a, b, c uint32) {
 		}
 	}
 	return
+}
+
+// PeekHeader12Checked 安全读取 12 字节协议头；数据不足时返回 ErrInsufficientData。
+// 性能敏感路径可继续使用 PeekHeader12（需调用方先做长度检查）。
+func (rb *RingBuffer) PeekHeader12Checked(offset int) (a, b, c uint32, err error) {
+	if rb.Len() < offset+12 {
+		return 0, 0, 0, ErrInsufficientData
+	}
+	a, b, c = rb.PeekHeader12(offset)
+	return a, b, c, nil
 }
 
 // PeekBytes 零拷贝查看指定偏移和长度的数据

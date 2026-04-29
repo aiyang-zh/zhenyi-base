@@ -677,3 +677,26 @@ func BenchmarkGetShard_Direct_Parallel(b *testing.B) {
 		}
 	})
 }
+
+// 回归：Range 回调中触发 Load(过期键) 不应死锁。
+func TestShardMap_RangeCallbackLoadNoDeadlock(t *testing.T) {
+	m := NewMap[string, int](1) // 单分片，确保同一把锁路径
+	m.Store("live", 1)
+	m.SetExpire("exp", 2, 5*time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
+
+	done := make(chan struct{})
+	go func() {
+		m.Range(func(key string, value int) bool {
+			_, _ = m.Load("exp")
+			return true
+		})
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("Range callback deadlocked when calling Load on expired key")
+	}
+}

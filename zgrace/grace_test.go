@@ -143,6 +143,25 @@ func TestGrace_StopTriggersClose(t *testing.T) {
 	}
 }
 
+func TestGrace_Stop_NonBlockingWhenBufferFull(t *testing.T) {
+	m := New()
+
+	// Fill the signal buffer.
+	m.Stop()
+
+	done := make(chan struct{})
+	go func() {
+		m.Stop() // must not block even if nobody is consuming g.ch
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("Stop blocked when channel buffer was full")
+	}
+}
+
 func TestGrace_ExecutionOrder(t *testing.T) {
 	m := New()
 	var order []int

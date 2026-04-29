@@ -240,15 +240,22 @@ func (m *Map[K, V]) Range(f func(key K, value V) bool) {
 }
 func (m *Map[K, V]) rangeShard(shardIdx int, f func(key K, value V) bool) bool {
 	m.locks[shardIdx].RLock()
-	// 注意：Range 期间持有读锁，不能 delete，不能 modify
-	// 如果 callback f 执行时间过长，会阻塞这个分片的写操作
-	defer m.locks[shardIdx].RUnlock()
-
+	// Snapshot current visible entries under read lock, then release lock before callback.
+	// This avoids callback-induced lock upgrade deadlock (e.g. callback->Load->delExpire->Lock).
+	type kv struct {
+		key K
+		val V
+	}
+	items := make([]kv, 0, len(m.shards[shardIdx]))
 	for k, v := range m.shards[shardIdx] {
 		if v.IsExpire() {
 			continue
 		}
-		if !f(k, v.value) {
+		items = append(items, kv{key: k, val: v.value})
+	}
+	m.locks[shardIdx].RUnlock()
+	for i := range items {
+		if !f(items[i].key, items[i].val) {
 			return false
 		}
 	}
