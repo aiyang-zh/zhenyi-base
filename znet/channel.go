@@ -187,7 +187,7 @@ func (c *BaseChannel) read() bool {
 	if err != nil {
 		if err == ErrBufferFull {
 			// 尝试扩容，避免连接卡死（RingBuffer 支持 Grow 且有 MaxSize 限制，调用安全）
-			if c.readBuffer.Grow(65536) {
+			if c.readBuffer.Grow(readRingGrowStepBytes) {
 				var n2 int
 				n2, err = c.readBuffer.WriteFromReader(c.conn, 0)
 				if n2 > 0 {
@@ -254,11 +254,14 @@ func (c *BaseChannel) read() bool {
 		}
 		if !parsed {
 			if c.readBuffer.IsFull() {
-				zlog.Error("Single packet exceeds buffer capacity, disconnecting",
-					zap.Uint64("channelId", c.channelId),
-					zap.Int("bufferCap", c.readBuffer.Cap()),
-					zap.Int("bufferLen", c.readBuffer.Len()))
-				return true
+				if !c.readBuffer.Grow(readRingGrowStepBytes) {
+					zlog.Error("Single packet exceeds buffer capacity, disconnecting",
+						zap.Uint64("channelId", c.channelId),
+						zap.Int("bufferCap", c.readBuffer.Cap()),
+						zap.Int("bufferLen", c.readBuffer.Len()))
+					return true
+				}
+				break
 			}
 			break
 		}
@@ -295,11 +298,14 @@ func (c *BaseChannel) ParseAndDispatch() bool {
 		}
 		if !parsed {
 			if c.readBuffer.IsFull() {
-				zlog.Error("Single packet exceeds buffer capacity, disconnecting",
-					zap.Uint64("channelId", c.channelId),
-					zap.Int("bufferCap", c.readBuffer.Cap()),
-					zap.Int("bufferLen", c.readBuffer.Len()))
-				return true
+				if !c.readBuffer.Grow(readRingGrowStepBytes) {
+					zlog.Error("Single packet exceeds buffer capacity, disconnecting",
+						zap.Uint64("channelId", c.channelId),
+						zap.Int("bufferCap", c.readBuffer.Cap()),
+						zap.Int("bufferLen", c.readBuffer.Len()))
+					return true
+				}
+				continue
 			}
 			return false
 		}

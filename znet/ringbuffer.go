@@ -55,6 +55,10 @@ var (
 // 池用于每连接复用，取小以控制内存；直接 NewRingBuffer 默认 64KB 适合单缓冲场景。
 const defaultRingBufferSize = 4 * 1024 // 4KB
 
+// readRingGrowStepBytes 读路径扩容步长：WriteFromReader 遇 ErrBufferFull、或解析阶段「环已满但整帧未收齐」时
+// 传入 Grow 的增量需求；RingBuffer.Grow 会按 Len+步长向上取 2 的幂直至满足。与 ztcp 默认 SO_RCVBUF/SO_SNDBUF 量级一致。
+const readRingGrowStepBytes = 64 * 1024
+
 var ringBufferPool = zpool.NewPool(func() *RingBuffer {
 	return NewRingBuffer(RingBufferConfig{Size: defaultRingBufferSize})
 })

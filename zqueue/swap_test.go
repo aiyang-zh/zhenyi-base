@@ -258,11 +258,13 @@ func TestSmartDoubleQueue_MaxCap(t *testing.T) {
 		t.Errorf("Expected ErrQueueFull, got %v", ok)
 	}
 
-	// Pop 之后应该能继续写
-	q.Pop()
+	// Pop 之后须 ReleaseBatch 才能继续写入
+	batch, _ := q.Pop()
+	q.ReleaseBatch()
 	if ok := q.Enqueue(7); !ok {
 		t.Errorf("Enqueue failed after Pop: %v", ok)
 	}
+	_ = batch
 }
 
 func TestSmartDoubleQueue_Concurrency(t *testing.T) {
@@ -397,8 +399,9 @@ func TestSmartDoubleQueue_Len(t *testing.T) {
 	}
 
 	q.Pop()
+	q.ReleaseBatch()
 	if q.Len() != 0 {
-		t.Errorf("after pop, len should be 0, got %d", q.Len())
+		t.Errorf("after pop and release, len should be 0, got %d", q.Len())
 	}
 }
 
@@ -489,6 +492,98 @@ func TestMPSCQueue_MinCapacity(t *testing.T) {
 	if q2.Cap() != 4 {
 		t.Errorf("expected cap 4, got %d", q2.Cap())
 	}
+}
+
+func TestSmartDoubleQueue_PopReturnedSliceStableOnSecondPop(t *testing.T) {
+	q := NewSmartDoubleQueue[int](64, 0, false)
+	if !q.Enqueue(1, 2, 3) {
+		t.Fatal("enqueue failed")
+	}
+	batch, ok := q.Pop()
+	if !ok || len(batch) != 3 {
+		t.Fatalf("first pop: ok=%v len=%d", ok, len(batch))
+	}
+	if _, ok := q.Pop(); !ok {
+		t.Fatal("second pop should return ok=true with empty write")
+	}
+	if batch[0] != 1 || batch[1] != 2 || batch[2] != 3 {
+		t.Fatalf("returned batch corrupted after second pop: %v", batch)
+	}
+}
+
+func TestSmartDoubleQueue_MaxCapHardLimit(t *testing.T) {
+	const maxCap = 5
+	q := NewSmartDoubleQueue[int](64, maxCap, false)
+	for i := 0; i < maxCap; i++ {
+		if !q.Enqueue(i) {
+			t.Fatalf("enqueue %d failed", i)
+		}
+	}
+	batch, ok := q.Pop()
+	if !ok || len(batch) != maxCap {
+		t.Fatalf("pop: ok=%v len=%d", ok, len(batch))
+	}
+	if q.Enqueue(99) {
+		t.Fatal("enqueue should fail while batch is not released")
+	}
+	q.ReleaseBatch()
+	for i := 0; i < maxCap; i++ {
+		if !q.Enqueue(i + 100) {
+			t.Fatalf("enqueue after release failed at %d", i)
+		}
+	}
+	if q.Enqueue(999) {
+		t.Fatal("enqueue should fail when at maxCap")
+	}
+}
+
+func TestSmartDoubleQueue_MaxCapAfterPopRefill(t *testing.T) {
+	const maxCap = 5
+	q := NewSmartDoubleQueue[int](64, maxCap, false)
+	for i := 0; i < maxCap; i++ {
+		if !q.Enqueue(i) {
+			t.Fatalf("enqueue %d failed", i)
+		}
+	}
+	batch, ok := q.Pop()
+	if !ok || len(batch) != maxCap {
+		t.Fatalf("pop: ok=%v len=%d", ok, len(batch))
+	}
+	if q.Enqueue(999) {
+		t.Fatal("enqueue should fail before ReleaseBatch")
+	}
+	q.ReleaseBatch()
+	for i := 0; i < maxCap; i++ {
+		if !q.Enqueue(i + 100) {
+			t.Fatalf("enqueue after pop failed at %d", i)
+		}
+	}
+	if q.Enqueue(999) {
+		t.Fatal("enqueue should fail when write buffer is at maxCap")
+	}
+}
+
+func TestSmartDoubleQueue_CloseEnqueueNoPanic(t *testing.T) {
+	q := NewSmartDoubleQueue[int](64, 0, true)
+	const workers = 32
+	var wg sync.WaitGroup
+	wg.Add(workers + 1)
+	for i := 0; i < workers; i++ {
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 2000; j++ {
+				_ = q.Enqueue(j)
+			}
+		}()
+	}
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 200; i++ {
+			q.Close()
+			runtime.Gosched()
+		}
+	}()
+	wg.Wait()
 }
 
 func TestSmartDoubleQueue_MinInitCap(t *testing.T) {

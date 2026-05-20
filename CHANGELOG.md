@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.3] - 2026-05-20
+
+### Fixed
+
+- **znet**：读路径在环已满但单帧未收齐时按 `readRingGrowStepBytes`（64KB）扩容后再解析，避免池化 4KB 环误判超包并断开；`BaseChannel`/`BaseClient`/`ParseAndDispatch` 行为对齐，补充大包异步读回归测试。
+- **zqueue**：修复 `SmartDoubleQueue` Pop 误 `clear` 破坏已返回批次、`Close` 关闭 `Signal` 与 `Enqueue` 竞态 panic、以及 `maxCap` 仅统计 `write` 可被绕过等问题；`maxCap>0` 时以 `outstanding`+`ReleaseBatch()` 实现硬上限；`Close` 改为非阻塞唤醒且不再关闭通知通道。简化 `PriorityQueue` 手写 `up` 冗余判断；补充双缓冲与优先队列回归/竞态测试及 `container/heap` 对比基准。
+
 ## [1.1.2] - 2026-04-29
 
 ### Fixed

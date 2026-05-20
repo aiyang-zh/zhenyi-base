@@ -74,19 +74,11 @@ func (q *PriorityQueue[T]) Dequeue() (T, bool) {
 // ----------------------
 
 func (q *PriorityQueue[T]) up(j int) {
-	for {
-		i := (j - 1) / 2 // parent index
-		if i == j || q.items[j].priority <= q.items[i].priority {
-			// 如果是最大堆（优先级大在前），这里改成 <=
-			// 如果是最小堆（优先级小在前），这里改成 >=
-			// 目前逻辑：Child <= Parent，说明不用动了（这是最大堆逻辑：父节点必须大）
-			// 修正：我们要实现 Priority 大的在前面 (Max Heap)
-			// Parent 必须 >= Child。如果 Child > Parent，则交换。
-			if q.items[j].priority <= q.items[i].priority {
-				break
-			}
+	for j > 0 {
+		i := (j - 1) / 2
+		if q.items[j].priority <= q.items[i].priority {
+			break
 		}
-		// 交换
 		q.items[i], q.items[j] = q.items[j], q.items[i]
 		j = i
 	}

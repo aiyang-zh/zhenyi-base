@@ -263,7 +263,7 @@ func (b *BaseClient) read() int {
 	_, err := rb.WriteFromReader(conn, 0)
 	if err != nil {
 		if err == ErrBufferFull {
-			if rb.Grow(65536) {
+			if rb.Grow(readRingGrowStepBytes) {
 				_, err = rb.WriteFromReader(conn, 0)
 				if err != nil && err != ErrBufferFull {
 				} else {
@@ -302,8 +302,13 @@ func (b *BaseClient) read() int {
 
 		if !parsed {
 			if rb.IsFull() {
-				zlog.Warn("single packet exceeds buffer capacity")
-				return 1
+				// 初始池化 RingBuffer 仅 4KB；单帧（header+body）可大于容量（如应用层大包）。
+				// 扩容后继续读，避免误判为协议错误并 Close 导致连接半残。
+				if !rb.Grow(readRingGrowStepBytes) {
+					zlog.Warn("single packet exceeds buffer capacity (Grow failed)")
+					return 1
+				}
+				break
 			}
 			break
 		}

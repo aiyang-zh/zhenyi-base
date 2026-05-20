@@ -8,6 +8,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -839,6 +840,32 @@ func TestBaseClient_isNormalCloseError(t *testing.T) {
 		if got != tt.expect {
 			t.Errorf("isNormalCloseError(%v) = %v, want %v", tt.err, got, tt.expect)
 		}
+	}
+}
+
+// 池化 GetRingBuffer 默认 4KB；单帧 header+body 可更大。回归：满缓冲且帧未收齐时应扩容并收齐，而非 Close。
+func TestBaseClient_Read_AsyncGrowWhenSingleFrameExceedsPooledRing(t *testing.T) {
+	r, w := net.Pipe()
+	client := NewBaseClient(WithAsyncMode())
+	client.SetConn(r)
+	var recv atomic.Int32
+	client.SetReadCall(func(msg ziface.IWireMessage) {
+		if len(msg.GetMessageData()) == 5000 {
+			recv.Store(1)
+		}
+	})
+	client.Read()
+
+	pkt := makeTestPacket(42, 7, bytes.Repeat([]byte{'z'}, 5000))
+	if n, err := w.Write(pkt); n != len(pkt) || err != nil {
+		t.Fatalf("write: n=%d err=%v", n, err)
+	}
+	time.Sleep(500 * time.Millisecond)
+	_ = w.Close()
+	_ = client.Close()
+	time.Sleep(100 * time.Millisecond)
+	if recv.Load() != 1 {
+		t.Fatalf("expected 5000B frame after ring grow, recv=%d", recv.Load())
 	}
 }
 
