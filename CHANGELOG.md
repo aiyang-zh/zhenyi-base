@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.4] - 2026-05-28
+
+### Changed
+
+- **znet**：`BaseClient` 区分 sync/async 发送：默认 sync 下 `SendMsg` 与 `Request` 同步写出，多协程并发安全；`WithAsyncMode` 下 `SendMsg` 异步入队、后台批量写出，调用方可在返回后 `Release` 原消息。新增 `SendMsgAsync`（仅 async）。默认与 `SetEncrypt(nil)` 均为 `BaseEncrypt` 透传（不加密）。
+
+
 ## [1.1.3] - 2026-05-20
 
 ### Fixed
