@@ -85,11 +85,17 @@ func NewMPSCQueue[T any](capacity int) *MPSCQueue[T] {
 // 通过 over-allocate 使每个逻辑 slot 占满整条 cache line，
 // 保证相邻 slot 的 sequence 不在同一 cache line，消除 false sharing。
 //
-// 内存开销：capacity × max(cacheLineSize, sizeof(slot))。
+// 当 sizeof(slot[T]) 已不小于 cacheLineSize 时，相邻 sequence 自然落在不同 cache line，
+// 退化为紧凑布局（与 NewMPSCQueue 相同），避免大元素类型无谓放大 stride 导致 cache miss。
+//
+// 内存开销（小 T）：capacity × max(cacheLineSize, sizeof(slot))。
 func NewMPSCQueuePadded[T any](capacity int) *MPSCQueue[T] {
-	capacity = nextPowerOfTwo(capacity)
-
 	slotSize := unsafe.Sizeof(slot[T]{})
+	if slotSize >= cacheLineSize {
+		return NewMPSCQueue[T](capacity)
+	}
+
+	capacity = nextPowerOfTwo(capacity)
 	// stride 向上取整到 cacheLineSize 的整数倍，确保相邻 slot 的
 	// sequence 字段一定落在不同 cache line（消除 false sharing）
 	stride := (slotSize + cacheLineSize - 1) / cacheLineSize * cacheLineSize

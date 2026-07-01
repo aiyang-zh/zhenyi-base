@@ -1,6 +1,6 @@
 // Package zqueue 组合基准测试矩阵
 //
-// 维度：类型(11) × 载荷档位(3) × 生产者(4) × 消费(2)
+// 维度：类型(11) × 载荷档位(3) × 生产者(4) × 入出 API(4)
 //
 // 队列类型（zqueue 全部实现 + channel 基线）：
 //   - MPSCBounded / MPSCPadded / MPSCUnbounded
@@ -10,13 +10,15 @@
 //   - ChanBuffered / ChanUnbuffered
 //
 // 载荷档位：Small(256B)、Medium(4KB)、Large(~64KB 值类型，65528B，受 Go channel 元素 <64KiB 约束)
-// 有界队列槽位数与 batch 窗口按档位对齐；ChanBuffered Large 缓冲槽位用 chanBufLarge(256)，避免 65536×64KB≈4GiB
+// Large 有界队列槽位 capLargeMatrix(1024×64KB≈64MiB)，非历史 65536×64KB≈4GiB；跨版本/旧矩阵对比 Large 吞吐不可直接横比，仅适合同矩阵内队列相对比较
+// Large 批量条数受 matrixMaxBatchBytes(1MiB) 限制（512 条×64KB 退化为 16 条）
+// ChanBuffered Large 缓冲槽位 chanBufLarge(256)，约 16MiB
 // 生产者：1、4、16、64
-// 消费：单条 API、批量 API（SmartDouble 仅 Batch；Priority 仅 Single，见 Skip）
+// 入出 API：SingleSingle / SingleBatch / BatchSingle / BatchBatch（见 matrixModeSupported Skip）
 //
-// 计时覆盖「并发入队 + 排空」全链路。QueueDrop 按实际 consumed 计 SetBytes（非 b.N 尝试次数）。
+// 计时覆盖「并发入队 + 排空」全链路。SetBytes 为每消息字节数（MB/s = bytesPerItem/ns_per_msg）。
 //
-// 组合数：9×3×4×2 + 2×3×1×2 − 12(SmartDouble Single) − 12(Priority Batch) = 204
+// 组合数：MPSC×3 + Queue×2 + SPSC×2 + SmartDouble + Priority + Chan×2 = 348（见 matrixModeSupported）
 package zqueue
 
 import (
@@ -29,13 +31,16 @@ import (
 const (
 	capSmall  = 256
 	capMedium = 4096
-	capLarge  = 65536
+	// capLargeMatrix Large 档有界环形容量：1024×payloadLargeBytes≈64MiB（全矩阵串行跑时 1–2GiB 机器可承受）
+	capLargeMatrix = 1024
 
 	batchSmall  = 32
 	batchMedium = 128
-	batchLarge  = 512
+	batchLarge  = 512 // 条数上限；Large 档按 matrixMaxBatchBytes 与载荷折算（见 matrixBatchCount）
 
-	chanBufLarge = 256 // Large 档 channel 缓冲槽位（元素为 ~64KB 值类型，不可与 capLarge 同槽数）
+	matrixMaxBatchBytes = 1 << 20 // 单次批量入/出窗口字节上限 1MiB
+
+	chanBufLarge = 256 // Large 档 channel 缓冲槽位（约 16MiB）
 
 	payloadSmallBytes  = 256
 	payloadMediumBytes = 4096
@@ -75,16 +80,46 @@ func matrixPayloadBytes(ds int) int64 {
 	}
 }
 
-// chanBufferSlots 返回 ChanBuffered 缓冲槽位数；Large 与有界队列 capLarge 解耦。
+// matrixBatchCount 返回该载荷档位下单次批量 API 使用的条数（不超过 batchSizes[ds] 与 matrixMaxBatchBytes/bytesPerItem）。
+func matrixBatchCount(ds int) int {
+	n := batchSizes[ds]
+	bytesPerItem := matrixPayloadBytes(ds)
+	if bytesPerItem <= 0 {
+		return n
+	}
+	maxByBytes := int(matrixMaxBatchBytes / bytesPerItem)
+	if maxByBytes < 1 {
+		maxByBytes = 1
+	}
+	if n > maxByBytes {
+		return maxByBytes
+	}
+	return n
+}
+
+// matrixQueueCap 返回该档位有界队列/SmartDouble 等使用的槽位数。
+func matrixQueueCap(ds int) int {
+	switch ds {
+	case 0:
+		return capSmall
+	case 1:
+		return capMedium
+	case 2:
+		return capLargeMatrix
+	default:
+		return capSmall
+	}
+}
+
+// chanBufferSlots 返回 ChanBuffered 缓冲槽位数。
 func chanBufferSlots(ds int) int {
 	if ds == 2 {
 		return chanBufLarge
 	}
-	return dataSizeCaps[ds]
+	return matrixQueueCap(ds)
 }
 
 var (
-	dataSizeCaps   = []int{capSmall, capMedium, capLarge}
 	dataSizeNames  = []string{"Small", "Medium", "Large"}
 	batchSizes     = []int{batchSmall, batchMedium, batchLarge}
 	producerCounts = []int{1, 4, 16, 64}
@@ -110,24 +145,70 @@ const (
 	matrixEnqueueDrop
 )
 
+// matrixIOMode 入队/出队 API 组合：Single=单条 API，Batch=批量 API。
+type matrixIOMode int
+
+const (
+	matrixIOSingleSingle matrixIOMode = iota // Enqueue + Dequeue
+	matrixIOSingleBatch                      // Enqueue + DequeueBatch
+	matrixIOBatchSingle                      // EnqueueBatch + Dequeue
+	matrixIOBatchBatch                       // EnqueueBatch + DequeueBatch
+)
+
+var matrixIOModes = []struct {
+	mode matrixIOMode
+	name string
+}{
+	{matrixIOSingleSingle, "SingleSingle"},
+	{matrixIOSingleBatch, "SingleBatch"},
+	{matrixIOBatchSingle, "BatchSingle"},
+	{matrixIOBatchBatch, "BatchBatch"},
+}
+
+func matrixModeSingleProducer(mode matrixIOMode) bool {
+	return mode == matrixIOSingleSingle || mode == matrixIOSingleBatch
+}
+
+func matrixModeSingleConsumer(mode matrixIOMode) bool {
+	return mode == matrixIOSingleSingle || mode == matrixIOBatchSingle
+}
+
+func matrixModeSupported(typ string, mode matrixIOMode) (bool, string) {
+	switch typ {
+	case "SmartDouble":
+		if mode == matrixIOSingleSingle || mode == matrixIOBatchSingle {
+			return false, "SmartDouble 仅 Pop 批量 API，无单条出队"
+		}
+	case "Priority":
+		if mode != matrixIOSingleSingle {
+			return false, "PriorityQueue 仅单条入队/出队 API"
+		}
+	case "ChanBuffered", "ChanUnbuffered":
+		if mode == matrixIOBatchSingle || mode == matrixIOBatchBatch {
+			return false, "channel 无批量 send API"
+		}
+	}
+	return true, ""
+}
+
 func BenchmarkMatrix(b *testing.B) {
 	for _, typ := range matrixTypes {
 		typ := typ
 		b.Run(typ, func(b *testing.B) {
 			for ds := 0; ds < 3; ds++ {
-				capOrBatch := dataSizeCaps[ds]
-				batchSize := batchSizes[ds]
+				capOrBatch := matrixQueueCap(ds)
+				batchSize := matrixBatchCount(ds)
 				dsName := dataSizeNames[ds]
 
 				b.Run(dsName, func(b *testing.B) {
 					for _, p := range producerCounts {
 						b.Run(producerName(p), func(b *testing.B) {
-							b.Run("Single", func(b *testing.B) {
-								runMatrixBench(b, typ, ds, capOrBatch, batchSize, p, true)
-							})
-							b.Run("Batch", func(b *testing.B) {
-								runMatrixBench(b, typ, ds, capOrBatch, batchSize, p, false)
-							})
+							for _, ioMode := range matrixIOModes {
+								ioMode := ioMode
+								b.Run(ioMode.name, func(b *testing.B) {
+									runMatrixBench(b, typ, ds, capOrBatch, batchSize, p, ioMode.mode)
+								})
+							}
 						})
 					}
 				})
@@ -155,38 +236,32 @@ func matrixTypeSPSCOnly(typ string) bool {
 	return typ == "SPSCBounded" || typ == "SPSCUnbounded"
 }
 
-func runMatrixBench(b *testing.B, typ string, ds, capOrBatch, batchSize, producers int, singleConsumer bool) {
+func runMatrixBench(b *testing.B, typ string, ds, capOrBatch, batchSize, producers int, mode matrixIOMode) {
 	if matrixTypeSPSCOnly(typ) && producers != 1 {
 		b.Skip("SPSC 队列仅支持单生产者")
 		return
 	}
-	if typ == "SmartDouble" && singleConsumer {
-		b.Skip("SmartDouble 仅 Pop 批量 API，无单条 Dequeue 语义")
-		return
-	}
-	if typ == "Priority" && !singleConsumer {
-		b.Skip("PriorityQueue 无批量 Dequeue API")
+	if ok, reason := matrixModeSupported(typ, mode); !ok {
+		b.Skip(reason)
 		return
 	}
 
 	bytesPerItem := matrixPayloadBytes(ds)
-	if typ != "QueueDrop" {
-		b.SetBytes(bytesPerItem)
-	}
+	b.SetBytes(bytesPerItem)
 	b.ReportAllocs()
 
 	if typ == "ChanBuffered" || typ == "ChanUnbuffered" {
-		runMatrixChan(b, typ, ds, batchSize, producers, singleConsumer)
+		runMatrixChan(b, typ, ds, batchSize, producers, mode)
 		return
 	}
 
 	switch ds {
 	case 0:
-		dispatchMatrixSkipChan(b, typ, capOrBatch, batchSize, producers, singleConsumer, bytesPerItem, newMatrixItem256, priorityOf256)
+		dispatchMatrixSkipChan(b, typ, capOrBatch, batchSize, producers, mode, bytesPerItem, newMatrixItem256, priorityOf256)
 	case 1:
-		dispatchMatrixSkipChan(b, typ, capOrBatch, batchSize, producers, singleConsumer, bytesPerItem, newMatrixItem4K, priorityOf4K)
+		dispatchMatrixSkipChan(b, typ, capOrBatch, batchSize, producers, mode, bytesPerItem, newMatrixItem4K, priorityOf4K)
 	case 2:
-		dispatchMatrixSkipChan(b, typ, capOrBatch, batchSize, producers, singleConsumer, bytesPerItem, newMatrixItem64K, priorityOf64K)
+		dispatchMatrixSkipChan(b, typ, capOrBatch, batchSize, producers, mode, bytesPerItem, newMatrixItem64K, priorityOf64K)
 	default:
 		b.Fatalf("unknown data size index %d", ds)
 	}
@@ -196,8 +271,9 @@ func priorityOf256(v matrixItem256) int { return int(v.Seq % 17) }
 func priorityOf4K(v matrixItem4K) int   { return int(v.Seq % 17) }
 func priorityOf64K(v matrixItem64K) int { return int(v.Seq % 17) }
 
-func runMatrixChan(b *testing.B, typ string, ds, batchSize, producers int, singleConsumer bool) {
+func runMatrixChan(b *testing.B, typ string, ds, batchSize, producers int, mode matrixIOMode) {
 	bufSlots := chanBufferSlots(ds)
+	singleConsumer := matrixModeSingleConsumer(mode)
 	switch ds {
 	case 0:
 		if typ == "ChanBuffered" {
@@ -222,44 +298,56 @@ func runMatrixChan(b *testing.B, typ string, ds, batchSize, producers int, singl
 	}
 }
 
-func dispatchMatrixSkipChan[T any](b *testing.B, typ string, capOrBatch, batchSize, producers int, singleConsumer bool, bytesPerItem int64, mk func(int) T, prio func(T) int) {
+func dispatchMatrixSkipChan[T any](b *testing.B, typ string, capOrBatch, batchSize, producers int, mode matrixIOMode, bytesPerItem int64, mk func(int) T, prio func(T) int) {
 	switch typ {
 	case "MPSCBounded":
-		benchMPSCBounded(b, capOrBatch, batchSize, producers, singleConsumer, false, bytesPerItem, mk)
+		benchMPSCBounded(b, capOrBatch, batchSize, producers, mode, false, bytesPerItem, mk)
 	case "MPSCPadded":
-		benchMPSCBounded(b, capOrBatch, batchSize, producers, singleConsumer, true, bytesPerItem, mk)
+		benchMPSCBounded(b, capOrBatch, batchSize, producers, mode, true, bytesPerItem, mk)
 	case "MPSCUnbounded":
-		benchMPSCUnbounded(b, batchSize, producers, singleConsumer, bytesPerItem, mk)
+		benchMPSCUnbounded(b, batchSize, producers, mode, bytesPerItem, mk)
 	case "SPSCBounded":
-		benchSPSCBounded(b, capOrBatch, batchSize, singleConsumer, mk)
+		benchSPSCBounded(b, capOrBatch, batchSize, mode, mk)
 	case "SPSCUnbounded":
-		benchSPSCUnbounded(b, batchSize, singleConsumer, mk)
+		benchSPSCUnbounded(b, batchSize, mode, mk)
 	case "QueueResize":
-		benchQueue(b, capOrBatch, batchSize, producers, singleConsumer, true, matrixEnqueueBlock, bytesPerItem, mk)
+		benchQueue(b, capOrBatch, batchSize, producers, mode, true, matrixEnqueueBlock, bytesPerItem, mk)
 	case "QueueDrop":
-		benchQueue(b, capOrBatch, batchSize, producers, singleConsumer, false, matrixEnqueueDrop, bytesPerItem, mk)
+		benchQueue(b, capOrBatch, batchSize, producers, mode, false, matrixEnqueueDrop, bytesPerItem, mk)
 	case "SmartDouble":
-		benchSmartDouble(b, capOrBatch, batchSize, producers, mk)
+		benchSmartDouble(b, capOrBatch, batchSize, producers, mode, mk)
 	case "Priority":
-		benchPriority(b, capOrBatch, batchSize, producers, singleConsumer, bytesPerItem, mk, prio)
+		benchPriority(b, capOrBatch, batchSize, producers, mode, bytesPerItem, mk, prio)
 	default:
 		b.Fatalf("unknown matrix type %q", typ)
 	}
 }
 
-func benchMPSCBounded[T any](b *testing.B, cap, batchSize, producers int, singleConsumer, padded bool, bytesPerItem int64, mk func(int) T) {
+func benchMPSCBounded[T any](b *testing.B, cap, batchSize, producers int, mode matrixIOMode, padded bool, bytesPerItem int64, mk func(int) T) {
 	var q *MPSCQueue[T]
 	if padded {
 		q = NewMPSCQueuePadded[T](cap)
 	} else {
 		q = NewMPSCQueue[T](cap)
 	}
-	runProducersConsumers(b, q, batchSize, producers, singleConsumer, matrixEnqueueBlock, bytesPerItem,
+	runProducersConsumers(b, q, batchSize, producers, mode, matrixEnqueueBlock, bytesPerItem,
 		func(q *MPSCQueue[T], v T) bool {
 			for !q.Enqueue(v) {
 				runtime.Gosched()
 			}
 			return true
+		},
+		func(q *MPSCQueue[T], items []T) int {
+			want := len(items)
+			for len(items) > 0 {
+				n := q.EnqueueBatch(items)
+				if n == 0 {
+					runtime.Gosched()
+					continue
+				}
+				items = items[n:]
+			}
+			return want
 		},
 		func(q *MPSCQueue[T], buf []T) int {
 			return q.DequeueBatch(buf)
@@ -275,12 +363,16 @@ func benchMPSCBounded[T any](b *testing.B, cap, batchSize, producers int, single
 	)
 }
 
-func benchMPSCUnbounded[T any](b *testing.B, batchSize, producers int, singleConsumer bool, bytesPerItem int64, mk func(int) T) {
+func benchMPSCUnbounded[T any](b *testing.B, batchSize, producers int, mode matrixIOMode, bytesPerItem int64, mk func(int) T) {
 	q := NewUnboundedMPSC[T]()
-	runProducersConsumers(b, q, batchSize, producers, singleConsumer, matrixEnqueueBlock, bytesPerItem,
+	runProducersConsumers(b, q, batchSize, producers, mode, matrixEnqueueBlock, bytesPerItem,
 		func(q *UnboundedMPSC[T], v T) bool {
 			q.Enqueue(v)
 			return true
+		},
+		func(q *UnboundedMPSC[T], items []T) int {
+			q.EnqueueBatch(items)
+			return len(items)
 		},
 		func(q *UnboundedMPSC[T], buf []T) int {
 			return q.DequeueBatch(buf)
@@ -296,12 +388,23 @@ func benchMPSCUnbounded[T any](b *testing.B, batchSize, producers int, singleCon
 	)
 }
 
-func benchSPSCBounded[T any](b *testing.B, cap, batchSize int, singleConsumer bool, mk func(int) T) {
+func benchSPSCBounded[T any](b *testing.B, cap, batchSize int, mode matrixIOMode, mk func(int) T) {
 	q := NewSPSCQueue[T](cap)
-	runProducersConsumersSPSC(b, batchSize, singleConsumer, mk,
+	runProducersConsumersSPSC(b, batchSize, mode, mk,
 		func(q *SPSCQueue[T], v T) {
 			for {
 				if q.Enqueue(v) {
+					return
+				}
+				if q.IsClosed() {
+					return
+				}
+				runtime.Gosched()
+			}
+		},
+		func(q *SPSCQueue[T], items []T) {
+			for {
+				if q.EnqueueBatch(items) {
 					return
 				}
 				if q.IsClosed() {
@@ -325,11 +428,14 @@ func benchSPSCBounded[T any](b *testing.B, cap, batchSize int, singleConsumer bo
 	)
 }
 
-func benchSPSCUnbounded[T any](b *testing.B, batchSize int, singleConsumer bool, mk func(int) T) {
+func benchSPSCUnbounded[T any](b *testing.B, batchSize int, mode matrixIOMode, mk func(int) T) {
 	q := NewUnboundedSPSC[T]()
-	runProducersConsumersSPSC(b, batchSize, singleConsumer, mk,
+	runProducersConsumersSPSC(b, batchSize, mode, mk,
 		func(q *UnboundedSPSC[T], v T) {
 			q.Enqueue(v)
+		},
+		func(q *UnboundedSPSC[T], items []T) {
+			q.EnqueueBatch(items)
 		},
 		func(q *UnboundedSPSC[T], buf []T) int {
 			return q.DequeueBatch(buf)
@@ -345,25 +451,30 @@ func benchSPSCUnbounded[T any](b *testing.B, batchSize int, singleConsumer bool,
 	)
 }
 
-func benchQueue[T any](b *testing.B, cap, batchSize, producers int, singleConsumer, resize bool, policy matrixEnqueuePolicy, bytesPerItem int64, mk func(int) T) {
+func benchQueue[T any](b *testing.B, cap, batchSize, producers int, mode matrixIOMode, resize bool, policy matrixEnqueuePolicy, bytesPerItem int64, mk func(int) T) {
 	var q *Queue[T]
 	if resize {
 		q = NewQueue[T](cap, 0, FullPolicyResize)
 	} else {
 		q = NewQueue[T](cap, cap, FullPolicyDrop)
 	}
-	runProducersConsumers(b, q, batchSize, producers, singleConsumer, policy, bytesPerItem,
+	runProducersConsumers(b, q, batchSize, producers, mode, policy, bytesPerItem,
 		func(q *Queue[T], v T) bool {
 			return q.Enqueue(v)
+		},
+		func(q *Queue[T], items []T) int {
+			if q.EnqueueBatch(items) {
+				return len(items)
+			}
+			return 0
 		},
 		func(q *Queue[T], buf []T) int {
 			slice, _ := q.DequeueBatch(buf)
 			return len(slice)
 		},
 		func(q *Queue[T]) (int, bool) {
-			var one [1]T
-			slice, _ := q.DequeueBatch(one[:])
-			if len(slice) > 0 {
+			_, ok := q.Dequeue()
+			if ok {
 				return 1, true
 			}
 			return 0, false
@@ -372,7 +483,7 @@ func benchQueue[T any](b *testing.B, cap, batchSize, producers int, singleConsum
 	)
 }
 
-func benchSmartDouble[T any](b *testing.B, cap, batchSize, producers int, mk func(int) T) {
+func benchSmartDouble[T any](b *testing.B, cap, batchSize, producers int, mode matrixIOMode, mk func(int) T) {
 	q := NewSmartDoubleQueue[T](cap, cap, false)
 	popAndCount := func() (int, bool) {
 		batch, ok := q.Pop()
@@ -383,23 +494,35 @@ func benchSmartDouble[T any](b *testing.B, cap, batchSize, producers int, mk fun
 		q.ReleaseBatch()
 		return n, true
 	}
-	runProducersConsumersSmartDouble(b, batchSize, producers, mk,
-		func(v T) {
-			for !q.Enqueue(v) {
-				runtime.Gosched()
-			}
-		},
-		popAndCount,
-	)
+	if mode == matrixIOSingleBatch {
+		runProducersConsumersSmartDouble(b, batchSize, producers, mk, popAndCount,
+			func(v T) {
+				for !q.Enqueue(v) {
+					runtime.Gosched()
+				}
+			},
+			nil,
+		)
+	} else {
+		runProducersConsumersSmartDouble(b, batchSize, producers, mk, popAndCount,
+			nil,
+			func(items []T) {
+				for !q.Enqueue(items...) {
+					runtime.Gosched()
+				}
+			},
+		)
+	}
 }
 
-func benchPriority[T any](b *testing.B, cap, batchSize, producers int, singleConsumer bool, bytesPerItem int64, mk func(int) T, prio func(T) int) {
+func benchPriority[T any](b *testing.B, cap, batchSize, producers int, mode matrixIOMode, bytesPerItem int64, mk func(int) T, prio func(T) int) {
 	q := NewPriorityQueue[T](cap)
-	runProducersConsumers(b, q, batchSize, producers, singleConsumer, matrixEnqueueBlock, bytesPerItem,
+	runProducersConsumers(b, q, batchSize, producers, mode, matrixEnqueueBlock, bytesPerItem,
 		func(q *PriorityQueue[T], v T) bool {
 			q.Enqueue(v, prio(v))
 			return true
 		},
+		nil,
 		nil,
 		func(q *PriorityQueue[T]) (int, bool) {
 			_, ok := q.Dequeue()
@@ -422,8 +545,9 @@ func benchChanUnbuffered[T any](b *testing.B, batchSize, producers int, singleCo
 	runProducersConsumersChan(b, ch, 0, batchSize, producers, singleConsumer, true, mk)
 }
 
-func runProducersConsumers[Q any, T any](b *testing.B, q Q, batchSize, producers int, singleConsumer bool, policy matrixEnqueuePolicy, bytesPerItem int64,
+func runProducersConsumers[Q any, T any](b *testing.B, q Q, batchSize, producers int, mode matrixIOMode, policy matrixEnqueuePolicy, bytesPerItem int64,
 	enqueue func(Q, T) bool,
+	enqueueBatch func(Q, []T) int,
 	dequeueBatch func(Q, []T) int,
 	dequeueOne func(Q) (int, bool),
 	mk func(int) T,
@@ -433,6 +557,9 @@ func runProducersConsumers[Q any, T any](b *testing.B, q Q, batchSize, producers
 	if opsPerProducer == 0 {
 		opsPerProducer = 1
 	}
+
+	singleProducer := matrixModeSingleProducer(mode)
+	singleConsumer := matrixModeSingleConsumer(mode)
 
 	done := make(chan struct{})
 	var consumed, enqueued int64
@@ -483,18 +610,49 @@ func runProducersConsumers[Q any, T any](b *testing.B, q Q, batchSize, producers
 			if end > total {
 				end = total
 			}
-			if policy == matrixEnqueueDrop {
+			if singleProducer {
+				if policy == matrixEnqueueDrop {
+					for i := start; i < end; i++ {
+						if enqueue(q, mk(i)) {
+							atomic.AddInt64(&enqueued, 1)
+						}
+					}
+					return
+				}
 				for i := start; i < end; i++ {
-					if enqueue(q, mk(i)) {
-						atomic.AddInt64(&enqueued, 1)
+					for !enqueue(q, mk(i)) {
+						runtime.Gosched()
 					}
 				}
 				return
 			}
-			for i := start; i < end; i++ {
-				for !enqueue(q, mk(i)) {
-					runtime.Gosched()
+
+			batchBuf := make([]T, batchSize)
+			for i := start; i < end; {
+				chunk := batchSize
+				if remain := end - i; remain < chunk {
+					chunk = remain
 				}
+				for j := 0; j < chunk; j++ {
+					batchBuf[j] = mk(i + j)
+				}
+				slice := batchBuf[:chunk]
+				if policy == matrixEnqueueDrop {
+					if enqueueBatch(q, slice) == chunk {
+						atomic.AddInt64(&enqueued, int64(chunk))
+					}
+					i += chunk
+					continue
+				}
+				for len(slice) > 0 {
+					n := enqueueBatch(q, slice)
+					if n == 0 {
+						runtime.Gosched()
+						continue
+					}
+					slice = slice[n:]
+				}
+				i += chunk
 			}
 		}(p)
 	}
@@ -504,19 +662,19 @@ func runProducersConsumers[Q any, T any](b *testing.B, q Q, batchSize, producers
 		runtime.Gosched()
 	}
 	<-done
-
-	if policy == matrixEnqueueDrop {
-		b.SetBytes(atomic.LoadInt64(&consumed) * bytesPerItem)
-	}
 }
 
-func runProducersConsumersSPSC[Q any, T any](b *testing.B, batchSize int, singleConsumer bool, mk func(int) T,
+func runProducersConsumersSPSC[Q any, T any](b *testing.B, batchSize int, mode matrixIOMode, mk func(int) T,
 	enqueue func(Q, T),
+	enqueueBatch func(Q, []T),
 	dequeueBatch func(Q, []T) int,
 	dequeueOne func(Q) (int, bool),
 	q Q,
 ) {
 	total := b.N
+	singleProducer := matrixModeSingleProducer(mode)
+	singleConsumer := matrixModeSingleConsumer(mode)
+
 	done := make(chan struct{})
 	var consumed int64
 
@@ -548,8 +706,23 @@ func runProducersConsumersSPSC[Q any, T any](b *testing.B, batchSize int, single
 	}
 
 	b.ResetTimer()
-	for i := 0; i < total; i++ {
-		enqueue(q, mk(i))
+	if singleProducer {
+		for i := 0; i < total; i++ {
+			enqueue(q, mk(i))
+		}
+	} else {
+		batchBuf := make([]T, batchSize)
+		for i := 0; i < total; {
+			chunk := batchSize
+			if remain := total - i; remain < chunk {
+				chunk = remain
+			}
+			for j := 0; j < chunk; j++ {
+				batchBuf[j] = mk(i + j)
+			}
+			enqueueBatch(q, batchBuf[:chunk])
+			i += chunk
+		}
 	}
 	for atomic.LoadInt64(&consumed) < int64(total) {
 		runtime.Gosched()
@@ -558,8 +731,9 @@ func runProducersConsumersSPSC[Q any, T any](b *testing.B, batchSize int, single
 }
 
 func runProducersConsumersSmartDouble[T any](b *testing.B, batchSize, producers int, mk func(int) T,
-	enqueue func(T),
 	dequeue func() (int, bool),
+	enqueueOne func(T),
+	enqueueMany func([]T),
 ) {
 	total := b.N
 	opsPerProducer := (total + producers - 1) / producers
@@ -593,8 +767,23 @@ func runProducersConsumersSmartDouble[T any](b *testing.B, batchSize, producers 
 			if end > total {
 				end = total
 			}
-			for i := start; i < end; i++ {
-				enqueue(mk(i))
+			if enqueueOne != nil {
+				for i := start; i < end; i++ {
+					enqueueOne(mk(i))
+				}
+				return
+			}
+			batchBuf := make([]T, batchSize)
+			for i := start; i < end; {
+				chunk := batchSize
+				if remain := end - i; remain < chunk {
+					chunk = remain
+				}
+				for j := 0; j < chunk; j++ {
+					batchBuf[j] = mk(i + j)
+				}
+				enqueueMany(batchBuf[:chunk])
+				i += chunk
 			}
 		}(p)
 	}

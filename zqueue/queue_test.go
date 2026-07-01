@@ -203,9 +203,179 @@ func TestDequeueBatch_ZeroLimit(t *testing.T) {
 	}
 }
 
-func TestQueue_Count(t *testing.T) {
-	fmt.Println(nextPowerOfTwo(10))
-	fmt.Println(nextPowerOfTwo(5000))
+// TestDequeueBatch_WrapAroundSingleBatch 单次 DequeueBatch 跨环尾+头两段（分段 copy/clear 路径）。
+func TestDequeueBatch_WrapAroundSingleBatch(t *testing.T) {
+	q := NewQueue[int](16, 16, FullPolicyResize)
+
+	for i := 0; i < 12; i++ {
+		if !q.Enqueue(i) {
+			t.Fatalf("enqueue %d failed", i)
+		}
+	}
+	buf := make([]int, 0, 10)
+	got, _ := q.DequeueBatch(buf)
+	if len(got) != 10 {
+		t.Fatalf("first batch len=%d want 10", len(got))
+	}
+	for i, v := range got {
+		if v != i {
+			t.Fatalf("got[%d]=%d want %d", i, v, i)
+		}
+	}
+	if q.head != 10 {
+		t.Fatalf("head=%d want 10", q.head)
+	}
+
+	for i := 12; i < 20; i++ {
+		if !q.Enqueue(i) {
+			t.Fatalf("enqueue %d failed", i)
+		}
+	}
+	if q.Count() != 10 {
+		t.Fatalf("count=%d want 10", q.Count())
+	}
+
+	buf = make([]int, 0, 8)
+	got, remain := q.DequeueBatch(buf)
+	if len(got) != 8 {
+		t.Fatalf("wrap batch len=%d want 8", len(got))
+	}
+	want := []int{10, 11, 12, 13, 14, 15, 16, 17}
+	for i, v := range want {
+		if got[i] != v {
+			t.Fatalf("got[%d]=%d want %d", i, got[i], v)
+		}
+	}
+	if remain != 2 {
+		t.Fatalf("remain=%d want 2", remain)
+	}
+	if q.head != 2 {
+		t.Fatalf("head=%d want 2", q.head)
+	}
+	if q.Count() != 2 {
+		t.Fatalf("count=%d want 2", q.Count())
+	}
+}
+
+// TestDequeueBatch_WrapAroundLargeValue 大值类型单次跨环批量出队，验证 FIFO 与 count/head。
+func TestDequeueBatch_WrapAroundLargeValue(t *testing.T) {
+	q := NewQueue[matrixItem256](16, 16, FullPolicyResize)
+
+	for i := 0; i < 12; i++ {
+		if !q.Enqueue(newMatrixItem256(i)) {
+			t.Fatalf("enqueue %d failed", i)
+		}
+	}
+	buf := make([]matrixItem256, 0, 10)
+	got, _ := q.DequeueBatch(buf)
+	if len(got) != 10 {
+		t.Fatalf("first batch len=%d want 10", len(got))
+	}
+	for i, v := range got {
+		if v.Seq != int64(i) {
+			t.Fatalf("got[%d].Seq=%d want %d", i, v.Seq, i)
+		}
+	}
+
+	for i := 12; i < 20; i++ {
+		if !q.Enqueue(newMatrixItem256(i)) {
+			t.Fatalf("enqueue %d failed", i)
+		}
+	}
+
+	buf = make([]matrixItem256, 0, 8)
+	got, remain := q.DequeueBatch(buf)
+	if len(got) != 8 || remain != 2 {
+		t.Fatalf("wrap batch len=%d remain=%d want 8/2", len(got), remain)
+	}
+	for i, v := range got {
+		if v.Seq != int64(10+i) {
+			t.Fatalf("got[%d].Seq=%d want %d", i, v.Seq, 10+i)
+		}
+	}
+	if q.head != 2 || q.Count() != 2 {
+		t.Fatalf("head=%d count=%d want head=2 count=2", q.head, q.Count())
+	}
+}
+
+// TestDequeueBatch_HeadAdvanceNonPowerOfTwoRing 非 2 幂环长时 head 须按 % len(items) 前进。
+func TestDequeueBatch_HeadAdvanceNonPowerOfTwoRing(t *testing.T) {
+	q := &Queue[int]{
+		items: make([]int, 6),
+		head:  4,
+		tail:  2,
+		count: 4,
+	}
+	for i := 0; i < 6; i++ {
+		q.items[i] = i + 100
+	}
+
+	buf := make([]int, 0, 2)
+	got, left := q.DequeueBatch(buf)
+	if len(got) != 2 || got[0] != 104 || got[1] != 105 {
+		t.Fatalf("got=%v want [104 105]", got)
+	}
+	if q.head != 0 {
+		t.Fatalf("head=%d want 0", q.head)
+	}
+	if left != 2 || q.count != 2 {
+		t.Fatalf("left=%d count=%d want 2/2", left, q.count)
+	}
+}
+
+// TestDequeueBatch_HeadAdvanceMatchesSingleStep 批量 head 前进与逐条出队一致。
+func TestDequeueBatch_HeadAdvanceMatchesSingleStep(t *testing.T) {
+	run := func(batch bool) (head int, got []int) {
+		q := NewQueue[int](16, 16, FullPolicyResize)
+		for i := 0; i < 12; i++ {
+			if !q.Enqueue(i) {
+				t.Fatalf("enqueue %d", i)
+			}
+		}
+		buf := make([]int, 0, 10)
+		if batch {
+			slice, _ := q.DequeueBatch(buf)
+			got = append(got, slice...)
+		} else {
+			for i := 0; i < 10; i++ {
+				v, ok := q.Dequeue()
+				if !ok {
+					t.Fatalf("dequeue %d", i)
+				}
+				got = append(got, v)
+			}
+		}
+		for i := 12; i < 20; i++ {
+			if !q.Enqueue(i) {
+				t.Fatalf("enqueue %d", i)
+			}
+		}
+		buf = make([]int, 0, 8)
+		if batch {
+			slice, _ := q.DequeueBatch(buf)
+			got = append(got, slice...)
+		} else {
+			for i := 0; i < 8; i++ {
+				v, ok := q.Dequeue()
+				if !ok {
+					t.Fatalf("dequeue wrap %d", i)
+				}
+				got = append(got, v)
+			}
+		}
+		return q.head, got
+	}
+
+	headBatch, gotBatch := run(true)
+	headSingle, gotSingle := run(false)
+	if headBatch != headSingle {
+		t.Fatalf("head batch=%d single=%d", headBatch, headSingle)
+	}
+	for i := range gotBatch {
+		if gotBatch[i] != gotSingle[i] {
+			t.Fatalf("at %d batch=%d single=%d", i, gotBatch[i], gotSingle[i])
+		}
+	}
 }
 
 // 测试锁竞争情况

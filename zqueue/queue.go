@@ -17,104 +17,147 @@ const (
 // Queue 是基于环形数组实现的通用有界队列。
 //
 // 特点：
-//   - 使用切片 + 位运算实现环形缓冲区，内存布局连续，缓存友好
+//   - 使用切片环形缓冲区，下标前进统一为 % len(items)，内存布局连续，缓存友好
 //   - 支持自动扩容或丢弃新元素两种策略（见 FullPolicy）
 //   - 使用互斥锁保护，适合中等并发场景
 type Queue[T any] struct {
-	items      []T        // 使用切片替代链表
-	head       int        // 队列头部指针
-	tail       int        // 队列尾部指针
-	mask       int        // 队列容量
-	count      int        // 原子计数器
-	lock       sync.Mutex // 优化为互斥锁
-	fullPolicy FullPolicy // 队列满时的策略
-	maxSize    int        // 最大容量（0表示无限制）
+	items      []T
+	head       int
+	tail       int
+	count      int // 当前元素个数（锁保护，非 atomic）
+	lock       sync.Mutex
+	fullPolicy FullPolicy
+	maxSize    int // 环形容量上限（0 无限制）；存 nextPowerOfTwo 后的槽位数
+	closed     bool
 }
 
 func nextPowerOfTwo(n int) int {
 	if n <= 0 {
 		return 2
-	} // 默认最小容量 2
+	}
 	n--
 	n |= n >> 1
 	n |= n >> 2
 	n |= n >> 4
 	n |= n >> 8
 	n |= n >> 16
+	n |= n >> 32
 	return n + 1
+}
+
+func normalizeQueueMaxSize(capacity, maxSize int) int {
+	if maxSize <= 0 {
+		return 0
+	}
+	maxSize = nextPowerOfTwo(maxSize)
+	// 初始环已大于配置上限时抬高上限，避免「刚创建即无法扩容」；调用方应保证 initialSize ≤ maxSize。
+	if capacity > maxSize {
+		maxSize = capacity
+	}
+	return maxSize
 }
 
 // NewQueue 创建一个带策略控制的有界队列。
 //
-// initialSize 为初始容量，maxSize 为最大容量（0 表示不限制），
+// initialSize 为初始容量，maxSize 为环形容量上限（0 表示不限制；非 0 会规范为 ≥2 的 2 幂），
 // policy 决定写满时的行为（自动扩容或丢弃）。
+// 若 nextPowerOfTwo(initialSize) 已超过 maxSize，会将 maxSize 抬高至初始环长（兼容旧行为，见 TestNewQueue_MaxSizeLessThanInitial）。
 func NewQueue[T any](initialSize int, maxSize int, policy FullPolicy) *Queue[T] {
 	capacity := nextPowerOfTwo(initialSize)
-	// 如果设置了上限，且初始容量已经比上限大，这通常是配置错误，但也兼容处理
-	if maxSize > 0 && capacity > nextPowerOfTwo(maxSize) {
-		maxSize = capacity
-	}
-
 	return &Queue[T]{
-		mask:       capacity - 1,
 		items:      make([]T, capacity),
 		fullPolicy: policy,
-		maxSize:    maxSize,
+		maxSize:    normalizeQueueMaxSize(capacity, maxSize),
 	}
 }
 
 // GetDefaultQueue 创建一个默认策略（可扩容）的队列。
 // 等价于 NewQueue(size, 0, FullPolicyResize)。
 func GetDefaultQueue[T any](size int) *Queue[T] {
-	capacity := nextPowerOfTwo(size)
-	q := &Queue[T]{
-		mask:       capacity - 1,
-		items:      make([]T, capacity), // 环形缓冲区需额外空间
-		fullPolicy: FullPolicyResize,    // 默认自动扩容
-	}
-	return q
+	return NewQueue[T](size, 0, FullPolicyResize)
 }
 
 // Count 返回当前队列中的元素个数。
-// 内部加锁获取一致性快照。
 func (q *Queue[T]) Count() int {
-	q.lock.Lock() // 必须加锁才能获取准确快照
-	c := q.count
-	q.lock.Unlock()
-	return c
+	q.lock.Lock()
+	defer q.lock.Unlock()
+	return q.count
+}
+
+// Len 与 Count 相同，与同包其它队列 API 命名一致。
+func (q *Queue[T]) Len() int {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+	return q.count
+}
+
+// Cap 返回当前环形缓冲区的槽位数。
+// 在写满前可容纳的元素个数为 Cap()-1；FullPolicyResize 且无 maxSize 限制时环可扩容，瞬时上限随 Cap 增长。
+func (q *Queue[T]) Cap() int {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+	return len(q.items)
+}
+
+// IsClosed 报告队列是否已关闭。
+func (q *Queue[T]) IsClosed() bool {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+	return q.closed
+}
+
+// Close 关闭队列；关闭后 Enqueue/TryEnqueue/EnqueueBatch 失败，已入队元素仍可 Dequeue。
+func (q *Queue[T]) Close() {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+	q.closed = true
 }
 
 // Enqueue 入队一个元素。
-// 返回 true 表示成功，false 表示队列已满且策略不允许扩容。
+// 返回 true 表示成功，false 表示队列已关闭、已满且策略不允许扩容。
 func (q *Queue[T]) Enqueue(item T) bool {
 	q.lock.Lock()
-	// 计算下一个位置
-	next := (q.tail + 1) & q.mask
-	// 队列满时的处理
+	defer q.lock.Unlock()
+	return q.enqueueLocked(item)
+}
+
+// TryEnqueue 非阻塞入队：无法获取锁、队列已关闭、或队列满且无法扩容时返回 false。
+func (q *Queue[T]) TryEnqueue(item T) bool {
+	if !q.lock.TryLock() {
+		return false
+	}
+	defer q.lock.Unlock()
+	return q.enqueueLocked(item)
+}
+
+func (q *Queue[T]) enqueueLocked(item T) bool {
+	if q.closed {
+		return false
+	}
+	n := len(q.items)
+	next := (q.tail + 1) % n
 	if next == q.head {
 		switch q.fullPolicy {
 		case FullPolicyResize:
-			if q.maxSize > 0 && len(q.items) >= q.maxSize {
-				q.lock.Unlock()
-				return false // 队列真满了，且不能再扩了 -> 返回 false 触发外部重试
+			if q.maxSize > 0 && n >= q.maxSize {
+				return false
 			}
 			q.resize()
-			next = (q.tail + 1) & q.mask
+			n = len(q.items)
+			next = (q.tail + 1) % n
 		case FullPolicyDrop:
-			q.lock.Unlock()
-			return false // 队列满，丢弃新元素
+			return false
 		}
 	}
 
 	q.items[q.tail] = item
 	q.tail = next
-	q.count++ // 普通 int 操作
-	q.lock.Unlock()
+	q.count++
 	return true
 }
 
 // EnqueueBatch 批量入队（原子语义：要么整批成功，要么整批失败）。
-// 返回 true 表示整批入队成功，false 表示空间不足且策略不允许扩容。
+// 空切片恒返回 true（含队列已关闭时的 no-op）；非空切片在已关闭或空间不足且无法扩容时返回 false。
 func (q *Queue[T]) EnqueueBatch(items []T) bool {
 	if len(items) == 0 {
 		return true
@@ -123,61 +166,40 @@ func (q *Queue[T]) EnqueueBatch(items []T) bool {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
+	if q.closed {
+		return false
+	}
+
 	requiredSpace := len(items)
 	currentCap := len(q.items)
-	// Ring buffer 使用 head/tail + next==head 区分满与空，因此可容纳的最大元素数是 (capacity-1)。
-	// Enqueue 侧的满判断基于 next==head（即最多 q.mask 个元素），所以这里也必须对齐该语义，
-	// 否则会出现 EnqueueBatch 允许 count 达到 capacity 导致后续 FIFO 顺序错误。
 	maxCount := currentCap - 1
 	availableSpace := maxCount - q.count
 
-	// 注意：环形队列实际可用空间通常认为是 capacity - 1 (为了区分空和满)，
-	// 但我们这里用 count 计数，实际上 resize 也是基于 count 的。
-	// 当 count == len(items) 时，就需要扩容了。
-
-	// 1. 判断是否需要扩容
-	// 如果剩余空间不足以放下这批数据
 	if availableSpace < requiredSpace {
 		if q.fullPolicy == FullPolicyDrop {
-			return false // 空间不够，策略是丢弃，直接失败
+			return false
 		}
 
-		// 尝试计算需要扩容到多大
 		targetSize := currentCap
-		// 循环翻倍直到能装下或者超过 MaxSize
 		for (targetSize - 1 - q.count) < requiredSpace {
 			targetSize *= 2
-			// 如果超过了最大限制，且最大限制被设置了
-			if q.maxSize > 0 && targetSize > nextPowerOfTwo(q.maxSize) {
-				return false // 即使扩容到最大也装不下这批数据
+			if q.maxSize > 0 && targetSize > q.maxSize {
+				return false
 			}
 		}
-
-		// 执行具体的扩容操作
-		// 注意：上面的循环只是模拟计算，resize() 是单纯翻倍，所以可能需要多次 resize
-		// 或者我们改写 resize 支持一步到位，为了简单安全，这里循环调用 resize
-		for len(q.items) < targetSize {
-			q.resize()
-		}
+		q.resizeTo(targetSize)
 	}
 
-	// 2. 此时空间一定足够，开始批量写入
-	// 因为是环形队列，可能需要分两段写入
-
-	// 第一段：从 tail 到数组末尾
 	firstChunkLen := len(q.items) - q.tail
+	n := len(q.items)
 	if firstChunkLen >= requiredSpace {
-		// 情况A：直接追加在后面，不需要绕回头部
 		copy(q.items[q.tail:], items)
-		q.tail = (q.tail + requiredSpace) & q.mask
+		q.tail = (q.tail + requiredSpace) % n
 	} else {
-		// 情况B：需要绕回头部
-		// 1. 先填满尾部
 		copy(q.items[q.tail:], items[:firstChunkLen])
-		// 2. 再填头部
 		secondChunkLen := requiredSpace - firstChunkLen
 		copy(q.items[0:], items[firstChunkLen:])
-		q.tail = secondChunkLen & q.mask
+		q.tail = secondChunkLen % n
 	}
 
 	q.count += requiredSpace
@@ -188,29 +210,48 @@ func (q *Queue[T]) EnqueueBatch(items []T) bool {
 // 第二个返回值为 false 表示队列为空。
 func (q *Queue[T]) Front() (T, bool) {
 	q.lock.Lock()
+	defer q.lock.Unlock()
 	if q.count == 0 {
-		q.lock.Unlock()
+		return *new(T), false
+	}
+	return q.items[q.head], true
+}
+
+// Dequeue 出队单个元素。
+func (q *Queue[T]) Dequeue() (T, bool) {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
+	if q.count == 0 {
 		return *new(T), false
 	}
 	item := q.items[q.head]
-	q.lock.Unlock()
+	clear(q.items[q.head : q.head+1])
+	q.head = (q.head + 1) % len(q.items)
+	q.count--
 	return item, true
 }
 
 func (q *Queue[T]) resize() {
-	newSize := len(q.items) * 2
-	newItems := make([]T, newSize)
+	q.resizeTo(len(q.items) * 2)
+}
+
+func (q *Queue[T]) resizeTo(targetSize int) {
+	if targetSize <= len(q.items) {
+		return
+	}
+	oldLen := len(q.items)
+	newItems := make([]T, targetSize)
 
 	curr := q.head
 	for i := 0; i < q.count; i++ {
 		newItems[i] = q.items[curr]
-		curr = (curr + 1) & q.mask
+		curr = (curr + 1) % oldLen
 	}
 
 	q.items = newItems
 	q.head = 0
 	q.tail = q.count
-	q.mask = newSize - 1
 }
 
 // DequeueBatch 批量出队，结果写入 buf 中。
@@ -218,7 +259,7 @@ func (q *Queue[T]) resize() {
 // buf 的容量决定单次最多出队多少元素。
 func (q *Queue[T]) DequeueBatch(buf []T) ([]T, int) {
 	q.lock.Lock()
-	defer q.lock.Unlock() // 🔴 只加一次锁
+	defer q.lock.Unlock()
 
 	if q.count == 0 {
 		return buf[:0], 0
@@ -231,14 +272,24 @@ func (q *Queue[T]) DequeueBatch(buf []T) ([]T, int) {
 		limit = q.count
 	}
 
-	buf = buf[:0] // 重置长度
-	for i := 0; i < limit; i++ {
-		data := q.items[q.head]
-		var zero T
-		q.items[q.head] = zero // 防止内存泄漏
-		q.head = (q.head + 1) & q.mask
-		buf = append(buf, data)
+	startHead := q.head
+	nitems := len(q.items)
+	first := nitems - startHead
+	if first > limit {
+		first = limit
 	}
+
+	buf = buf[:0]
+	if first > 0 {
+		buf = append(buf, q.items[startHead:startHead+first]...)
+		clear(q.items[startHead : startHead+first])
+	}
+	remain := limit - first
+	if remain > 0 {
+		buf = append(buf, q.items[:remain]...)
+		clear(q.items[:remain])
+	}
+	q.head = (startHead + limit) % nitems
 	q.count -= limit
 	return buf, q.count
 }

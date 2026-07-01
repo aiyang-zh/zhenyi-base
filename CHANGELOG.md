@@ -13,11 +13,13 @@
 - **zcoll**：`ClearTimer` 分片循环 `checked>=LimitCheck` 与内层一致；`LimitDelete`/`LimitCheck` 增量清理上限注释。
 - **zencrypt**：AES/SM4 PKCS7 去填充增加 `padding > blockSize` 校验。
 - **zbatch**：`FastAdaptiveBatcher` warmup 按实际样本数计算平均延迟。
+- **zqueue**：`Queue.DequeueBatch` 分段 `copy`+`clear` 替代逐条写零，修复大元素批量出队性能退化；`NewMPSCQueuePadded` 在 `sizeof(slot[T])≥cacheLineSize` 时退化为紧凑布局；`resizeTo` 替代 `EnqueueBatch` 多次翻倍扩容。
 
 ### Changed
 
 - **ziface**：`IClient` 增加 `SendMsgAsync`（仅 async 异步入队；sync 丢弃并 Release）；`GMTLSConfig.DialWithTimeout`（`DialTLSWithTimeout` GM 路径尊重 dial timeout）。
 - **znet**：`SetDisconnectOnDecryptError`（默认 true）；读环扩容上限 **`RingBufferMaxSizeForSocket`**、**`SetRingBufferPoolMaxSize`**（accept 前）、**`SetMaxSize`**、**`GetRingBufferForSocket`**；**`BaseServer.SetSocketConfig`** 与 **`WithSocketConfig`** 同步 `BaseSocket` 与读环上限；`NewBaseChannel` 使用 `GetRingBufferForSocket`。
+- **zqueue**：`Queue.NewQueue` 将非 0 `maxSize` 规范为 2 幂且与 `Enqueue`/`EnqueueBatch` 共用同一环长上限比较（非 2 幂配置如 9 视为 16）；初始环已超过配置上限时仍抬高 `maxSize`（见 `TestNewQueue_MaxSizeLessThanInitial`）。
 - **docs**：`API.md` 补充 maxConn/BaseClose/解密策略/zreactor、RingBuffer 上限配置、网络层 Warn/Error 约定、`zcoll.ClearTimer` 说明。
 
 ### Added
@@ -25,7 +27,7 @@
 - **znet**：`regression_test.go`、`channel_onread_close_test.go`（OnRead 内/外 `Close` 死锁回归；关服、maxConn、解密、shared-send Close 等见 `regression_test.go`）；RingBuffer/GM dial/`SetSocketConfig` 等单元测试。
 - **zreactor**：`reactor_lifecycle.go`、`heartbeat.go`、`heartbeat_poll.go`、`sharded_fdmap.go` 及 `reactor_heartbeat_test.go`、`sharded_fdmap_test.go`。
 - **ztcp**：`server_reactor_test.go`（reactor 心跳超时）；**zws**：`ws_path.go`。
-- **zqueue**：`BenchmarkMatrix` 覆盖全部队列实现（11 类型×3 载荷×4 生产者×2 消费）；定长值载荷与 channel 公平对比；QueueDrop 按 consumed 计吞吐；SmartDouble/Priority 无对应 API 子项 Skip。
+- **zqueue**：`Queue` 新增 `Dequeue`/`Len`/`Cap`/`Close`/`IsClosed`/`TryEnqueue`；`GetDefaultQueue` 委托 `NewQueue`；`BenchmarkMatrix` 扩展四档入出 API（SingleSingle/SingleBatch/BatchSingle/BatchBatch，348 子项）；修正 `SetBytes` 为每消息字节与 MPSC `EnqueueBatch` 部分入队返回值；Large 环 `capLargeMatrix`(64MiB，非历史 4GiB，跨版本 Large 吞吐勿横比) 与 `matrixMaxBatchBytes`(1MiB) 适配 1–2GiB 机器；定长值载荷与 channel 公平对比；无对应 API 子项 Skip。
 
 ## [1.1.4] - 2026-05-28
 

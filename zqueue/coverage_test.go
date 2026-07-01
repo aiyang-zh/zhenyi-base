@@ -1,9 +1,12 @@
 package zqueue
 
 import (
+	"runtime"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
+	"unsafe"
 )
 
 // ============================================================
@@ -419,6 +422,178 @@ func TestMPSCQueue_EnqueueBatch_PartialFailure(t *testing.T) {
 	}
 }
 
+// mpscLargeTestItem 使 sizeof(slot[T]) ≥ cacheLineSize，触发 Padded 大元素紧凑退化路径。
+type mpscLargeTestItem struct {
+	Seq int64
+	Pad [120]byte
+}
+
+func TestMPSCQueuePadded_LargeTCompactLayout(t *testing.T) {
+	if unsafe.Sizeof(slot[mpscLargeTestItem]{}) < cacheLineSize {
+		t.Fatalf("sizeof(slot)=%d want >= %d", unsafe.Sizeof(slot[mpscLargeTestItem]{}), cacheLineSize)
+	}
+	padded := NewMPSCQueuePadded[mpscLargeTestItem](64)
+	compact := NewMPSCQueue[mpscLargeTestItem](64)
+	if len(padded.buffer) != len(compact.buffer) {
+		t.Fatalf("buffer len padded=%d compact=%d", len(padded.buffer), len(compact.buffer))
+	}
+	if padded.slots.stride != compact.slots.stride {
+		t.Fatalf("stride padded=%d compact=%d", padded.slots.stride, compact.slots.stride)
+	}
+}
+
+func TestMPSCQueuePadded_LargeTFIFOAndBatch(t *testing.T) {
+	q := NewMPSCQueuePadded[mpscLargeTestItem](64)
+
+	for i := 0; i < 50; i++ {
+		if !q.Enqueue(mpscLargeTestItem{Seq: int64(i)}) {
+			t.Fatalf("Enqueue %d failed", i)
+		}
+	}
+	for i := 0; i < 50; i++ {
+		v, ok := q.Dequeue()
+		if !ok || v.Seq != int64(i) {
+			t.Fatalf("Dequeue %d: ok=%v seq=%d", i, ok, v.Seq)
+		}
+	}
+
+	items := make([]mpscLargeTestItem, 8)
+	for i := range items {
+		items[i] = mpscLargeTestItem{Seq: int64(100 + i)}
+	}
+	if n := q.EnqueueBatch(items); n != len(items) {
+		t.Fatalf("EnqueueBatch=%d want %d", n, len(items))
+	}
+	buf := make([]mpscLargeTestItem, 8)
+	if m := q.DequeueBatch(buf); m != 8 {
+		t.Fatalf("DequeueBatch=%d want 8", m)
+	}
+	for i := 0; i < 8; i++ {
+		if buf[i].Seq != int64(100+i) {
+			t.Fatalf("buf[%d].Seq=%d want %d", i, buf[i].Seq, 100+i)
+		}
+	}
+}
+
+func TestMPSCQueuePadded_LargeTConcurrentSoak(t *testing.T) {
+	t.Run("MultiProducerCompleteness", func(t *testing.T) {
+		q := NewMPSCQueuePadded[mpscLargeTestItem](256)
+		const (
+			producerCount   = 8
+			msgsPerProducer = 500
+			total           = producerCount * msgsPerProducer
+		)
+		var enqueueSeq atomic.Uint64
+		var wg sync.WaitGroup
+		wg.Add(producerCount)
+		for p := 0; p < producerCount; p++ {
+			go func() {
+				defer wg.Done()
+				for j := 0; j < msgsPerProducer; j++ {
+					seq := enqueueSeq.Add(1) - 1
+					v := mpscLargeTestItem{Seq: int64(seq)}
+					for !q.Enqueue(v) {
+						runtime.Gosched()
+					}
+				}
+			}()
+		}
+
+		seen := make([]atomic.Uint32, total)
+		var received int64
+		var badSeq atomic.Bool
+		var dupSeq atomic.Bool
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			for atomic.LoadInt64(&received) < int64(total) {
+				v, ok := q.Dequeue()
+				if !ok {
+					if atomic.LoadInt64(&received) == int64(total) {
+						return
+					}
+					runtime.Gosched()
+					continue
+				}
+				idx := v.Seq
+				if idx < 0 || int(idx) >= total {
+					badSeq.Store(true)
+				} else if seen[idx].Add(1) > 1 {
+					dupSeq.Store(true)
+				}
+				atomic.AddInt64(&received, 1)
+			}
+		}()
+
+		wg.Wait()
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			t.Fatalf("timeout received=%d want %d", atomic.LoadInt64(&received), total)
+		}
+		if atomic.LoadInt64(&received) != int64(total) {
+			t.Fatalf("received=%d want %d", atomic.LoadInt64(&received), total)
+		}
+		if enqueueSeq.Load() != uint64(total) {
+			t.Fatalf("enqueueSeq=%d want %d", enqueueSeq.Load(), total)
+		}
+		if badSeq.Load() {
+			t.Fatal("dequeued Seq out of range")
+		}
+		if dupSeq.Load() {
+			t.Fatal("duplicate Seq dequeued")
+		}
+		for i := range seen {
+			if seen[i].Load() != 1 {
+				t.Fatalf("missing Seq %d", i)
+			}
+		}
+	})
+
+	t.Run("SingleProducerFIFO", func(t *testing.T) {
+		q := NewMPSCQueuePadded[mpscLargeTestItem](256)
+		const total = 4000
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < total; i++ {
+				for !q.Enqueue(mpscLargeTestItem{Seq: int64(i)}) {
+					runtime.Gosched()
+				}
+			}
+		}()
+
+		var next int64
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			for next < int64(total) {
+				v, ok := q.Dequeue()
+				if !ok {
+					runtime.Gosched()
+					continue
+				}
+				if v.Seq != next {
+					t.Errorf("FIFO violated at %d: got Seq %d", next, v.Seq)
+					return
+				}
+				next++
+			}
+		}()
+
+		wg.Wait()
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			t.Fatalf("timeout at %d/%d", next, total)
+		}
+		if next != int64(total) {
+			t.Fatalf("dequeued %d want %d", next, total)
+		}
+	})
+}
+
 func TestMPSCQueue_DequeueBatch_Basic(t *testing.T) {
 	q := NewMPSCQueue[int](8)
 	q.Enqueue(1)
@@ -522,7 +697,7 @@ func TestNewQueue_MaxSizeLessThanInitial(t *testing.T) {
 	if q == nil {
 		t.Fatal("NewQueue returned nil")
 	}
-	// maxSize 8 -> nextPowerOfTwo(8)=8, capacity 16 > 8, so maxSize gets set to 16
+	// maxSize 8 → nextPowerOfTwo(8)=8，capacity 16 > 8，maxSize 抬高为 16
 	// Ring buffer: capacity 16 uses one slot to distinguish full/empty, so we can hold 15 items
 	for i := 0; i < 15; i++ {
 		if !q.Enqueue(i) {
@@ -531,6 +706,158 @@ func TestNewQueue_MaxSizeLessThanInitial(t *testing.T) {
 	}
 	if q.Enqueue(100) {
 		t.Error("Enqueue when full should fail")
+	}
+}
+
+func TestQueue_DequeueAndLenCap(t *testing.T) {
+	q := NewQueue[int](8, 8, FullPolicyResize)
+	if q.Cap() != 8 {
+		t.Fatalf("Cap=%d want 8", q.Cap())
+	}
+	for i := 0; i < 5; i++ {
+		if !q.Enqueue(i) {
+			t.Fatalf("enqueue %d", i)
+		}
+	}
+	if q.Len() != 5 || q.Count() != 5 {
+		t.Fatalf("Len=%d Count=%d want 5", q.Len(), q.Count())
+	}
+	for i := 0; i < 5; i++ {
+		v, ok := q.Dequeue()
+		if !ok || v != i {
+			t.Fatalf("Dequeue %d: ok=%v v=%d", i, ok, v)
+		}
+	}
+	if q.Len() != 0 {
+		t.Fatalf("Len=%d want 0", q.Len())
+	}
+}
+
+func TestQueue_CloseBlocksEnqueueAllowsDequeue(t *testing.T) {
+	q := NewQueue[int](8, 8, FullPolicyResize)
+	for i := 0; i < 3; i++ {
+		q.Enqueue(i)
+	}
+	q.Close()
+	if !q.IsClosed() {
+		t.Fatal("IsClosed want true")
+	}
+	if q.Enqueue(99) {
+		t.Fatal("Enqueue after Close should fail")
+	}
+	if q.EnqueueBatch([]int{1, 2}) {
+		t.Fatal("EnqueueBatch after Close should fail")
+	}
+	for i := 0; i < 3; i++ {
+		v, ok := q.Dequeue()
+		if !ok || v != i {
+			t.Fatalf("Dequeue %d: ok=%v v=%d", i, ok, v)
+		}
+	}
+	if _, ok := q.Dequeue(); ok {
+		t.Fatal("Dequeue on empty should fail")
+	}
+}
+
+func TestQueue_TryEnqueue(t *testing.T) {
+	q := NewQueue[int](4, 4, FullPolicyDrop)
+	for i := 0; i < 3; i++ {
+		if !q.TryEnqueue(i) {
+			t.Fatalf("TryEnqueue %d", i)
+		}
+	}
+	if q.TryEnqueue(99) {
+		t.Fatal("TryEnqueue on full drop queue should fail")
+	}
+	q.Close()
+	if q.TryEnqueue(0) {
+		t.Fatal("TryEnqueue after Close should fail")
+	}
+}
+
+func TestQueue_TryEnqueueContention(t *testing.T) {
+	q := NewQueue[int](4, 4, FullPolicyDrop)
+	const goroutines = 16
+	const perG = 200
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	for g := 0; g < goroutines; g++ {
+		go func(base int) {
+			defer wg.Done()
+			for i := 0; i < perG; i++ {
+				q.TryEnqueue(base*perG + i)
+			}
+		}(g)
+	}
+	wg.Wait()
+
+	if q.Count() > 3 {
+		t.Fatalf("Count=%d want <= 3", q.Count())
+	}
+	for q.Count() > 0 {
+		if _, ok := q.Dequeue(); !ok {
+			t.Fatal("Dequeue failed while draining")
+		}
+	}
+}
+
+func TestQueue_EnqueueBatchResizeToOnce(t *testing.T) {
+	q := NewQueue[int](4, 0, FullPolicyResize)
+	if !q.EnqueueBatch(make([]int, 20)) {
+		t.Fatal("EnqueueBatch 20 failed")
+	}
+	if q.Cap() < 32 {
+		t.Fatalf("Cap=%d want >= 32 after single resizeTo", q.Cap())
+	}
+	if q.Count() != 20 {
+		t.Fatalf("Count=%d want 20", q.Count())
+	}
+	for i := 0; i < 20; i++ {
+		v, ok := q.Dequeue()
+		if !ok || v != 0 {
+			t.Fatalf("Dequeue %d: ok=%v v=%d want 0", i, ok, v)
+		}
+	}
+}
+
+func TestQueue_EnqueueBatchEmptyWhenClosed(t *testing.T) {
+	q := NewQueue[int](4, 4, FullPolicyResize)
+	q.Close()
+	if !q.EnqueueBatch(nil) {
+		t.Fatal("EnqueueBatch nil on closed should be no-op true")
+	}
+	if !q.EnqueueBatch([]int{}) {
+		t.Fatal("EnqueueBatch empty on closed should be no-op true")
+	}
+	if q.Count() != 0 {
+		t.Fatalf("Count=%d want 0", q.Count())
+	}
+}
+
+func TestQueue_MaxSizeNormalizedForBatchAndSingle(t *testing.T) {
+	// 非 2 幂 maxSize 规范为 16；单条与批量扩容上限一致
+	q := NewQueue[int](4, 9, FullPolicyResize)
+	if q.maxSize != 16 {
+		t.Fatalf("maxSize=%d want 16", q.maxSize)
+	}
+	for i := 0; i < 15; i++ {
+		if !q.Enqueue(i) {
+			t.Fatalf("Enqueue %d at cap boundary", i)
+		}
+	}
+	if q.Enqueue(100) {
+		t.Error("Enqueue beyond max ring should fail")
+	}
+	q2 := NewQueue[int](4, 9, FullPolicyResize)
+	for i := 0; i < 12; i++ {
+		q2.Enqueue(i)
+	}
+	if !q2.EnqueueBatch([]int{12, 13, 14}) {
+		t.Fatal("EnqueueBatch should succeed up to 15 elements")
+	}
+	if q2.EnqueueBatch([]int{99}) {
+		t.Error("EnqueueBatch beyond max ring should fail")
 	}
 }
 
@@ -742,6 +1069,7 @@ func TestNextPowerOfTwo_EdgeCases(t *testing.T) {
 		{100, 128},
 		{1024, 1024},
 		{1025, 2048},
+		{1<<32 + 1, 1 << 33},
 	}
 	for _, tt := range tests {
 		got := nextPowerOfTwo(tt.in)
