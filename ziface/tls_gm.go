@@ -3,6 +3,7 @@ package ziface
 import (
 	"errors"
 	"net"
+	"time"
 
 	gmx509 "github.com/emmansun/gmsm/smx509"
 
@@ -16,10 +17,19 @@ type GMTLSConfig struct {
 
 // Dial 使用本配置建立 GM-TLS 客户端连接。
 func (g *GMTLSConfig) Dial(network, addr string) (net.Conn, error) {
+	return g.DialWithTimeout(network, addr, 0)
+}
+
+// DialWithTimeout 建立 GM-TLS 客户端连接；timeout>0 时作为底层 net.Dialer.Timeout（与标准 TLS DialWithDialer 一致）。
+func (g *GMTLSConfig) DialWithTimeout(network, addr string, timeout time.Duration) (net.Conn, error) {
 	if g == nil || g.inner == nil {
 		return nil, errors.New("ziface: nil GMTLSConfig")
 	}
-	return gmtls.Dial(network, addr, g.inner)
+	var d net.Dialer
+	if timeout > 0 {
+		d.Timeout = timeout
+	}
+	return gmtls.DialWithDialer(&d, network, addr, g.inner)
 }
 
 func (g *GMTLSConfig) wrapListener(ln net.Listener) net.Listener {

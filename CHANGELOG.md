@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.1.5] - 2026-06-29
+
+### Fixed
+
+- **znet（关服与连接管理）**：`BaseClose` 关闭全部 channel；共享写 `awaitSharedSendDrain`（全局 ctx 2×`SharedSendCloseTimeout`）后 **`stopSharedSendWorkers` 排空队列**（超时亦 stop）；**`HandleAccept` `connCount.Load()` 快拒（含自定义 `IChannel`）+ `AddChannel` 原子递增**（未 `AddChannel` 不泄漏 `connCount`）；`SetChannelAuth`/`RemoveChannel` 修正。
+- **znet（Close 与读循环）**：`readWg`；OnRead 内 `Close` 异步收尾；**解密失败默认断链**，**`SetDisconnectOnDecryptError(false)` 兼容 1.1.4 丢包**；`RingBuffer.Write` 满缓冲部分写返回 `io.ErrShortWrite`。
+- **znet（reactor 共享写）**：`BeginReactorRead`/`EndReactorRead`、`CloseFromReactor`、`CloseFromSharedSendPath`；读栈内 `Close()` 异步 drain；`SendLoopTuning.SharedSendCloseTimeout`（默认 30s，Close 双次重试）；worker 单消费者排空 mailBoxQueue；`SetSendQueueOverflowHook`。
+- **znet（reactor 读与客户端）**：`WriteToReadBuffer` 缓冲满/扩容重试；`RecordReadIngestError`；客户端 v1 `writeImmediate`/`Request` 13 字节头与 `SocketConfig` 校验；`WithSocketConfig`/`WithTLSConfig`/`WithDialTimeout`/`WithWebSocketPath`/`WithWebSocketHeaders`；`SendBatchMsg` 加密失败时紧凑 header 槽位。
+- **ztcp/zws/zkcp**：`HandleAccept` 拒绝改为 `CloseFromSharedSendPath()`；Darwin reactor 与 Linux 对齐；`WithDialTimeout`；`WClient` TLS；`wserver` Listen 失败 `Close`、`TCP_NODELAY`、`SetWebSocketPath`；`wsConn` 帧尾缓冲池化。
+- **zreactor**：`closeConn` → `CloseFromReactor`；`ingestConnReadAndDispatch` 合并写缓冲与解析；`HeartbeatPollMs` + `checkHeartbeats`（`eachShardEntries` 稳态零分配）；`batchReadAndParse` 与 `handleConnRead` 对齐；合并 `sharded_fdmap`；Darwin listener 非阻塞；stub panic 文案修正。
+- **zcoll**：`ClearTimer` 分片循环 `checked>=LimitCheck` 与内层一致；`LimitDelete`/`LimitCheck` 增量清理上限注释。
+- **zencrypt**：AES/SM4 PKCS7 去填充增加 `padding > blockSize` 校验。
+- **zbatch**：`FastAdaptiveBatcher` warmup 按实际样本数计算平均延迟。
+
+### Changed
+
+- **ziface**：`IClient` 增加 `SendMsgAsync`（仅 async 异步入队；sync 丢弃并 Release）；`GMTLSConfig.DialWithTimeout`（`DialTLSWithTimeout` GM 路径尊重 dial timeout）。
+- **znet**：`SetDisconnectOnDecryptError`（默认 true）；读环扩容上限 **`RingBufferMaxSizeForSocket`**、**`SetRingBufferPoolMaxSize`**（accept 前）、**`SetMaxSize`**、**`GetRingBufferForSocket`**；**`BaseServer.SetSocketConfig`** 与 **`WithSocketConfig`** 同步 `BaseSocket` 与读环上限；`NewBaseChannel` 使用 `GetRingBufferForSocket`。
+- **docs**：`API.md` 补充 maxConn/BaseClose/解密策略/zreactor、RingBuffer 上限配置、网络层 Warn/Error 约定、`zcoll.ClearTimer` 说明。
+
+### Added
+
+- **znet**：`regression_test.go`、`channel_onread_close_test.go`（OnRead 内/外 `Close` 死锁回归；关服、maxConn、解密、shared-send Close 等见 `regression_test.go`）；RingBuffer/GM dial/`SetSocketConfig` 等单元测试。
+- **zreactor**：`reactor_lifecycle.go`、`heartbeat.go`、`heartbeat_poll.go`、`sharded_fdmap.go` 及 `reactor_heartbeat_test.go`、`sharded_fdmap_test.go`。
+- **ztcp**：`server_reactor_test.go`（reactor 心跳超时）；**zws**：`ws_path.go`。
+- **zqueue**：`BenchmarkMatrix` 覆盖全部队列实现（11 类型×3 载荷×4 生产者×2 消费）；定长值载荷与 channel 公平对比；QueueDrop 按 consumed 计吞吐；SmartDouble/Priority 无对应 API 子项 Skip。
+
 ## [1.1.4] - 2026-05-28
 
 ### Changed

@@ -28,6 +28,9 @@ type SendLoopTuning struct {
 	ReactorMaxQueuedMsgs int
 	// ReactorFlushBatchesPerTurn：共享写 worker 单次轮转内对单连接最多连续 flush 的批次数（公平性）。
 	ReactorFlushBatchesPerTurn int
+	// SharedSendCloseTimeout：单连接 Close 等待共享写 worker ack 的单轮上限（默认 30s，失败会重试一轮）。
+	// BaseClose 并行 awaitSharedSendDrain，全局 context 上限 2×本值；到期取消等待 goroutine 并 stopSharedSendWorkers 排空队列。
+	SharedSendCloseTimeout time.Duration
 }
 
 var sendLoopTuning atomic.Value // SendLoopTuning
@@ -48,6 +51,7 @@ func init() {
 
 		ReactorMaxQueuedMsgs:       8192,
 		ReactorFlushBatchesPerTurn: 8,
+		SharedSendCloseTimeout:     30 * time.Second,
 	})
 }
 
@@ -87,6 +91,9 @@ func SetSendLoopTuning(t SendLoopTuning) {
 	}
 	if t.ReactorFlushBatchesPerTurn > 0 {
 		cur.ReactorFlushBatchesPerTurn = t.ReactorFlushBatchesPerTurn
+	}
+	if t.SharedSendCloseTimeout > 0 {
+		cur.SharedSendCloseTimeout = t.SharedSendCloseTimeout
 	}
 	sendLoopTuning.Store(cur)
 }

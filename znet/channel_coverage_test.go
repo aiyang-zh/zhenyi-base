@@ -3,6 +3,7 @@ package znet
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"net"
 	"strings"
@@ -344,6 +345,89 @@ func TestBaseChannel_SendBatchMsg_SingleMessage(t *testing.T) {
 	}
 	if n < 12 {
 		t.Errorf("expected >= 12 bytes, got %d", n)
+	}
+}
+
+// failNthEncrypt 在第 n 次 Encrypt 调用时返回错误，用于测试 SendBatchMsg 跳过失败消息。
+type failNthEncrypt struct {
+	n     int
+	calls int
+}
+
+func (f *failNthEncrypt) Encrypt(data []byte) ([]byte, error) {
+	f.calls++
+	if f.calls == f.n {
+		return nil, errors.New("injected encrypt failure")
+	}
+	return data, nil
+}
+
+func (f *failNthEncrypt) Decrypt(data []byte) ([]byte, error) {
+	return data, nil
+}
+
+func TestBaseChannel_SendBatchMsg_SkipsFailedEncrypt(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Skipf("listen: %v", err)
+	}
+	defer ln.Close()
+
+	acceptDone := make(chan net.Conn, 1)
+	go func() {
+		conn, _ := ln.Accept()
+		acceptDone <- conn
+	}()
+
+	clientConn, err := net.Dial("tcp", ln.Addr().String())
+	if err != nil {
+		t.Skipf("dial: %v", err)
+	}
+	defer clientConn.Close()
+
+	serverConn := <-acceptDone
+	if serverConn == nil {
+		t.Fatal("accept failed")
+	}
+	defer serverConn.Close()
+
+	bs := NewBaseServer("test:0", ServerHandlers{
+		OnAccept: func(ziface.IChannel) bool { return true },
+		OnRead:   func(ziface.IChannel, ziface.IWireMessage) {},
+	})
+	bs.SetEncrypt(&failNthEncrypt{n: 2})
+	ts := &testServer{BaseServer: bs}
+	ch := NewBaseChannel(ts.NextId(), clientConn, ts)
+	defer ch.Close()
+	bs.AddChannel(ch)
+
+	msgs := []ziface.IMessage{
+		&NetMessage{MsgId: 1, SeqId: 1, Data: []byte("a")},
+		&NetMessage{MsgId: 2, SeqId: 2, Data: []byte("b")},
+		&NetMessage{MsgId: 3, SeqId: 3, Data: []byte("c")},
+	}
+	ch.SendBatchMsg(msgs)
+
+	buf := make([]byte, 256)
+	serverConn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	total := 0
+	for total < 2*(12+1) {
+		n, err := serverConn.Read(buf[total:])
+		if err != nil {
+			t.Fatalf("Read: %v (total=%d)", err, total)
+		}
+		total += n
+	}
+	wire := buf[:total]
+	if len(wire) != 2*(12+1) {
+		t.Fatalf("expected 2 packets (26 bytes), got %d", len(wire))
+	}
+	if binary.BigEndian.Uint32(wire[0:4]) != 1 {
+		t.Fatalf("first msgId: got %d want 1", binary.BigEndian.Uint32(wire[0:4]))
+	}
+	off := 12 + 1
+	if binary.BigEndian.Uint32(wire[off:off+4]) != 3 {
+		t.Fatalf("second msgId: got %d want 3", binary.BigEndian.Uint32(wire[off:off+4]))
 	}
 }
 

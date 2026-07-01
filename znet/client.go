@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"net/http"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -25,9 +26,45 @@ import (
 // ClientOption 客户端创建时的可选配置。
 type ClientOption func(*BaseClient)
 
+// WithSocketConfig 设置客户端协议解析与安全限制（如 ProtocolVersion、MaxDataLength）。
+func WithSocketConfig(cfg SocketConfig) ClientOption {
+	return func(b *BaseClient) {
+		b.socketParser = NewBaseSocket(cfg)
+		if b.readBuffer != nil {
+			b.readBuffer.SetMaxSize(RingBufferMaxSizeForSocket(cfg))
+		}
+		hdrLen := b.socketParser.HeaderLen()
+		tuning := GetSendLoopTuning()
+		if tuning.BatchMax > 0 && hdrLen > 0 {
+			b.headersBuf = make([]byte, 0, tuning.BatchMax*hdrLen)
+			b.writeBufs = make(net.Buffers, 0, tuning.BatchMax*2)
+		}
+	}
+}
+
 // WithAsyncMode 启用异步模式：SetReadCall + Read() 流式收包。
 func WithAsyncMode() ClientOption {
 	return func(b *BaseClient) { b.mode = ziface.ModeAsync }
+}
+
+// WithTLSConfig 设置客户端 TLS/GM-TLS 配置；由 ztcp/zws 在 Connect 时使用。
+func WithTLSConfig(cfg *ziface.TLSConfig) ClientOption {
+	return func(b *BaseClient) { b.tlsConfig = cfg }
+}
+
+// WithDialTimeout 设置客户端建连超时；0 表示使用系统默认（无额外超时）。
+func WithDialTimeout(timeout time.Duration) ClientOption {
+	return func(b *BaseClient) { b.dialTimeout = timeout }
+}
+
+// WithWebSocketPath 设置 WebSocket 握手路径（默认 "/"）。
+func WithWebSocketPath(path string) ClientOption {
+	return func(b *BaseClient) { b.wsPath = path }
+}
+
+// WithWebSocketHeaders 设置 WebSocket 握手附加 HTTP 头。
+func WithWebSocketHeaders(headers http.Header) ClientOption {
+	return func(b *BaseClient) { b.wsHeaders = headers }
 }
 
 // BaseClient 基础客户端（零拷贝、热路径无锁）。
@@ -52,8 +89,8 @@ type BaseClient struct {
 
 	mode ziface.ConnMode // 默认 ModeSync（Request）；ModeAsync 时用 Read
 
-	requestReader    *bufio.Reader // Request 路径用，懒创建
-	requestHeaderBuf [12]byte      // Request 直读路径复用，避免每请求分配
+	requestReader    *bufio.Reader      // Request 路径用，懒创建
+	requestHeaderBuf [headerSizeV1]byte // Request 直读路径复用，覆盖 v0/v1 最大头长
 
 	mailBoxQueue  *zqueue.UnboundedMPSC[ziface.IMessage]
 	sendDone      sync.WaitGroup
@@ -63,6 +100,11 @@ type BaseClient struct {
 	writeBufs     net.Buffers
 	batcher       *zbatch.FastAdaptiveBatcher
 	queuedMsgs    int64
+
+	tlsConfig   *ziface.TLSConfig
+	dialTimeout time.Duration
+	wsPath      string
+	wsHeaders   http.Header
 }
 
 // NewBaseClient 创建网络层客户端基类。默认 sync（Request）；可选 WithAsyncMode() 启用 async（Read）。
@@ -97,7 +139,40 @@ func NewBaseClient(opts ...ClientOption) *BaseClient {
 	for _, opt := range opts {
 		opt(client)
 	}
+	client.readBuffer.SetMaxSize(RingBufferMaxSizeForSocket(client.socketParser.config))
 	return client
+}
+
+// TLSConfig 返回客户端 TLS 配置（可能为 nil）。
+func (b *BaseClient) TLSConfig() *ziface.TLSConfig {
+	if b == nil {
+		return nil
+	}
+	return b.tlsConfig
+}
+
+// DialTimeout 返回客户端建连超时；0 表示无额外超时。
+func (b *BaseClient) DialTimeout() time.Duration {
+	if b == nil {
+		return 0
+	}
+	return b.dialTimeout
+}
+
+// WebSocketPath 返回 WebSocket 握手路径；空字符串表示默认 "/"。
+func (b *BaseClient) WebSocketPath() string {
+	if b == nil {
+		return ""
+	}
+	return b.wsPath
+}
+
+// WebSocketHeaders 返回 WebSocket 握手附加 HTTP 头（可能为 nil）。
+func (b *BaseClient) WebSocketHeaders() http.Header {
+	if b == nil {
+		return nil
+	}
+	return b.wsHeaders
 }
 
 // SetReadCall 设置收到完整消息时的回调（在 Read 循环中同步调用）。
@@ -178,6 +253,7 @@ func (b *BaseClient) Close() error {
 	// Step 2: 关闭底层连接，强制 runSend / read 中阻塞 I/O 立即返回
 	if v := b.activeConn.Load(); v != nil {
 		if err := v.(net.Conn).Close(); err != nil {
+			// 关连清理：过滤「连接已关闭」类预期错误，其余 Close 错误记 Warn，见 docs/API.md「日志级别」。
 			errMsg := err.Error()
 			if !strings.Contains(errMsg, "use of closed network connection") {
 				zlog.Warn("Close connection error", zap.Error(err))
@@ -272,21 +348,34 @@ func (b *BaseClient) Request(msg ziface.IMessage) (ziface.IWireMessage, error) {
 	if b.requestReader == nil {
 		b.requestReader = bufio.NewReader(conn)
 	}
-	// 直读路径：io.ReadFull(header 12B) + io.ReadFull(body)，与 Zinx 同结构
-	hdr := b.requestHeaderBuf[:]
+	// 直读路径：按 HeaderLen 读取 header + body。
+	hdrLen := b.socketParser.HeaderLen()
+	hdr := b.requestHeaderBuf[:hdrLen]
 	if _, err := io.ReadFull(b.requestReader, hdr); err != nil {
 		if err == io.EOF || b.isNormalCloseError(err) {
 			return nil, io.EOF
 		}
 		return nil, err
 	}
-	msgId := int32(binary.BigEndian.Uint32(hdr[0:4]))
-	seqId := binary.BigEndian.Uint32(hdr[4:8])
-	dataLen := binary.BigEndian.Uint32(hdr[8:12])
+	off := 0
+	if b.socketParser.config.ProtocolVersion >= 1 {
+		if hdr[0] != b.socketParser.config.ProtocolVersion {
+			return nil, zerrs.Newf(zerrs.ErrTypeValidation, "protocol version mismatch: got %d, expect %d", hdr[0], b.socketParser.config.ProtocolVersion)
+		}
+		off = 1
+	}
+	msgId := int32(binary.BigEndian.Uint32(hdr[off : off+4]))
+	maxMsgId := b.socketParser.config.MaxMsgId
+	if int(msgId) < -maxMsgId || int(msgId) > maxMsgId {
+		return nil, zerrs.InvalidParameterf("msgId %d out of range", msgId)
+	}
+	seqId := binary.BigEndian.Uint32(hdr[off+4 : off+8])
+	dataLen := binary.BigEndian.Uint32(hdr[off+8 : off+12])
+	maxDataLen := b.socketParser.config.MaxDataLength
 	var body []byte
 	if dataLen > 0 {
-		if dataLen > uint32(DefaultMaxDataLength) {
-			return nil, ErrBufferFull
+		if int(dataLen) > maxDataLen {
+			return nil, zerrs.InvalidParameterf("invalid data length: %d (max: %d)", dataLen, maxDataLen)
 		}
 		body = make([]byte, dataLen)
 		if _, err := io.ReadFull(b.requestReader, body); err != nil {
@@ -344,7 +433,7 @@ func (b *BaseClient) writeImmediate(message ziface.IMessage, conn net.Conn) {
 	wrapper.SetSeqId(message.GetSeqId())
 	wrapper.SetMessageData(encryptedData)
 
-	var headerBuf [headerSize]byte
+	var headerBuf [headerSizeV1]byte
 	headerLen, body := b.socketParser.PreparePacket(wrapper, headerBuf[:])
 
 	buffers := net.Buffers{headerBuf[:headerLen]}
@@ -442,17 +531,8 @@ func (b *BaseClient) sendBatchMsg(messages []ziface.IMessage) {
 	}
 
 	hdrLen := b.socketParser.HeaderLen()
-	headersSize := len(messages) * hdrLen
-	if cap(b.headersBuf) >= headersSize {
-		b.headersBuf = b.headersBuf[:headersSize]
-	} else {
-		b.headersBuf = make([]byte, headersSize)
-	}
-	headers := b.headersBuf
-
-	needBufsCap := 2 * len(messages)
-	if cap(b.writeBufs) < needBufsCap {
-		b.writeBufs = make(net.Buffers, 0, needBufsCap)
+	if cap(b.writeBufs) < 2*len(messages) {
+		b.writeBufs = make(net.Buffers, 0, 2*len(messages))
 	} else {
 		b.writeBufs = b.writeBufs[:0]
 	}
@@ -460,7 +540,8 @@ func (b *BaseClient) sendBatchMsg(messages []ziface.IMessage) {
 	wrapper := GetNetMessage()
 	defer wrapper.Release()
 
-	for i, msg := range messages {
+	sent := 0
+	for _, msg := range messages {
 		data := msg.GetMessageData()
 		wireData, err := b.iEncrypt.Encrypt(data)
 		if err != nil {
@@ -476,13 +557,29 @@ func (b *BaseClient) sendBatchMsg(messages []ziface.IMessage) {
 		wrapper.SetSeqId(msg.GetSeqId())
 		wrapper.SetMessageData(wireData)
 
-		offset := i * hdrLen
-		headerLen, body := b.socketParser.PreparePacket(wrapper, headers[offset:offset+hdrLen])
+		needHeaders := (sent + 1) * hdrLen
+		if cap(b.headersBuf) < needHeaders {
+			grow := needHeaders
+			if cap(b.headersBuf) > 0 {
+				grow = cap(b.headersBuf) * 2
+				if grow < needHeaders {
+					grow = needHeaders
+				}
+			}
+			nb := make([]byte, needHeaders, grow)
+			copy(nb, b.headersBuf[:sent*hdrLen])
+			b.headersBuf = nb
+		} else {
+			b.headersBuf = b.headersBuf[:needHeaders]
+		}
+		offset := sent * hdrLen
+		headerLen, body := b.socketParser.PreparePacket(wrapper, b.headersBuf[offset:offset+hdrLen])
 
-		b.writeBufs = append(b.writeBufs, headers[offset:offset+headerLen])
+		b.writeBufs = append(b.writeBufs, b.headersBuf[offset:offset+headerLen])
 		if len(body) > 0 {
 			b.writeBufs = append(b.writeBufs, body)
 		}
+		sent++
 	}
 
 	if len(b.writeBufs) == 0 {

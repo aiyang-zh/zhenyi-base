@@ -6,6 +6,7 @@ import (
 	"github.com/aiyang-zh/zhenyi-base/zencrypt"
 	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"io"
+	"net"
 	"sync"
 	"testing"
 	"time"
@@ -253,6 +254,98 @@ func TestRingBufferPool_GetPut(t *testing.T) {
 		t.Errorf("expected Stats zero after pool Get, got tr=%d tw=%d", tr, tw)
 	}
 	PutRingBuffer(rb2)
+}
+
+func TestGetRingBuffer_MaxSizeCapped(t *testing.T) {
+	rb := GetRingBuffer()
+	defer PutRingBuffer(rb)
+
+	wantCap := int(nextPowerOfTwo64(uint64(RingBufferMaxSizeForSocket(DefaultSocketConfig()))))
+	for rb.Cap() < wantCap {
+		if rb.Free() == 0 {
+			if !rb.Grow(1) {
+				break
+			}
+		}
+		n := rb.Free()
+		if _, err := rb.Write(make([]byte, n)); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+	}
+	if rb.Cap() != wantCap {
+		t.Fatalf("pooled ring cap=%d want max %d (RingBufferMaxSizeForSocket default)", rb.Cap(), wantCap)
+	}
+	if rb.Free() == 0 && rb.Grow(1) {
+		t.Fatal("Grow should fail at pooled max size")
+	}
+}
+
+func TestSetRingBufferPoolMaxSize(t *testing.T) {
+	defer SetRingBufferPoolMaxSize(0)
+
+	const custom = 256 * 1024
+	SetRingBufferPoolMaxSize(custom)
+	if got := GetRingBufferPoolMaxSize(); got != custom {
+		t.Fatalf("GetRingBufferPoolMaxSize=%d want %d", got, custom)
+	}
+
+	rb := GetRingBuffer()
+	defer PutRingBuffer(rb)
+	wantCap := int(nextPowerOfTwo64(custom))
+	for rb.Cap() < wantCap {
+		if rb.Free() == 0 {
+			if !rb.Grow(1) {
+				break
+			}
+		}
+		n := rb.Free()
+		if _, err := rb.Write(make([]byte, n)); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+	}
+	if rb.Cap() != wantCap {
+		t.Fatalf("cap=%d want %d after SetRingBufferPoolMaxSize", rb.Cap(), wantCap)
+	}
+}
+
+func TestRingBufferMaxSizeForSocket_FollowsMaxDataLength(t *testing.T) {
+	cfg := DefaultSocketConfig()
+	cfg.MaxDataLength = 2048
+	cfg.ProtocolVersion = 1
+	if got := RingBufferMaxSizeForSocket(cfg); got != 2048+headerSizeV1 {
+		t.Fatalf("got %d want %d", got, 2048+headerSizeV1)
+	}
+}
+
+func TestBaseClient_WithSocketConfig_SetsRingMaxSize(t *testing.T) {
+	cfg := DefaultSocketConfig()
+	cfg.MaxDataLength = 4096
+	client := NewBaseClient(WithSocketConfig(cfg))
+	want := int(nextPowerOfTwo64(uint64(RingBufferMaxSizeForSocket(cfg))))
+	if client.readBuffer.MaxSizeCap() != want {
+		t.Fatalf("readBuffer MaxSizeCap=%d want %d", client.readBuffer.MaxSizeCap(), want)
+	}
+}
+
+func TestBaseServer_SetSocketConfig_SetsChannelRingMaxSize(t *testing.T) {
+	ts := &testServer{BaseServer: NewBaseServer("127.0.0.1:0", ServerHandlers{
+		OnAccept: func(ziface.IChannel) bool { return true },
+		OnRead:   func(ziface.IChannel, ziface.IWireMessage) {},
+	})}
+	cfg := DefaultSocketConfig()
+	cfg.MaxDataLength = 4096
+	cfg.ProtocolVersion = 1
+	ts.SetSocketConfig(cfg)
+
+	_, srvConn := net.Pipe()
+	ch := NewBaseChannel(ts.NextId(), srvConn, ts)
+	want := int(nextPowerOfTwo64(uint64(RingBufferMaxSizeForSocket(cfg))))
+	if ch.readBuffer.MaxSizeCap() != want {
+		t.Fatalf("channel readBuffer MaxSizeCap=%d want %d", ch.readBuffer.MaxSizeCap(), want)
+	}
+	if ch.socketParser.config.MaxDataLength != cfg.MaxDataLength {
+		t.Fatalf("socketParser MaxDataLength=%d want %d", ch.socketParser.config.MaxDataLength, cfg.MaxDataLength)
+	}
 }
 
 func TestRingBufferPool_PutNil(t *testing.T) {

@@ -122,8 +122,16 @@ func (b *FastAdaptiveBatcher) GetBatchSize(lastFetchCount int64) int {
 
 	// --- 以下逻辑每 16 次才执行一次 ---
 
-	// 计算平均延迟 (滚动和 / 16) -> 等价于 右移 4 位
-	avgLatency := b.totalLatency >> WindowShift
+	// 计算平均延迟：warmup 阶段按实际样本数，满窗后等价于滚动和 / 16
+	if b.count == 0 {
+		return int(b.currentBatch)
+	}
+	var avgLatency int64
+	if b.count < WindowSize {
+		avgLatency = b.totalLatency / int64(b.count)
+	} else {
+		avgLatency = b.totalLatency >> WindowShift
+	}
 
 	if avgLatency > b.targetLatency {
 		// 延迟太高 -> 必须减小 Batch (为了降低 HoL 阻塞)

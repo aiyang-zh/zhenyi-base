@@ -77,10 +77,7 @@ func (ser *Server) listen(ctx context.Context) {
 			channel := NewChannel(channelId, c, ser)
 
 			if !ser.HandleAccept(channel) {
-				err := c.Close()
-				if err != nil {
-					zlog.Warn("Failed to close KCP connection", zap.Error(err))
-				}
+				channel.CloseFromSharedSendPath()
 				zlog.Warn("KServer OnAccept rejected", zap.Uint64("channelId", channelId))
 				return
 			}

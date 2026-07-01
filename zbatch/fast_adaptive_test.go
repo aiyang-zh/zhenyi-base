@@ -145,6 +145,20 @@ func TestFastAdaptiveBatcher_RollingSum(t *testing.T) {
 	}
 }
 
+// warmup 阶段平均延迟应按实际样本数计算，而非固定除以窗口大小。
+func TestFastAdaptiveBatcher_WarmupUsesSampleCount(t *testing.T) {
+	batcher := NewFastAdaptiveBatcher(10, 200, 100*time.Millisecond)
+	batcher.RecordLatency(400 * time.Millisecond)
+	batcher.counter = UpdateMask // 触发下次 GetBatchSize 进入采样分支
+
+	initial := batcher.GetCurrentBatch()
+	batcher.GetBatchSize(10)
+
+	if batcher.GetCurrentBatch() >= initial {
+		t.Fatalf("warmup avg latency should shrink batch: before=%d after=%d", initial, batcher.GetCurrentBatch())
+	}
+}
+
 func TestFastAdaptiveBatcher_GetAvgLatency(t *testing.T) {
 	batcher := NewFastAdaptiveBatcher(10, 200, 5*time.Millisecond)
 

@@ -9,6 +9,12 @@ import (
 	"time"
 )
 
+// ClearTimer 增量清理过期项，供后台 tick 周期性调用（非一次删光）。
+// LimitDelete、LimitCheck 为单次调用的工作量上限，避免大 map 在一次 sweep 内长时间持锁：
+//   - LimitDelete（100）：单次最多物理删除的过期键数；删不完的留待下次 tick 或 Load 惰性删除。
+//   - LimitCheck（1000）：单次最多扫描的键数（含未过期）；限制遍历成本，与 map 总条目数解耦。
+//
+// 100/1000 为经验默认值，假定秒级周期调用；更高吞吐或更大 map 可在 fork 侧酌情调大。
 const LimitDelete = 100
 const LimitCheck = 1000
 
@@ -275,7 +281,7 @@ func (m *Map[K, V]) ClearTimer() {
 	deleted := 0
 	checked := 0
 	for i := 0; i < int(m.shardCount); i++ {
-		if deleted >= LimitDelete || checked > LimitCheck {
+		if deleted >= LimitDelete || checked >= LimitCheck {
 			return
 		}
 		m.locks[i].Lock()

@@ -658,6 +658,40 @@ func TestBaseClient_Request_BodyReadEOF(t *testing.T) {
 	}
 }
 
+func TestBaseClient_Request_RejectsMinInt32MsgId(t *testing.T) {
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+
+	client := NewBaseClient()
+	client.SetConn(clientConn)
+
+	go func() {
+		reqHdr := make([]byte, 12)
+		if _, err := io.ReadFull(serverConn, reqHdr); err != nil {
+			return
+		}
+		dataLen := binary.BigEndian.Uint32(reqHdr[8:12])
+		if dataLen > 0 {
+			body := make([]byte, dataLen)
+			if _, err := io.ReadFull(serverConn, body); err != nil {
+				return
+			}
+		}
+		resp := make([]byte, 12)
+		resp[0] = 0x80 // big-endian int32 0x80000000（math.MinInt32）
+		_, _ = serverConn.Write(resp)
+	}()
+
+	_, err := client.Request(&NetMessage{MsgId: 1, Data: []byte("x")})
+	if err == nil {
+		t.Fatal("expected msgId out of range error for MinInt32")
+	}
+	if !strings.Contains(err.Error(), "out of range") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestBaseClient_read_NilBuffer(t *testing.T) {
 	client := NewBaseClient()
 	clientConn, _ := net.Pipe()

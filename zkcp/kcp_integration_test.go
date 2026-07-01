@@ -104,6 +104,18 @@ func TestKClient_ConnectInvalidAddr(t *testing.T) {
 	}
 }
 
+func TestKClient_DialTimeout(t *testing.T) {
+	start := time.Now()
+	_, err := NewClient("nonexistent-host-xyz.invalid:9", znet.WithDialTimeout(150*time.Millisecond))
+	elapsed := time.Since(start)
+	if err == nil {
+		t.Fatal("expected dial error for invalid host with timeout")
+	}
+	if elapsed > time.Second {
+		t.Fatalf("dial should respect timeout, took %v", elapsed)
+	}
+}
+
 func TestKServer_Close(t *testing.T) {
 	addr := kcpFreePort(t)
 

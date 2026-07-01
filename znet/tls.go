@@ -27,6 +27,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"net"
+	"time"
 
 	"github.com/aiyang-zh/zhenyi-base/ziface"
 )
@@ -92,19 +93,32 @@ func NewGMTLSConfigFromPEMSingle(certPEM, keyPEM []byte) (*ziface.TLSConfig, err
 // DialTLS 建立 TLS 连接。
 // 如果 cfg 为 nil 或 Mode 为 TLSModeNone，使用普通 net.Dial。
 func DialTLS(network, addr string, cfg *ziface.TLSConfig) (net.Conn, error) {
+	return DialTLSWithTimeout(network, addr, cfg, 0)
+}
+
+// DialTLSWithTimeout 建立 TLS 连接，timeout>0 时作为 net.Dialer.Timeout。
+func DialTLSWithTimeout(network, addr string, cfg *ziface.TLSConfig, timeout time.Duration) (net.Conn, error) {
+	var d net.Dialer
+	if timeout > 0 {
+		d.Timeout = timeout
+	}
 	if cfg == nil || cfg.Mode == ziface.TLSModeNone {
-		return net.Dial(network, addr)
+		return d.Dial(network, addr)
 	}
 	switch cfg.Mode {
 	case ziface.TLSModeStandard:
-		return tls.Dial(network, addr, cfg.StdConfig)
+		std := cfg.StdConfig
+		if std == nil {
+			std = &tls.Config{}
+		}
+		return tls.DialWithDialer(&d, network, addr, std)
 	case ziface.TLSModeGM:
 		if cfg.GMConfig == nil {
 			return nil, errors.New("znet: TLSModeGM requires non-nil GMConfig")
 		}
-		return cfg.GMConfig.Dial(network, addr)
+		return cfg.GMConfig.DialWithTimeout(network, addr, timeout)
 	default:
-		return net.Dial(network, addr)
+		return d.Dial(network, addr)
 	}
 }
 

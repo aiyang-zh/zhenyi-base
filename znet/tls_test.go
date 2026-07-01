@@ -245,6 +245,21 @@ func TestClientTLSConfig_DefaultIsGM(t *testing.T) {
 	}
 }
 
+func TestDialTLSWithTimeout_GM_RespectsTimeout(t *testing.T) {
+	cfg := NewClientTLSConfig()
+	cfg.GMConfig.SetInsecureSkipVerify(true)
+
+	start := time.Now()
+	_, err := DialTLSWithTimeout("tcp", "198.18.0.1:9", cfg, 150*time.Millisecond)
+	elapsed := time.Since(start)
+	if err == nil {
+		t.Fatal("expected dial error for unreachable host")
+	}
+	if elapsed > time.Second {
+		t.Fatalf("GM DialTLSWithTimeout should respect timeout, took %v", elapsed)
+	}
+}
+
 func TestClientStandardTLSConfig(t *testing.T) {
 	cfg := NewClientStandardTLSConfig()
 	if cfg.Mode != ziface.TLSModeStandard {

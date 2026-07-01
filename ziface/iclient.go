@@ -17,6 +17,11 @@ type IClient interface {
 	// SendMsg 发送一条消息。
 	SendMsg(message IMessage)
 
+	// SendMsgAsync 异步入队发送（仅 async 模式有效）。
+	// 成功入队后调用方不得再 Release；写出后由发送循环 Release。
+	// sync 模式下实现应丢弃消息并 Release。
+	SendMsgAsync(message IMessage)
+
 	// Request 同步请求：发送消息并阻塞直到收到一条响应。
 	// 适用于 sync/RPC 场景。与 Read() 互斥，二者只能选其一。
 	Request(message IMessage) (IWireMessage, error)

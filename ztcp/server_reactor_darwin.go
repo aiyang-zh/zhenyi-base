@@ -40,7 +40,7 @@ func (ser *Server) ServerReactor(ctx context.Context) {
 		channelId := ser.NextId()
 		channel := NewChannel(channelId, conn, ser)
 		if !ser.HandleAccept(channel) {
-			_ = conn.Close()
+			channel.CloseFromSharedSendPath()
 			return nil, false
 		}
 		ser.AddChannel(channel)

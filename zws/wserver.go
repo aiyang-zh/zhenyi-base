@@ -20,11 +20,30 @@ type Server struct {
 	sl       atomic.Pointer[http.Server] // 无锁：start 时 Store，Close 时 Swap(nil) 后 Shutdown
 	// allowedOrigins: optional allowlist for CheckOrigin. Empty means allow all (backward compatible default).
 	allowedOrigins map[string]struct{}
+	wsPath         string // WebSocket 升级路径，默认 "/"
 }
 
 // NewServer 创建 WebSocket 服务端；addr 为监听地址，handlers 必须提供 OnAccept 与 OnRead。
 func NewServer(addr string, handlers znet.ServerHandlers) *Server {
-	return &Server{BaseServer: znet.NewBaseServer(addr, handlers)}
+	return &Server{
+		BaseServer: znet.NewBaseServer(addr, handlers),
+		wsPath:     "/",
+	}
+}
+
+// SetWebSocketPath 设置 WebSocket HTTP 升级路径（默认 "/"）。
+func (ser *Server) SetWebSocketPath(path string) {
+	if ser == nil {
+		return
+	}
+	ser.wsPath = normalizeWebSocketPath(path)
+}
+
+func (ser *Server) webSocketPath() string {
+	if ser == nil || ser.wsPath == "" {
+		return "/"
+	}
+	return ser.wsPath
 }
 
 // SetAllowedOrigins configures an Origin allowlist for WebSocket upgrades.
@@ -66,7 +85,7 @@ func (ser *Server) CheckOrigin(r *http.Request) bool {
 	return ok
 }
 
-// start 启动 HTTP 服务并在 "/" 上处理 WebSocket 升级与连接。
+// start 启动 HTTP 服务并在配置路径上处理 WebSocket 升级与连接。
 func (ser *Server) start(ctx context.Context) {
 	ser.upgrader = websocket.Upgrader{
 		HandshakeTimeout: znet.WebSocketTimeout,
@@ -74,8 +93,9 @@ func (ser *Server) start(ctx context.Context) {
 		WriteBufferSize:  znet.WriteBufferSize,
 		CheckOrigin:      ser.CheckOrigin,
 	}
+	path := ser.webSocketPath()
 	s := http.NewServeMux()
-	s.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	s.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		ser.handler(ctx, w, r)
 	})
 	sl := &http.Server{
@@ -102,9 +122,11 @@ func (ser *Server) start(ctx context.Context) {
 	case <-ser.GetClose():
 		ser.Close()
 	case err := <-errCh:
+		// 监听循环退出且非 ErrServerClosed：服务级失败，记 Error。
 		zlog.Error("Failed to start WebSocket server",
 			zap.String("addr", ser.GetAddr()),
 			zap.Error(zerrs.Wrap(err, zerrs.ErrTypeNetwork, "ListenAndServe failed")))
+		ser.Close()
 	}
 }
 
@@ -117,15 +139,12 @@ func (ser *Server) handler(ctx context.Context, w http.ResponseWriter, r *http.R
 			zap.Error(zerrs.Wrap(err, zerrs.ErrTypeNetwork, "upgrade failed")))
 		return
 	}
+	setNoDelay(conn.NetConn())
 	channelId := ser.NextId()
 	channel := NewChannel(channelId, conn, ser)
 
 	if !ser.HandleAccept(channel) {
-		err := conn.Close()
-		if err != nil {
-			zlog.Warn("Failed to close WebSocket connection", zap.Error(err))
-			return
-		}
+		channel.CloseFromSharedSendPath()
 		zlog.Warn("WServer OnAccept rejected", zap.Uint64("channelId", channelId))
 		return
 	}

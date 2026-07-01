@@ -4,6 +4,8 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -147,6 +149,30 @@ func TestWServer_StartAndClose(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 }
 
+func TestWServer_ListenError_ClosesServer(t *testing.T) {
+	addr := wsFreePort(t)
+	blocker, err := net.Listen("tcp", addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer blocker.Close()
+
+	server := NewServer(addr, znet.ServerHandlers{
+		OnAccept: func(ziface.IChannel) bool { return true },
+		OnRead:   func(ziface.IChannel, ziface.IWireMessage) {},
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	server.Server(ctx)
+
+	select {
+	case <-server.GetClose():
+	case <-time.After(2 * time.Second):
+		t.Fatal("GetClose must be signaled when ListenAndServe fails")
+	}
+}
+
 func TestWServer_Client_SendReceive(t *testing.T) {
 	addr := wsFreePort(t)
 
@@ -275,5 +301,85 @@ func TestWSConn_Read_CopiesRemainingTail(t *testing.T) {
 	}
 	if string(p2[:n2]) != "efghij" {
 		t.Fatalf("unexpected tail read: got %q want %q", string(p2[:n2]), "efghij")
+	}
+}
+
+func TestWSConn_Close_ReleasesTailBuffer(t *testing.T) {
+	fc := &fakeWSConn{buf: []byte("abcdefghij")}
+	w := &wsConn{c: fc}
+
+	p := make([]byte, 4)
+	if _, err := w.Read(p); err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	if w.tail == nil {
+		t.Fatal("expected tail buffer after partial read")
+	}
+	if err := w.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+	if w.tail != nil {
+		t.Fatal("tail buffer must be released on Close")
+	}
+}
+
+func TestWClient_CustomPathAndHeaders(t *testing.T) {
+	var gotPath string
+	var gotToken string
+	upgrader := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/ws", func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotToken = r.Header.Get("X-Auth-Token")
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		_ = conn.Close()
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	host := strings.TrimPrefix(srv.URL, "http://")
+	headers := http.Header{}
+	headers.Set("X-Auth-Token", "test-token")
+
+	client, err := NewClient(host, znet.WithWebSocketPath("/api/ws"), znet.WithWebSocketHeaders(headers))
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	defer client.Close()
+
+	if gotPath != "/api/ws" {
+		t.Fatalf("path: got %q want /api/ws", gotPath)
+	}
+	if gotToken != "test-token" {
+		t.Fatalf("header: got %q want test-token", gotToken)
+	}
+}
+
+func TestWServer_CustomPath_AcceptsMatchingClient(t *testing.T) {
+	addr := wsFreePort(t)
+
+	server := NewServer(addr, znet.ServerHandlers{
+		OnAccept: func(ziface.IChannel) bool { return true },
+		OnRead:   func(ziface.IChannel, ziface.IWireMessage) {},
+	})
+	server.SetWebSocketPath("/game/ws")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	server.Server(ctx)
+	time.Sleep(200 * time.Millisecond)
+
+	client, err := NewClient(addr, znet.WithWebSocketPath("/game/ws"), znet.WithAsyncMode())
+	if err != nil {
+		t.Fatalf("NewClient on custom path: %v", err)
+	}
+	defer client.Close()
+
+	_, err = NewClient(addr, znet.WithWebSocketPath("/"), znet.WithAsyncMode())
+	if err == nil {
+		t.Fatal("client on default / should fail when server path is /game/ws")
 	}
 }

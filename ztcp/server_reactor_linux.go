@@ -40,7 +40,7 @@ func (ser *Server) ServerReactor(ctx context.Context) {
 		channelId := ser.NextId()
 		channel := NewChannel(channelId, conn, ser)
 		if !ser.HandleAccept(channel) {
-			channel.Close() // 拒绝连接时释放 channel 持有的 readBuffer 等资源
+			channel.CloseFromSharedSendPath()
 			return nil, false
 		}
 		ser.AddChannel(channel)

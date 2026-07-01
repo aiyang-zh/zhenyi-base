@@ -10,6 +10,15 @@ type ReactorChannel interface {
 	Close()
 }
 
+// ReactorChannelLifecycle 扩展接口：reactor 读栈标记与异步关闭。
+// *znet.BaseChannel 在 ServerReactor 共享写路径下实现本接口。
+type ReactorChannelLifecycle interface {
+	ReactorChannel
+	BeginReactorRead()
+	EndReactorRead()
+	CloseFromReactor()
+}
+
 // AcceptFunc 接受新连接并返回要加入 reactor 的 channel；返回 (nil, false) 表示拒绝。
 type AcceptFunc func(conn net.Conn) (channel ReactorChannel, ok bool)
 
@@ -65,11 +74,15 @@ type ServeConfig struct {
 	// MaxConns 连接数上限；>0 时 accept 前检查 fdMap.Len()，超过则拒绝新连接（不调用 accept）。
 	// 0 表示不限制，极端高并发时可能耗尽文件描述符。
 	MaxConns int
+	// HeartbeatPollMs：epoll/kqueue 等待超时（毫秒），用于周期性扫描心跳。
+	// 0 为默认 1000；-1 禁用超时（一直阻塞到 I/O 就绪）；>0 为自定义间隔。
+	HeartbeatPollMs int
 }
 
 const (
-	defaultReadBufSize  = 4096
-	defaultMinEventsNum = 256 // 与 poller 默认事件槽一致，仅用于 ServeConfig 默认值
+	defaultReadBufSize     = 4096
+	defaultMinEventsNum    = 256 // 与 poller 默认事件槽一致，仅用于 ServeConfig 默认值
+	defaultHeartbeatPollMs = 1000
 )
 
 // defaultServeConfig 返回默认配置，调用方不应修改返回值。
@@ -80,6 +93,7 @@ func defaultServeConfig() *ServeConfig {
 		BatchRead:        false,
 		EnableWriteEvent: false,
 		MaxConns:         0,
+		HeartbeatPollMs:  defaultHeartbeatPollMs,
 	}
 }
 

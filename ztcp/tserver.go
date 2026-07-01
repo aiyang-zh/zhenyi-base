@@ -82,10 +82,7 @@ func (ser *Server) listen(ctx context.Context) {
 			channel := NewChannel(channelId, c, ser)
 
 			if !ser.HandleAccept(channel) {
-				err := c.Close()
-				if err != nil {
-					zlog.Warn("Failed to close connection", zap.Error(err))
-				}
+				channel.CloseFromSharedSendPath()
 				zlog.Warn("TServer OnAccept rejected", zap.Uint64("channelId", channelId))
 				return
 			}

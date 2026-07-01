@@ -230,7 +230,7 @@ func pkcs7Unpad(data []byte) ([]byte, error) {
 		return nil, errors.New("empty data")
 	}
 	unPadding := int(data[length-1])
-	if unPadding > length || unPadding == 0 {
+	if unPadding > length || unPadding == 0 || unPadding > sm4.BlockSize {
 		return nil, errors.New("invalid padding")
 	}
 	for _, b := range data[length-unPadding:] {

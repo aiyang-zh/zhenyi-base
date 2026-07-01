@@ -160,7 +160,7 @@ func (a *AesEncrypt) PKCS7UnPaddingWithValidation(origData []byte) ([]byte, erro
 	unPadding := int(origData[length-1])
 
 	// 验证填充
-	if unPadding > length || unPadding == 0 {
+	if unPadding > length || unPadding == 0 || unPadding > aes.BlockSize {
 		return nil, errors.New("invalid padding")
 	}
 

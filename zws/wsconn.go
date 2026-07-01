@@ -4,6 +4,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/aiyang-zh/zhenyi-base/zpool"
 	"github.com/gorilla/websocket"
 )
 
@@ -20,21 +21,32 @@ type wsMessageConn interface {
 // wsConn 将 *websocket.Conn 适配为 net.Conn：Read/Write 走二进制 WebSocket 帧，
 // 与浏览器及标准 WebSocket 对端互通。勿再使用 conn.NetConn() 做裸 TCP 读写（会破坏帧同步）。
 type wsConn struct {
-	c       wsMessageConn
-	readBuf []byte
+	c    wsMessageConn
+	tail *zpool.Buffer // 帧尾未读完部分；来自 zpool 分级字节池
 }
 
 func newWSConn(c *websocket.Conn) net.Conn {
 	return &wsConn{c: c}
 }
 
+func (w *wsConn) releaseTail() {
+	if w.tail != nil {
+		w.tail.Release()
+		w.tail = nil
+	}
+}
+
 func (w *wsConn) Read(p []byte) (int, error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
-	if len(w.readBuf) > 0 {
-		n := copy(p, w.readBuf)
-		w.readBuf = w.readBuf[n:]
+	if w.tail != nil && len(w.tail.B) > 0 {
+		n := copy(p, w.tail.B)
+		if n < len(w.tail.B) {
+			w.tail.B = w.tail.B[n:]
+		} else {
+			w.releaseTail()
+		}
 		return n, nil
 	}
 	for {
@@ -49,7 +61,11 @@ func (w *wsConn) Read(p []byte) (int, error) {
 			}
 			n := copy(p, data)
 			if n < len(data) {
-				w.readBuf = append([]byte(nil), data[n:]...)
+				w.releaseTail()
+				tailLen := len(data) - n
+				buf := zpool.GetBytesBuffer(tailLen)
+				copy(buf.B, data[n:])
+				w.tail = buf
 			}
 			return n, nil
 		default:
@@ -66,6 +82,7 @@ func (w *wsConn) Write(p []byte) (int, error) {
 }
 
 func (w *wsConn) Close() error {
+	w.releaseTail()
 	return w.c.Close()
 }
 

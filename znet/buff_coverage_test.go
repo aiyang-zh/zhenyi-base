@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/aiyang-zh/zhenyi-base/zencrypt"
+	"github.com/aiyang-zh/zhenyi-base/zerrs"
 	"github.com/aiyang-zh/zhenyi-base/zpool"
 	"github.com/aiyang-zh/zhenyi-base/ztime"
 )
@@ -516,7 +517,7 @@ func TestRingBuffer_Write_PartialWhenFull(t *testing.T) {
 	rb.Write(make([]byte, 30))
 
 	n, err := rb.Write(make([]byte, 10))
-	if err != nil {
+	if err != nil && !errors.Is(err, io.ErrShortWrite) {
 		t.Fatalf("Write: %v", err)
 	}
 	if n != 2 {
@@ -711,8 +712,11 @@ func TestBaseClient_Request_UsesDefaultMaxDataLength(t *testing.T) {
 	}()
 
 	_, err := client.Request(&NetMessage{MsgId: 1, Data: []byte("x")})
-	if !errors.Is(err, ErrBufferFull) {
-		t.Fatalf("expected ErrBufferFull when dataLen > DefaultMaxDataLength, got %v", err)
+	if err == nil {
+		t.Fatal("expected error when response dataLen exceeds max")
+	}
+	if !zerrs.IsValidation(err) {
+		t.Fatalf("expected validation error when dataLen > DefaultMaxDataLength, got %v", err)
 	}
 }
 

@@ -150,8 +150,8 @@ func (q *SmartDoubleQueue[T]) Signal() <-chan struct{} {
 // 关闭后仍应照常 ReleaseBatch，以释放 maxCap 配额并校正 Len。
 // 若启用了通知，会非阻塞地向 Signal 发送一次唤醒，便于消费方退出 select。
 func (q *SmartDoubleQueue[T]) Close() {
-    q.mu.Lock()
-    defer q.mu.Unlock()
+	q.mu.Lock()
+	defer q.mu.Unlock()
 	if !atomic.CompareAndSwapInt32(&q.closed, 0, 1) {
 		return
 	}

@@ -76,18 +76,27 @@ type BaseChannel struct {
 	// ========== reactor 共享写（仅在 ServerReactor 路径启用）==========
 	// sharedSendHook 非 nil 时，Send() 在首次入队后会触发一次 hook，将当前 channel 投递到共享写 worker。
 	// sharedSendPending 用于避免重复投递；共享写 worker 在队列清空后会清除该标记。
-	sharedSendHook    func(*BaseChannel)
-	sharedSendPending atomic.Bool
-	queuedMsgs        int64 // 当前发送队列近似长度（入队+1，批量写后-批次大小）
-	overflowHook      func(*BaseChannel, int64, int64) SendQueueOverflowAction
+	sharedSendHook         func(*BaseChannel)
+	sharedSendPending      atomic.Bool
+	sharedSendCloseAck     chan struct{} // 共享写 worker 排空并 Close(mailBoxQueue) 后向 Close 发信号（buf 1，单消费者）
+	sharedSendCloseDone    atomic.Bool   // worker 已在本 goroutine 完成 drain（如 panic 恢复），同步 Close 无需再等 ack
+	closeReactorAsync      atomic.Bool   // CloseFromReactor：仅 hook worker 异步 drain，不在 reactor 线程阻塞
+	reactorReadDepth       atomic.Int32  // reactor 读栈嵌套深度（BeginReactorRead/EndReactorRead；仅 sharedSendHook 路径）
+	readCallbackDepth      atomic.Int32  // Start 读路径 OnRead 分发栈深度（handleParsedMessage）
+	deferReadBufferRelease atomic.Bool   // 在读栈/Start 读 goroutine 内 Close 时延后归还 readBuffer
+	acceptConnSlotReserved atomic.Bool   // HandleAccept 已占位 maxConn 槽，AddChannel 消费后不再递增 connCount
+	queuedMsgs             int64         // 当前发送队列近似长度（入队+1，批量写后-批次大小）
+	overflowHook           func(*BaseChannel, int64, int64) SendQueueOverflowAction
 
 	// ========== 复杂类型 ==========
 	addr      string
 	closeChan chan struct {
 	} // 关闭信号
-	sendDone  sync.WaitGroup // 等待 runSend 退出
-	closeOnce sync.Once      // 确保只关闭一次
-	isClose   atomic.Bool    // 是否已关闭
+	sendDone          sync.WaitGroup // 等待 runSend 退出
+	readWg            sync.WaitGroup // 等待 Start 读循环退出后 Close 才回收 readBuffer
+	closeOnce         sync.Once      // 确保只关闭一次
+	closeFinalizeOnce sync.Once      // 关闭收尾（closeCall、mailBox、readBuffer）仅执行一次
+	isClose           atomic.Bool    // 是否已关闭
 }
 
 // SendQueueOverflowAction 定义发送队列超限时的处理动作。
@@ -108,6 +117,7 @@ func NewBaseChannel(channelId uint64, conn net.Conn, server ziface.IServer) *Bas
 
 	syncMode := server.SyncMode()
 	tuning := GetSendLoopTuning()
+	socketCfg := socketConfigFromServer(server)
 
 	c := &BaseChannel{
 		// 网络层
@@ -116,8 +126,8 @@ func NewBaseChannel(channelId uint64, conn net.Conn, server ziface.IServer) *Bas
 		addr:         conn.RemoteAddr().String(),
 		conn:         conn,
 		state:        state,
-		readBuffer:   GetRingBuffer(),
-		socketParser: NewBaseSocket(),
+		readBuffer:   GetRingBufferForSocket(socketCfg),
+		socketParser: NewBaseSocket(socketCfg),
 
 		// 会话层（原 Session 字段）
 		lastRecTime:      ztime.ServerNowUnixMilli(),
@@ -265,25 +275,63 @@ func (c *BaseChannel) read() bool {
 			}
 			break
 		}
-		c.handleParsedMessage()
+		if c.handleParsedMessage() {
+			return true
+		}
 	}
 
 	return false
 }
 
+// MarkAcceptConnSlotReserved 标记 HandleAccept 已通过 maxConn 闸门（仅供 BaseServer 调用）；connCount 在 AddChannel 递增。
+func (c *BaseChannel) MarkAcceptConnSlotReserved() {
+	c.acceptConnSlotReserved.Store(true)
+}
+
+// TakeAcceptConnSlot 消费 HandleAccept 占位；返回 true 表示 HandleAccept 已通过 maxConn 闸门，AddChannel 据此执行唯一一次 connCount 递增。
+func (c *BaseChannel) TakeAcceptConnSlot() bool {
+	return c.acceptConnSlotReserved.CompareAndSwap(true, false)
+}
+
 // WriteToReadBuffer 将数据追加到读缓冲，供 reactor 等外部驱动在可读时写入后调用。
 // 与 read() 路径一致：累加 IChannelMetrics 接收字节，保证 epoll/reactor 模式下 Prometheus 字节指标与自旋读一致。
 func (c *BaseChannel) WriteToReadBuffer(p []byte) (n int, err error) {
-	n, err = c.readBuffer.Write(p)
-	if n > 0 && c.metrics != nil {
-		c.metrics.BytesRecAdd(int64(n))
+	if c.isClose.Load() {
+		return 0, io.EOF
 	}
-	return n, err
+	written := 0
+	for written < len(p) {
+		wn, e := c.readBuffer.Write(p[written:])
+		if wn > 0 {
+			if c.metrics != nil {
+				c.metrics.BytesRecAdd(int64(wn))
+			}
+			c.UpdateLastRecTime()
+			written += wn
+		}
+		if written >= len(p) {
+			return written, nil
+		}
+		if e == nil {
+			continue
+		}
+		if e == ErrBufferFull && c.readBuffer.Grow(readRingGrowStepBytes) {
+			continue
+		}
+		if e == io.ErrShortWrite {
+			continue
+		}
+		return written, e
+	}
+	return written, nil
 }
 
 // ParseAndDispatch 从读缓冲解析并分发所有完整消息；供 reactor 在 WriteToReadBuffer 后调用。
-// 返回 true 表示应关闭连接（解析错误或单包超缓冲容量）。
+// 返回 true 表示应关闭连接（解析错误、解密错误或单包超缓冲容量）。
 func (c *BaseChannel) ParseAndDispatch() bool {
+	if c.isClose.Load() {
+		return true
+	}
 	for {
 		c.parseData.ResetForReuse()
 		parsed, parseErr := c.socketParser.ParseFromRingBuffer(c.readBuffer, &c.parseData)
@@ -309,25 +357,46 @@ func (c *BaseChannel) ParseAndDispatch() bool {
 			}
 			return false
 		}
-		c.handleParsedMessage()
+		if c.handleParsedMessage() {
+			return true
+		}
 	}
 }
 
-// handleParsedMessage 解密并分派已解析的消息（提取公共逻辑）
-func (c *BaseChannel) handleParsedMessage() {
+// handleParsedMessage 解密并分派已解析的消息。
+// 解密失败：默认 DisconnectOnDecryptError=true 时递增 ConnErrors 并断链；false 时仅丢包（兼容 1.1.4）。
+func (c *BaseChannel) handleParsedMessage() bool {
+	c.readCallbackDepth.Add(1)
+	defer c.readCallbackDepth.Add(-1)
+
 	netMsg := c.parseData.Message
 	if encryptedData := netMsg.GetMessageData(); len(encryptedData) > 0 {
 		decryptedData, err1 := c.server.GetEncrypt().Decrypt(encryptedData)
 		if err1 != nil {
-			zlog.Error("Decrypt error",
+			disconnect := true
+			if p, ok := c.server.(decryptErrorPolicy); ok {
+				disconnect = p.DisconnectOnDecryptError()
+			}
+			if disconnect {
+				if c.metrics != nil {
+					c.metrics.ConnErrorsInc()
+				}
+				zlog.Error("Decrypt error",
+					zap.Uint64("channelId", c.channelId),
+					zap.Int32("msgId", netMsg.GetMsgId()),
+					zap.Error(err1))
+				return true
+			}
+			zlog.Warn("Decrypt error, dropping message",
 				zap.Uint64("channelId", c.channelId),
 				zap.Int32("msgId", netMsg.GetMsgId()),
 				zap.Error(err1))
-			return
+			return false
 		}
 		netMsg.SetMessageData(decryptedData)
 	}
 	c.server.HandleRead(c, netMsg)
+	return false
 }
 
 // isNormalCloseError 判断是否是正常的连接关闭错误（纯判断，无副作用）
@@ -341,8 +410,12 @@ func (c *BaseChannel) isNormalCloseError(err error) bool {
 		strings.Contains(errMsg, "forcibly closed by the remote host")
 }
 
-// Start 开启读写业务
+// Start 开启读写业务（goroutine 读循环）。
+// OnRead 回调在读 goroutine 内同步执行，不得阻塞（长耗时 I/O/RPC 须下沉到业务 Actor 或 AsyncRun）。
+// 读循环因 EOF/错误退出时，defer 会调用 Close() 做正常收尾（与业务在读回调内主动 Close 不同路径）。
 func (c *BaseChannel) Start() {
+	c.readWg.Add(1)
+	defer zlog.Recover("Channel.Start")
 	defer func() {
 		c.Close()
 
@@ -351,11 +424,13 @@ func (c *BaseChannel) Start() {
 			buf.Release()
 		}
 		c.parseData.OwnedBuffers = c.parseData.OwnedBuffers[:0]
-
-		if c.readBuffer != nil {
-			PutRingBuffer(c.readBuffer)
-			c.readBuffer = nil
+	}()
+	defer func() {
+		if c.deferReadBufferRelease.Load() {
+			c.deferReadBufferRelease.Store(false)
+			c.releaseReadBuffer()
 		}
+		c.readWg.Done()
 	}()
 
 	// 设置初始读超时（心跳检测）
@@ -368,25 +443,21 @@ func (c *BaseChannel) Start() {
 	}
 }
 
-// Flush 刷新缓冲区
 // Flush 刷新写缓冲；零拷贝模式下无应用层缓冲，直接返回 nil。
 func (c *BaseChannel) Flush() error {
 	return nil
 }
 
-// GetWriterTier 获取 writer 当前等级
 // GetWriterTier 返回写缓冲层级；零拷贝模式下为 TierNone。
 func (c *BaseChannel) GetWriterTier() ziface.BufferTier {
 	return ziface.TierNone
 }
 
-// GetBuffered 获取缓冲区中已写入但未刷新的字节数
 // GetBuffered 返回当前未刷写的字节数；零拷贝模式下为 0。
 func (c *BaseChannel) GetBuffered() int {
 	return 0
 }
 
-// SendBatchMsg 批量发送消息（实现 IChannel 接口）
 // SendBatchMsg 批量发送消息（零拷贝 writev）；调用方不应再使用 messages 或 Release。
 func (c *BaseChannel) SendBatchMsg(messages []ziface.IMessage) {
 	if messages == nil || len(messages) == 0 {
@@ -398,28 +469,17 @@ func (c *BaseChannel) SendBatchMsg(messages []ziface.IMessage) {
 	}
 
 	hdrLen := c.socketParser.HeaderLen()
-	headersSize := len(messages) * hdrLen
-	if cap(c.headersBuf) >= headersSize {
-		c.headersBuf = c.headersBuf[:headersSize]
-	} else {
-		c.headersBuf = make([]byte, headersSize)
-	}
-	headers := c.headersBuf
-
-	// ✅ 复用 Channel 上预分配的 writeBufs（runSend 单协程，无并发）
-	// 每条消息最多写入两段（header/body），预留容量可减少 append 扩容带来的分配与拷贝。
-	needBufsCap := 2 * len(messages)
-	if cap(c.writeBufs) < needBufsCap {
-		c.writeBufs = make(net.Buffers, 0, needBufsCap)
+	if cap(c.writeBufs) < 2*len(messages) {
+		c.writeBufs = make(net.Buffers, 0, 2*len(messages))
 	} else {
 		c.writeBufs = c.writeBufs[:0]
 	}
 
-	// 复用消息包装器
 	wrapper := GetNetMessage()
 	defer wrapper.Release()
 
-	for i, msg := range messages {
+	sent := 0
+	for _, msg := range messages {
 		// 加密
 		data, err := c.server.GetEncrypt().Encrypt(msg.GetMessageData())
 		if err != nil {
@@ -440,13 +500,33 @@ func (c *BaseChannel) SendBatchMsg(messages []ziface.IMessage) {
 		wrapper.SetSeqId(msg.GetSeqId())
 		wrapper.SetMessageData(data)
 
-		offset := i * hdrLen
-		headerLen, body := c.socketParser.PreparePacket(wrapper, headers[offset:offset+hdrLen])
+		needHeaders := (sent + 1) * hdrLen
+		if cap(c.headersBuf) < needHeaders {
+			grow := needHeaders
+			if cap(c.headersBuf) > 0 {
+				grow = cap(c.headersBuf) * 2
+				if grow < needHeaders {
+					grow = needHeaders
+				}
+			}
+			nb := make([]byte, needHeaders, grow)
+			copy(nb, c.headersBuf[:sent*hdrLen])
+			c.headersBuf = nb
+		} else {
+			c.headersBuf = c.headersBuf[:needHeaders]
+		}
+		offset := sent * hdrLen
+		headerLen, body := c.socketParser.PreparePacket(wrapper, c.headersBuf[offset:offset+hdrLen])
 
-		c.writeBufs = append(c.writeBufs, headers[offset:offset+headerLen])
+		c.writeBufs = append(c.writeBufs, c.headersBuf[offset:offset+headerLen])
 		if len(body) > 0 {
 			c.writeBufs = append(c.writeBufs, body)
 		}
+		sent++
+	}
+
+	if sent == 0 {
+		return
 	}
 
 	if err := c.writeBuffers(c.writeBufs); err != nil {
@@ -502,52 +582,138 @@ func (c *BaseChannel) writeBuffers(buffers net.Buffers) error {
 //   - 再置 state、关闭 closeChan、关闭连接，等待 runSend 退出后回收队列。
 //
 // 因此与 Close 并发的 Send 可能入队失败：此时 Send 会对消息调用 Release，业务不得假定「Send 返回即已发出」。
+//
+// ServerReactor 共享写路径：若在读栈内（BeginReactorRead 活跃）调用 Close，与 CloseFromReactor 相同，
+// 仅异步 hook worker drain，不阻塞 epoll/kqueue；readBuffer 延至 EndReactorRead 归还。
+//
+// Start 读 goroutine 内（如 OnRead）调用 Close 时，不得在 readCallbackDepth>0 的栈上同步 readWg.Wait()；
+// 收尾在独立 goroutine 中等待读循环退出后执行，readBuffer 延至 Start 退出归还。
 func (c *BaseChannel) Close() {
+	c.doClose()
+}
+
+// CloseFromReactor 在 reactor 事件循环线程关闭连接（closeConn、发送队列 overflow 断链等）。
+// 共享写路径仅投递 worker 异步 drain，不阻塞 epoll/kqueue；在读回调栈内触发时，readBuffer 延至 EndReactorRead 归还。
+func (c *BaseChannel) CloseFromReactor() {
 	if c.isClose.Load() {
 		return
 	}
+	c.closeReactorAsync.Store(true)
+	if c.reactorReadDepth.Load() > 0 {
+		c.deferReadBufferRelease.Store(true)
+	}
+	c.doClose()
+}
 
-	c.closeOnce.Do(func() {
-		c.isClose.Store(true)
+// BeginReactorRead 与 EndReactorRead 成对调用，标记 reactor 读栈深度。
+// 仅 sharedSendHook 非 nil（ServerReactor 共享写）时生效，供 Close 延后回收 readBuffer。
+func (c *BaseChannel) BeginReactorRead() {
+	if c.sharedSendHook != nil {
+		c.reactorReadDepth.Add(1)
+	}
+}
 
-		// Step 0: 从 Server 的 map 中移除，阻止新消息路由到此 channel
-		c.server.RemoveChannel(c.channelId)
+func (c *BaseChannel) EndReactorRead() {
+	if c.sharedSendHook == nil {
+		return
+	}
+	if c.reactorReadDepth.Add(-1) != 0 {
+		return
+	}
+	if c.deferReadBufferRelease.Load() {
+		c.deferReadBufferRelease.Store(false)
+		c.releaseReadBuffer()
+	}
+}
 
-		// Step 0.5: 必须在通知 runSend 退出之前禁止入队，否则 Send 在 state 检查与入队之间存在 TOCTOU：
-		// runSend 已退出后仍可能 Enqueue 成功，导致消息永不出队、回调永不触发（见 UnboundedMPSC.StopEnqueue 注释）。
-		if c.mailBoxQueue != nil {
-			c.mailBoxQueue.StopEnqueue()
+func (c *BaseChannel) doClose() {
+	if c.isClose.Load() {
+		return
+	}
+	// reactor 读栈内的 Close() 与 CloseFromReactor 共享写语义一致（异步 drain，不阻塞事件循环）。
+	if c.sharedSendHook != nil && c.reactorReadDepth.Load() > 0 {
+		c.closeReactorAsync.Store(true)
+	}
+	c.closeOnce.Do(c.closeBody)
+}
+
+func (c *BaseChannel) closeBody() {
+	c.isClose.Store(true)
+
+	// Step 0: 从 Server 的 map 中移除，阻止新消息路由到此 channel
+	c.server.RemoveChannel(c.channelId)
+
+	// Step 0.5: 必须在通知 runSend 退出之前禁止入队，否则 Send 在 state 检查与入队之间存在 TOCTOU：
+	// runSend 已退出后仍可能 Enqueue 成功，导致消息永不出队、回调永不触发（见 UnboundedMPSC.StopEnqueue 注释）。
+	if c.mailBoxQueue != nil {
+		c.mailBoxQueue.StopEnqueue()
+	}
+
+	// Step 1: 标记不可写 + 通知 runSend 退出
+	c.state.Store(false)
+	close(c.closeChan)
+
+	// Step 2: 关闭底层连接，强制 runSend 中阻塞的 WriteTo 立即返回错误
+	// 这保证 sendDone.Wait() 不会无限挂起（消除 goroutine 泄漏）
+	if err := c.conn.Close(); err != nil {
+		// 关连清理：过滤「连接已关闭」类预期错误，其余 Close 错误记 Warn，见 docs/API.md「日志级别」。
+		errMsg := err.Error()
+		if !strings.Contains(errMsg, "use of closed network connection") {
+			zlog.Warn("Close connection error",
+				zap.Uint64("channelId", c.channelId),
+				zap.Error(err))
 		}
+	}
 
-		// Step 1: 标记不可写 + 通知 runSend 退出
-		c.state.Store(false)
-		close(c.closeChan)
+	// Step 3: 等待 runSend 完全退出（conn 已关闭，保证快速返回）
+	c.sendDone.Wait()
 
-		// Step 2: 关闭底层连接，强制 runSend 中阻塞的 WriteTo 立即返回错误
-		// 这保证 sendDone.Wait() 不会无限挂起（消除 goroutine 泄漏）
-		if err := c.conn.Close(); err != nil {
-			// 仅记录非正常关闭错误
-			errMsg := err.Error()
-			if !strings.Contains(errMsg, "use of closed network connection") {
-				zlog.Warn("Close connection error",
-					zap.Uint64("channelId", c.channelId),
-					zap.Error(err))
-			}
+	// Step 3.5: 等待读侧退出后再回收 readBuffer（goroutine Start 用 readWg；reactor 用 reactorReadDepth）
+	if c.sharedSendHook != nil {
+		if c.reactorReadDepth.Load() > 0 {
+			c.deferReadBufferRelease.Store(true)
 		}
+		c.closeFinalizeOnce.Do(c.finalizeCloseTail)
+		return
+	}
+	if c.readCallbackDepth.Load() > 0 {
+		c.deferReadBufferRelease.Store(true)
+		go c.waitReadLoopAndFinalizeClose()
+		return
+	}
+	c.readWg.Wait()
+	c.closeFinalizeOnce.Do(c.finalizeCloseTail)
+}
 
-		// Step 3: 等待 runSend 完全退出（conn 已关闭，保证快速返回）
-		c.sendDone.Wait()
+func (c *BaseChannel) waitReadLoopAndFinalizeClose() {
+	c.readWg.Wait()
+	c.closeFinalizeOnce.Do(c.finalizeCloseTail)
+}
 
-		// Step 4: 执行关闭回调（框架层 + 业务层）
-		if c.closeCall != nil {
-			c.closeCall(c)
-		}
+func (c *BaseChannel) finalizeCloseTail() {
+	// Step 4: 执行关闭回调（框架层 + 业务层）
+	if c.closeCall != nil {
+		c.closeCall(c)
+	}
 
-		// Step 5: 关闭发送队列并清理残留消息
-		if c.mailBoxQueue != nil {
+	// Step 5: 关闭发送队列并清理残留消息
+	if c.mailBoxQueue != nil {
+		if c.sharedSendHook != nil {
+			c.finalizeSharedSendClose()
+		} else {
 			c.mailBoxQueue.Close()
 		}
-	})
+	}
+	if !c.deferReadBufferRelease.Load() {
+		c.releaseReadBuffer()
+	}
+}
+
+func (c *BaseChannel) releaseReadBuffer() {
+	if c.readBuffer != nil {
+		PutRingBuffer(c.readBuffer)
+		c.readBuffer = nil
+	}
 }
 
 // GetChannelId 获取通道 ID
@@ -582,7 +748,7 @@ func (c *BaseChannel) GetAuthId() uint64 {
 
 // SetAuthId 设置认证 ID
 func (c *BaseChannel) SetAuthId(authId uint64) {
-	atomic.SwapUint64(&c.authId, authId)
+	atomic.StoreUint64(&c.authId, authId)
 }
 
 // GetRpcId 获取并递增 RPC ID
@@ -689,11 +855,13 @@ func (c *BaseChannel) Send(msg ziface.IMessage) {
 	// ✅ 默认无锁设计：无需通知，无需计数，runSend 轮询队列（消费结果驱动）
 }
 
-// SetSharedSendHook 设置 reactor 共享写投递 hook。
-// 仅在 reactor 模式下使用：调用方需确保不会与 StartSend/runSend 同时启用。
+// SetSharedSendHook 设置 reactor 共享写投递 hook；h 非 nil 时创建 sharedSendCloseAck。
+// 仅 reactor 模式使用，勿与每连接 StartSend/runSend 同时启用。
 func (c *BaseChannel) SetSharedSendHook(h func(*BaseChannel)) {
 	c.sharedSendHook = h
-	// hook 切换时不强制改变 pending：pending 的生命周期由 worker 控制。
+	if h != nil {
+		c.sharedSendCloseAck = make(chan struct{}, 1)
+	}
 }
 
 // SharedSendDequeueBatch 从发送队列批量取消息（仅供 reactor 共享写 worker 使用）。
@@ -703,6 +871,114 @@ func (c *BaseChannel) SharedSendDequeueBatch(dst []ziface.IMessage) int {
 		return 0
 	}
 	return c.mailBoxQueue.DequeueBatch(dst)
+}
+
+// sharedSendDrainAndCloseMailbox 由共享写 worker 以唯一消费者身份排空并 Close(mailBoxQueue)。
+func (c *BaseChannel) sharedSendDrainAndCloseMailbox(batch []ziface.IMessage) {
+	if c.mailBoxQueue == nil {
+		c.signalSharedSendCloseAck()
+		return
+	}
+	for {
+		n := c.mailBoxQueue.DequeueBatch(batch)
+		if n == 0 {
+			break
+		}
+		for i := 0; i < n; i++ {
+			if batch[i] != nil {
+				batch[i].Release()
+				batch[i] = nil
+			}
+		}
+		atomic.AddInt64(&c.queuedMsgs, -int64(n))
+	}
+	c.mailBoxQueue.Close()
+	c.signalSharedSendCloseAck()
+}
+
+func (c *BaseChannel) signalSharedSendCloseAck() {
+	if c.sharedSendCloseAck == nil {
+		return
+	}
+	select {
+	case c.sharedSendCloseAck <- struct{}{}:
+	default:
+	}
+}
+
+func (c *BaseChannel) drainStaleSharedSendCloseAck() {
+	if c.sharedSendCloseAck == nil {
+		return
+	}
+	select {
+	case <-c.sharedSendCloseAck:
+	default:
+	}
+}
+
+func (c *BaseChannel) enqueueSharedSendClose() {
+	if c.sharedSendHook == nil {
+		return
+	}
+	if c.sharedSendPending.CompareAndSwap(false, true) {
+		c.sharedSendHook(c)
+	}
+}
+
+func (c *BaseChannel) finalizeSharedSendClose() {
+	if c.sharedSendCloseDone.Load() {
+		return
+	}
+	if c.closeReactorAsync.Load() {
+		c.enqueueSharedSendClose()
+		return
+	}
+	c.drainStaleSharedSendCloseAck()
+	c.enqueueSharedSendClose()
+	c.waitSharedSendCloseAckWithTimeout(context.Background())
+}
+
+// waitSharedSendCloseAckWithTimeout 等待 worker drain 完成；超时后 re-hook 一次，仍失败则打 Error 并返回。
+// ctx 取消（如 BaseClose 全局超时）时立即返回，避免关服后残留等待 goroutine。
+func (c *BaseChannel) waitSharedSendCloseAckWithTimeout(ctx context.Context) {
+	if c.sharedSendCloseAck == nil {
+		return
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	timeout := GetSendLoopTuning().SharedSendCloseTimeout
+	if timeout <= 0 {
+		timeout = 30 * time.Second
+	}
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	select {
+	case <-c.sharedSendCloseAck:
+		return
+	case <-timer.C:
+		zlog.Warn("shared send close ack timeout, re-hook worker",
+			zap.Uint64("channelId", c.channelId),
+			zap.Duration("timeout", timeout))
+	case <-ctx.Done():
+		return
+	}
+	if ctx.Err() != nil {
+		return
+	}
+	c.drainStaleSharedSendCloseAck()
+	c.enqueueSharedSendClose()
+	timer2 := time.NewTimer(timeout)
+	defer timer2.Stop()
+	select {
+	case <-c.sharedSendCloseAck:
+		return
+	case <-timer2.C:
+		zlog.Error("shared send close ack timeout after retry; mailbox may retain undrained messages",
+			zap.Uint64("channelId", c.channelId),
+			zap.Duration("timeout", timeout))
+	case <-ctx.Done():
+	}
 }
 
 // SharedSendProcessBatch 批量写出并 Release（仅供 reactor 共享写 worker 使用）。
@@ -752,11 +1028,41 @@ func (c *BaseChannel) onSendQueueOverflow(queued, limit int64) {
 		return
 	}
 	if c.overflowHook(c, queued, limit) == OverflowCloseChannel {
-		c.Close()
+		c.closeFromSharedSendPath()
 	}
 }
 
-// StartSend 启动异步发送 goroutine
+// CloseFromSharedSendPath 在 reactor/关服/Accept 拒绝等路径关闭连接。
+// sharedSendHook 非 nil 时走 CloseFromReactor（异步 hook worker drain，不阻塞事件循环）；
+// 否则与 Close() 相同（如 Accept 拒绝时尚未 BindSharedSendHook）。
+func (c *BaseChannel) CloseFromSharedSendPath() {
+	c.closeFromSharedSendPath()
+}
+
+func (c *BaseChannel) closeFromSharedSendPath() {
+	if c.sharedSendHook != nil {
+		c.CloseFromReactor()
+		return
+	}
+	c.Close()
+}
+
+// RecordReadIngestError 在读缓冲写入失败时递增 ConnErrors（供 zreactor ReactorReadMetrics 可选回调）。
+func (c *BaseChannel) RecordReadIngestError() {
+	if c.metrics != nil {
+		c.metrics.ConnErrorsInc()
+	}
+}
+
+// awaitSharedSendDrain 关服路径等待共享写 worker 排空 mailBoxQueue（带 SharedSendCloseTimeout 双次重试）。
+// ctx 取消时立即返回（BaseClose 全局超时）。
+func (c *BaseChannel) awaitSharedSendDrain(ctx context.Context) {
+	if c.sharedSendHook == nil {
+		return
+	}
+	c.waitSharedSendCloseAckWithTimeout(ctx)
+}
+
 func (c *BaseChannel) StartSend(ctx context.Context) {
 	c.sendDone.Add(1)
 	go c.runSend(ctx)

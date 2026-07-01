@@ -122,13 +122,17 @@ func ServeWithConfig(ctx context.Context, listener net.Listener, accept AcceptFu
 
 	fdMap := newShardedFDMap()
 	connEvents := connEventsForAdd(cfg.EnableWriteEvent)
+	pollMs := heartbeatPollMs(cfg)
 
 	for {
-		ready, err := poller.WaitWithEvents(-1)
+		ready, err := poller.WaitWithEvents(pollMs)
 		if err != nil {
 			return err
 		}
 		if len(ready) == 0 {
+			if pollMs > 0 {
+				checkHeartbeats(poller, fdMap, metrics, cfg)
+			}
 			continue
 		}
 
@@ -271,31 +275,24 @@ func allocReadBuf(size int) []byte {
 	return make([]byte, size)
 }
 
-// parseAndDispatchSafe 调用 ch.ParseAndDispatch()；若发生 panic 则恢复并返回 true，由调用方关闭该连接。
-func parseAndDispatchSafe(entry *connEntry, poller *Poller, fd int, fdMap *shardedFDMap, metrics *Metrics, cfg *ServeConfig) (shouldClose bool) {
-	defer func() {
-		if r := recover(); r != nil {
-			zlog.Recover("zreactor ParseAndDispatch panic",
-				zap.Int("fd", fd),
-				zap.Uint64("channelId", entry.ch.GetChannelId()),
-				zap.Any("panic", r))
-			shouldClose = true
-		}
-	}()
-	return entry.ch.ParseAndDispatch()
-}
-
 func handleConnRead(poller *Poller, fd int, fdMap *shardedFDMap, metrics *Metrics, cfg *ServeConfig) {
 	entry, ok := fdMap.Get(fd)
 	if !ok {
 		_ = poller.Remove(fd)
 		return
 	}
+	endRead := beginReactorRead(entry.ch)
+	defer endRead()
+
 	n, err := syscall.Read(fd, entry.readBuf)
 	if n > 0 {
 		reportReadBytes(metrics, fd, n)
-		_, _ = entry.ch.WriteToReadBuffer(entry.readBuf[:n])
-		if parseAndDispatchSafe(entry, poller, fd, fdMap, metrics, cfg) {
+		if ingestConnReadAndDispatch(entry, fd, entry.readBuf[:n]) {
+			closeConn(poller, fd, entry, fdMap, metrics, cfg.ReadBufSize)
+			return
+		}
+		if err != nil && err != syscall.EAGAIN {
+			reportReadErr(metrics, fd, err)
 			closeConn(poller, fd, entry, fdMap, metrics, cfg.ReadBufSize)
 			return
 		}
@@ -349,9 +346,16 @@ func batchReadAndParse(poller *Poller, connReady []ReadyEvent, fdMap *shardedFDM
 		}
 		rn, err := results[i].n, results[i].err
 		if rn > 0 {
+			endRead := beginReactorRead(entry.ch)
 			reportReadBytes(metrics, fd, rn)
-			_, _ = entry.ch.WriteToReadBuffer(entry.readBuf[:rn])
-			if parseAndDispatchSafe(entry, poller, fd, fdMap, metrics, cfg) {
+			if ingestConnReadAndDispatch(entry, fd, entry.readBuf[:rn]) {
+				endRead()
+				closeConn(poller, fd, entry, fdMap, metrics, cfg.ReadBufSize)
+				continue
+			}
+			endRead()
+			if err != nil && err != syscall.EAGAIN {
+				reportReadErr(metrics, fd, err)
 				closeConn(poller, fd, entry, fdMap, metrics, cfg.ReadBufSize)
 			}
 			continue
@@ -395,8 +399,7 @@ func isListenerClosed(err error) bool {
 
 func closeConn(poller *Poller, fd int, entry *connEntry, fdMap *shardedFDMap, metrics *Metrics, readBufSize int) {
 	_ = poller.Remove(fd)
-	entry.ch.Close()
-	entry.conn.Close()
+	closeReactorChannel(entry.ch)
 	// 按 cap 归还缓冲：截断后 len 可能小于 defaultReadBufSize，只要 cap 足够即可复用
 	if readBufSize == defaultReadBufSize && cap(entry.readBuf) >= defaultReadBufSize {
 		readBufPool.Put(entry.readBuf)

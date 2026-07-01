@@ -1,15 +1,15 @@
 package zws
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/aiyang-zh/zhenyi-base/znet"
 	"net"
 
 	"github.com/aiyang-zh/zhenyi-base/zerrs"
-
 	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"github.com/aiyang-zh/zhenyi-base/zlog"
+	"github.com/aiyang-zh/zhenyi-base/znet"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
@@ -47,10 +47,32 @@ func setNoDelay(c net.Conn) {
 	}
 }
 
-// Connect 使用 WebSocket 连接到 ws://addr/。
+// Connect 使用 WebSocket 连接到 ws://addr/ 或 wss://addr/（配置 TLS 时）。
 func (n *Client) Connect(addr string) error {
-	addrInfo := fmt.Sprintf("ws://%s/", addr)
-	conn, _, err := websocket.DefaultDialer.Dial(addrInfo, nil)
+	scheme := "ws"
+	var tlsClientCfg *tls.Config
+	if cfg := n.TLSConfig(); cfg != nil && cfg.Mode != ziface.TLSModeNone {
+		scheme = "wss"
+		if cfg.Mode == ziface.TLSModeStandard && cfg.StdConfig != nil {
+			tlsClientCfg = cfg.StdConfig
+		}
+	}
+
+	path := normalizeWebSocketPath(n.WebSocketPath())
+	addrInfo := fmt.Sprintf("%s://%s%s", scheme, addr, path)
+
+	dialer := websocket.Dialer{
+		HandshakeTimeout: znet.WebSocketTimeout,
+		TLSClientConfig:  tlsClientCfg,
+	}
+	if timeout := n.DialTimeout(); timeout > 0 {
+		dialer.NetDialContext = func(ctx context.Context, network, dialAddr string) (net.Conn, error) {
+			d := net.Dialer{Timeout: timeout}
+			return d.DialContext(ctx, network, dialAddr)
+		}
+	}
+
+	conn, _, err := dialer.Dial(addrInfo, n.WebSocketHeaders())
 	if err != nil {
 		zlog.Error("Failed to dial WebSocket server",
 			zap.String("addr", addr),

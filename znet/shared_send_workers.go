@@ -92,9 +92,19 @@ func (sh *sharedSendShard) flushChannel(batch []ziface.IMessage, ch *BaseChannel
 			zlog.Error("shared send worker panic",
 				zap.Any("panic", r),
 				zap.Uint64("channelId", ch.GetChannelId()))
-			ch.Close()
+			if !ch.isClose.Load() {
+				ch.sharedSendDrainAndCloseMailbox(batch)
+				ch.sharedSendCloseDone.Store(true)
+				ch.Close()
+			}
 		}
 	}()
+
+	if ch.isClose.Load() {
+		ch.sharedSendDrainAndCloseMailbox(batch)
+		ch.SharedSendClearPending()
+		return
+	}
 
 	quota := GetSendLoopTuning().ReactorFlushBatchesPerTurn
 	if quota <= 0 {
@@ -103,6 +113,12 @@ func (sh *sharedSendShard) flushChannel(batch []ziface.IMessage, ch *BaseChannel
 	processedBatches := 0
 
 	for {
+		if ch.isClose.Load() {
+			ch.sharedSendDrainAndCloseMailbox(batch)
+			ch.SharedSendClearPending()
+			return
+		}
+
 		n := ch.SharedSendDequeueBatch(batch)
 		if n > 0 {
 			ch.SharedSendProcessBatch(batch[:n])

@@ -778,3 +778,49 @@ func TestTServer_WithTLS(t *testing.T) {
 		t.Fatal("timeout waiting for message over TLS")
 	}
 }
+
+// TClient 支持 WithTLSConfig 建立 TLS 连接。
+func TestTClient_WithTLS(t *testing.T) {
+	certPEM, keyPEM := generateSelfSignedCert(t)
+	tlsCfg, err := NewStandardTLSConfigFromPEM(certPEM, keyPEM)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	server := NewServer("127.0.0.1:0", znet.ServerHandlers{
+		OnAccept: func(ch ziface.IChannel) bool { return true },
+		OnRead:   func(ch ziface.IChannel, msg ziface.IWireMessage) {},
+	})
+	server.SetTLSConfig(tlsCfg)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	server.Server(ctx)
+	time.Sleep(100 * time.Millisecond)
+
+	rootCAs := x509.NewCertPool()
+	if !rootCAs.AppendCertsFromPEM(certPEM) {
+		t.Fatal("failed to append server cert to RootCAs")
+	}
+	clientCfg := znet.NewClientStandardTLSConfig()
+	clientCfg.StdConfig.RootCAs = rootCAs
+
+	client, err := NewClient(server.GetAddr(), znet.WithTLSConfig(clientCfg))
+	if err != nil {
+		t.Fatalf("NewClient with TLS: %v", err)
+	}
+	defer client.Close()
+}
+
+// TClient 支持 WithDialTimeout，不可达地址应在超时内失败返回。
+func TestTClient_DialTimeout(t *testing.T) {
+	start := time.Now()
+	_, err := NewClient("198.18.0.1:9", znet.WithDialTimeout(150*time.Millisecond))
+	elapsed := time.Since(start)
+	if err == nil {
+		t.Fatal("expected dial error for unreachable host")
+	}
+	if elapsed > time.Second {
+		t.Fatalf("dial should respect timeout, took %v", elapsed)
+	}
+}

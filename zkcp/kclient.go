@@ -1,6 +1,8 @@
 package zkcp
 
 import (
+	"net"
+
 	"github.com/aiyang-zh/zhenyi-base/zerrs"
 	"github.com/aiyang-zh/zhenyi-base/ziface"
 	"github.com/aiyang-zh/zhenyi-base/zlog"
@@ -27,14 +29,51 @@ func NewClient(addr string, opts ...znet.ClientOption) (ziface.IClient, error) {
 	return client, nil
 }
 
-// Connect 使用 KCP 连接到指定地址（FEC 关闭，与 Server 一致）。
+// Connect 使用 KCP 连接远端（FEC 关闭，与 Server 一致）。
+// DialTimeout>0 时经 net.Dialer 建 UDP 再包装为 KCP；0 则使用 kcp.DialWithOptions。
 func (n *Client) Connect(addr string) error {
-	conn, err := kcp.DialWithOptions(addr, nil, 0, 0)
-	if err != nil {
-		zlog.Error("Failed to dial KCP server",
-			zap.String("addr", addr),
-			zap.Error(err))
-		return zerrs.Wrap(err, zerrs.ErrTypeNetwork, "failed to dial KCP server")
+	var (
+		conn *kcp.UDPSession
+		err  error
+	)
+	if timeout := n.DialTimeout(); timeout > 0 {
+		d := net.Dialer{Timeout: timeout}
+		udpConn, dialErr := d.Dial("udp", addr)
+		if dialErr != nil {
+			zlog.Error("Failed to dial KCP server",
+				zap.String("addr", addr),
+				zap.Error(dialErr))
+			return zerrs.Wrap(dialErr, zerrs.ErrTypeNetwork, "failed to dial KCP server")
+		}
+		pc, ok := udpConn.(net.PacketConn)
+		if !ok {
+			if closeErr := udpConn.Close(); closeErr != nil {
+				zlog.Warn("Failed to close non-packet UDP conn after dial",
+					zap.String("addr", addr),
+					zap.Error(closeErr))
+			}
+			return zerrs.New(zerrs.ErrTypeNetwork, "kcp dial: underlying conn is not PacketConn")
+		}
+		conn, err = kcp.NewConn2(udpConn.RemoteAddr(), nil, 0, 0, pc)
+		if err != nil {
+			if closeErr := pc.Close(); closeErr != nil {
+				zlog.Warn("Failed to close UDP conn after KCP session setup",
+					zap.String("addr", addr),
+					zap.Error(closeErr))
+			}
+			zlog.Error("Failed to create KCP session",
+				zap.String("addr", addr),
+				zap.Error(err))
+			return zerrs.Wrap(err, zerrs.ErrTypeNetwork, "failed to create KCP session")
+		}
+	} else {
+		conn, err = kcp.DialWithOptions(addr, nil, 0, 0)
+		if err != nil {
+			zlog.Error("Failed to dial KCP server",
+				zap.String("addr", addr),
+				zap.Error(err))
+			return zerrs.Wrap(err, zerrs.ErrTypeNetwork, "failed to dial KCP server")
+		}
 	}
 	conn.SetNoDelay(1, 20, 2, 1)
 	conn.SetWindowSize(128, 128)

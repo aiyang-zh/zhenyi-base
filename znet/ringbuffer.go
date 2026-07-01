@@ -51,6 +51,8 @@ var (
 //	rb := GetRingBuffer()       // 从池获取（默认 4KB，多连接时节省内存）
 //	defer PutRingBuffer(rb)     // 归还到池
 //
+// 池化读环扩容上限见 SetRingBufferPoolMaxSize（须在 accept 前调用）或 RingBufferMaxSizeForSocket。
+//
 // 注意：池默认 4KB，DefaultRingBufferConfig 为 64KB，二者不一致是刻意的：
 // 池用于每连接复用，取小以控制内存；直接 NewRingBuffer 默认 64KB 适合单缓冲场景。
 const defaultRingBufferSize = 4 * 1024 // 4KB
@@ -59,14 +61,70 @@ const defaultRingBufferSize = 4 * 1024 // 4KB
 // 传入 Grow 的增量需求；RingBuffer.Grow 会按 Len+步长向上取 2 的幂直至满足。与 ztcp 默认 SO_RCVBUF/SO_SNDBUF 量级一致。
 const readRingGrowStepBytes = 64 * 1024
 
+// pooledRingMaxSize 为 GetRingBuffer 默认扩容上限（字节）；0 表示按 DefaultSocketConfig 推导（见 RingBufferMaxSizeForSocket）。
+var pooledRingMaxSize atomic.Uint64
+
 var ringBufferPool = zpool.NewPool(func() *RingBuffer {
 	return NewRingBuffer(RingBufferConfig{Size: defaultRingBufferSize})
 })
 
-// GetRingBuffer 从池中获取 RingBuffer
+// RingBufferMaxSizeForSocket 按 SocketConfig 推导读环扩容上限（MaxDataLength + 线协议头长，未设 MaxDataLength 时用 DefaultMaxDataLength）。
+func RingBufferMaxSizeForSocket(cfg SocketConfig) int {
+	maxData := cfg.MaxDataLength
+	if maxData <= 0 {
+		maxData = DefaultMaxDataLength
+	}
+	hdr := headerSizeV0
+	if cfg.ProtocolVersion >= 1 {
+		hdr = headerSizeV1
+	}
+	return maxData + hdr
+}
+
+func normalizeRingBufferMaxSize(max int) uint64 {
+	if max <= 0 {
+		return 0
+	}
+	return nextPowerOfTwo64(uint64(max))
+}
+
+func effectivePooledRingMaxSize() uint64 {
+	if v := pooledRingMaxSize.Load(); v > 0 {
+		return normalizeRingBufferMaxSize(int(v))
+	}
+	return normalizeRingBufferMaxSize(RingBufferMaxSizeForSocket(DefaultSocketConfig()))
+}
+
+// SetRingBufferPoolMaxSize 设置 GetRingBuffer 默认扩容上限（字节，内部向上取 2 的幂）；max<=0 恢复为按 DefaultSocketConfig 推导。
+// 须在进程 accept 新连接之前调用（与 SetSendLoopTuning 同类约定）；已借出的 RingBuffer 不受影响。
+func SetRingBufferPoolMaxSize(max int) {
+	if max <= 0 {
+		pooledRingMaxSize.Store(0)
+		return
+	}
+	pooledRingMaxSize.Store(uint64(max))
+}
+
+// GetRingBufferPoolMaxSize 返回当前池化读环上限配置；未显式设置时返回 RingBufferMaxSizeForSocket(DefaultSocketConfig())。
+func GetRingBufferPoolMaxSize() int {
+	if v := pooledRingMaxSize.Load(); v > 0 {
+		return int(v)
+	}
+	return RingBufferMaxSizeForSocket(DefaultSocketConfig())
+}
+
+// GetRingBuffer 从池中获取 RingBuffer（初始 4KB；maxSize 见 SetRingBufferPoolMaxSize 或 DefaultSocketConfig 推导）。
 func GetRingBuffer() *RingBuffer {
 	rb := ringBufferPool.Get()
-	rb.Reset() // 确保干净状态
+	rb.Reset()
+	rb.maxSize = effectivePooledRingMaxSize()
+	return rb
+}
+
+// GetRingBufferForSocket 从池获取并按 SocketConfig 设置扩容上限（覆盖 SetRingBufferPoolMaxSize 默认值）。
+func GetRingBufferForSocket(cfg SocketConfig) *RingBuffer {
+	rb := GetRingBuffer()
+	rb.SetMaxSize(RingBufferMaxSizeForSocket(cfg))
 	return rb
 }
 
@@ -105,14 +163,14 @@ type RingBuffer struct {
 // RingBufferConfig Ring Buffer 配置
 type RingBufferConfig struct {
 	Size    int // 初始缓冲区大小；DefaultRingBufferConfig 为 64KB；池 GetRingBuffer 为 4KB
-	MaxSize int // 最大扩容大小，默认 1MB，0 表示不限制
+	MaxSize int // 扩容上限（向上取 2 的幂）；DefaultRingBufferConfig 为 RingBufferMaxSizeForSocket(DefaultSocketConfig())；0 表示不限制
 }
 
 // DefaultRingBufferConfig 默认配置
 func DefaultRingBufferConfig() RingBufferConfig {
 	return RingBufferConfig{
-		Size:    64 * 1024,   // 64KB
-		MaxSize: 1024 * 1024, // 1MB
+		Size:    64 * 1024,
+		MaxSize: RingBufferMaxSizeForSocket(DefaultSocketConfig()),
 	}
 }
 
@@ -196,12 +254,23 @@ func (rb *RingBuffer) Reset() {
 	atomic.StoreUint64(&rb.totalWrite, 0)
 }
 
+// SetMaxSize 设置扩容上限（字节，向上取 2 的幂）；max<=0 表示不限制。已扩容的 buf 不会缩容。
+func (rb *RingBuffer) SetMaxSize(max int) {
+	rb.maxSize = normalizeRingBufferMaxSize(max)
+}
+
+// MaxSizeCap 返回当前扩容上限（0 表示不限制）。
+func (rb *RingBuffer) MaxSizeCap() int {
+	return int(rb.maxSize)
+}
+
 // ================================================================
 // 扩容操作
 // ================================================================
 
-// Grow 扩容缓冲区以容纳至少 n 字节的额外数据
-// 返回是否成功扩容
+// Grow 扩容缓冲区以容纳至少 n 字节的额外数据。
+// maxSize>0 时不超过构造时配置的上限；maxSize==0 时可无限翻倍（调用方须自行约束，生产读路径应设上限）。
+// 返回是否成功扩容。
 func (rb *RingBuffer) Grow(n int) bool {
 	if rb.Free() >= n {
 		return true // 空间足够，无需扩容
@@ -344,9 +413,9 @@ func (rb *RingBuffer) Write(p []byte) (n int, err error) {
 	}
 
 	// 检查空间，必要时扩容
-	if rb.Free() < len(p) {
-		if !rb.Grow(len(p)) {
-			// 扩容失败，只写入能写的部分
+	want := len(p)
+	if rb.Free() < want {
+		if !rb.Grow(want) {
 			if rb.Free() == 0 {
 				return 0, ErrBufferFull
 			}
@@ -369,6 +438,9 @@ func (rb *RingBuffer) Write(p []byte) (n int, err error) {
 
 	rb.write += uint64(len(p))
 	atomic.AddUint64(&rb.totalWrite, uint64(len(p)))
+	if len(p) < want {
+		return len(p), io.ErrShortWrite
+	}
 	return len(p), nil
 }
 

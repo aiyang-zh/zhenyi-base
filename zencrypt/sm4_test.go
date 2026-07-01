@@ -29,6 +29,13 @@ func TestSM4CBC_EncryptDecrypt(t *testing.T) {
 	}
 }
 
+func TestPkcs7Unpad_RejectsPaddingExceedingBlockSize(t *testing.T) {
+	data := append(bytes.Repeat([]byte{1}, 15), 17)
+	if _, err := pkcs7Unpad(data); err == nil {
+		t.Fatal("expected error when padding byte exceeds SM4 block size")
+	}
+}
+
 func TestSM4CBC_DifferentIV(t *testing.T) {
 	cipher := NewSM4Encrypt("test-key")
 	plaintext := []byte("same data")

@@ -31,7 +31,7 @@ func NewClient(addr string, opts ...znet.ClientOption) (ziface.IClient, error) {
 
 // Connect 使用 TCP 连接到指定地址（格式如 "host:port"）。
 func (n *TClient) Connect(addr string) error {
-	conn, err := net.Dial("tcp", addr)
+	conn, err := znet.DialTLSWithTimeout("tcp", addr, n.TLSConfig(), n.DialTimeout())
 	if err != nil {
 		zlog.Error("Failed to dial TCP server",
 			zap.String("addr", addr),

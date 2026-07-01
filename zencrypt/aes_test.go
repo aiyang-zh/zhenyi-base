@@ -263,6 +263,7 @@ func TestPKCS7UnPaddingWithValidation(t *testing.T) {
 		{"invalid padding value", []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 99}, true},
 		{"inconsistent padding", []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 3, 2}, true},
 		{"zero padding", []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0}, true},
+		{"padding exceeds block size", append(bytes.Repeat([]byte{1}, 15), 17), true},
 		{"empty data", []byte{}, true},
 	}
 
