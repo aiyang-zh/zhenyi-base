@@ -1,114 +1,354 @@
-# zqueue 96 组合基准测试原始结果
-
-**测试环境**：Go 1.24, darwin/arm64, Apple M3  
-**复现命令**：`go test -bench=BenchmarkMatrix -benchmem ./zqueue/`  
-**数据日期**：2025-03
-
----
-
-## 完整数据
-
-goos: darwin
-goarch: arm64
+goos: linux
+goarch: amd64
 pkg: github.com/aiyang-zh/zhenyi-base/zqueue
-cpu: Apple M3
-
-BenchmarkMatrix/MPSCBounded/Small/P1/Single-8  	53005778	        22.20 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Small/P1/Batch-8   	79831246	        13.70 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Small/P4/Single-8  	43890127	        27.97 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Small/P4/Batch-8   	48176887	        24.93 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Small/P16/Single-8 	45079239	        43.71 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Small/P16/Batch-8  	30994503	        52.88 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Small/P64/Single-8 	12039946	        94.63 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Small/P64/Batch-8  	16041529	        68.50 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Medium/P1/Single-8 	45346260	        25.53 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Medium/P1/Batch-8  	79998890	        17.79 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Medium/P4/Single-8 	45266790	        31.73 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Medium/P4/Batch-8  	59603016	        23.06 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Medium/P16/Single-8         	34343361	        34.90 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Medium/P16/Batch-8          	50101854	        23.90 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Medium/P64/Single-8         	35747178	        37.33 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Medium/P64/Batch-8          	46585432	        31.24 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Large/P1/Single-8           	29420720	        40.32 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Large/P1/Batch-8            	61050706	        28.07 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Large/P4/Single-8           	28834746	        42.91 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Large/P4/Batch-8            	46886674	        27.61 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Large/P16/Single-8          	25970886	        43.91 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Large/P16/Batch-8           	39728467	        29.58 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Large/P64/Single-8          	29289247	        41.49 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCBounded/Large/P64/Batch-8           	44000971	        29.18 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Small/P1/Single-8         	10479690	       107.2 ns/op	       1 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Small/P1/Batch-8          	10771718	       109.2 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Small/P4/Single-8         	 5199818	       213.9 ns/op	       7 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Small/P4/Batch-8          	 4718780	       282.0 ns/op	       4 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Small/P16/Single-8        	 6592292	       197.6 ns/op	      13 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Small/P16/Batch-8         	 6660009	       192.7 ns/op	      13 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Small/P64/Single-8        	 5661976	       188.5 ns/op	      16 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Small/P64/Batch-8        	 7555075	       216.2 ns/op	      20 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Medium/P1/Single-8        	 6922471	       264.7 ns/op	       4 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Medium/P1/Batch-8         	10914619	       132.5 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Medium/P4/Single-8        	 5434262	       236.6 ns/op	       8 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Medium/P4/Batch-8         	 7812732	       159.4 ns/op	      13 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Medium/P16/Single-8        	 6059673	       289.5 ns/op	      16 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Medium/P16/Batch-8        	 4885434	       239.4 ns/op	      15 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Medium/P64/Single-8       	 7708694	       143.2 ns/op	      15 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Medium/P64/Batch-8        	 6810991	       215.1 ns/op	      19 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Large/P1/Single-8        	 7692882	       143.1 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Large/P1/Batch-8         	9126770	       175.1 ns/op	       5 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Large/P4/Single-8        	 5847841	       203.7 ns/op	      14 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Large/P4/Batch-8          	 5208544	       242.5 ns/op	      17 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Large/P16/Single-8       	 7786468	       162.4 ns/op	      16 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Large/P16/Batch-8        	 6675810	       180.1 ns/op	      21 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Large/P64/Single-8       	 5197154	       196.8 ns/op	      19 B/op	       0 allocs/op
-BenchmarkMatrix/MPSCUnbounded/Large/P64/Batch-8        	 7324600	       150.7 ns/op	      19 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Small/P1/Single-8          	19678516	        55.13 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Small/P1/Batch-8           	19923004	        62.09 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Small/P4/Single-8          	12713137	       104.2 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Small/P4/Batch-8           	10410924	       116.7 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Small/P16/Single-8         	 7587172	       184.1 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Small/P16/Batch-8         	 6483441	       173.7 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Small/P64/Single-8         	 4095606	       293.4 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Small/P64/Batch-8          	 4617157	       271.3 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Medium/P1/Single-8         	20227942	        52.84 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Medium/P1/Batch-8           	23027932	        58.39 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Medium/P4/Single-8         	16220361	        81.87 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Medium/P4/Batch-8          	15703491	        82.57 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Medium/P16/Single-8        	10144645	       120.5 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Medium/P16/Batch-8          	10992722	       124.9 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Medium/P64/Single-8        	 5435589	       214.5 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Medium/P64/Batch-8          	 6890563	       182.8 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Large/P1/Single-8          	19822095	        50.57 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Large/P1/Batch-8           	24763904	        50.60 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Large/P4/Single-8          	17274802	        76.70 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Large/P4/Batch-8            	15019290	        83.96 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Large/P16/Single-8         	11401777	       119.4 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Large/P16/Batch-8           	12292352	        97.88 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Large/P64/Single-8         	 7579760	       193.5 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanBuffered/Large/P64/Batch-8           	8609808	       167.4 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Small/P1/Single-8        	 5760927	       196.1 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Small/P1/Batch-8         	 6416882	       181.3 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Small/P4/Single-8        	 2996634	       424.4 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Small/P4/Batch-8         	 2715234	       454.9 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Small/P16/Single-8       	 2315644	       514.9 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Small/P16/Batch-8        	 2553906	       483.5 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Small/P64/Single-8       	 2097529	       598.4 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Small/P64/Batch-8        	 2050854	       652.7 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Medium/P1/Single-8       	 5296393	       215.2 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Medium/P1/Batch-8        	 5064582	       219.3 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Medium/P4/Single-8       	 2596887	       471.1 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Medium/P4/Batch-8        	 2303348	       446.5 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Medium/P16/Single-8      	 2630275	       462.5 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Medium/P16/Batch-8       	 2492272	       481.9 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Medium/P64/Single-8      	 2044773	       551.8 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Medium/P64/Batch-8       	 1973086	       563.6 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Large/P1/Single-8        	 5987788	       179.7 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Large/P1/Batch-8         	 6761982	       172.7 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Large/P4/Single-8        	 2571218	       412.5 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Large/P4/Batch-8         	 2687157	       454.9 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Large/P16/Single-8       	 2409997	       518.8 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Large/P16/Batch-8        	 2340463	       502.4 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Large/P64/Single-8      	 2002802	       564.4 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMatrix/ChanUnbuffered/Large/P64/Batch-8        	 2143082	       570.8 ns/op	       0 B/op	       0 allocs/op
-
+cpu: Intel(R) Xeon(R) CPU @ 2.20GHz
+BenchmarkMatrix/MPSCBounded/Small/P1/SingleSingle-4         	10459172	       111.5 ns/op	2296.90 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P1/SingleBatch-4          	11718274	        92.83 ns/op	2757.75 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P1/BatchSingle-4          	11776773	       100.6 ns/op	2544.40 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P1/BatchBatch-4           	16393519	        74.12 ns/op	3453.69 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P4/SingleSingle-4         	 8189484	       141.3 ns/op	1811.52 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P4/SingleBatch-4          	10384824	       124.3 ns/op	2059.63 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P4/BatchSingle-4          	 7130094	       172.1 ns/op	1487.74 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P4/BatchBatch-4           	22203672	        52.61 ns/op	4866.46 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P16/SingleSingle-4        	 8180361	       144.3 ns/op	1774.28 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P16/SingleBatch-4         	 9715692	       123.7 ns/op	2069.64 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P16/BatchSingle-4         	 6681970	       185.1 ns/op	1383.00 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P16/BatchBatch-4          	22358125	        54.08 ns/op	4733.38 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P64/SingleSingle-4        	 8197484	       147.7 ns/op	1733.24 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P64/SingleBatch-4         	 8936774	       137.0 ns/op	1868.84 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P64/BatchSingle-4         	 6114768	       183.3 ns/op	1396.52 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Small/P64/BatchBatch-4          	21869743	        55.76 ns/op	4591.13 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P1/SingleSingle-4        	 1356920	       994.9 ns/op	4117.07 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P1/SingleBatch-4         	 1000000	      1036 ns/op	3955.31 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P1/BatchSingle-4         	 1195090	      1062 ns/op	3855.46 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P1/BatchBatch-4          	  928100	      1176 ns/op	3483.77 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P4/SingleSingle-4        	 1000000	      1209 ns/op	3388.66 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P4/SingleBatch-4         	 1586926	       760.6 ns/op	5385.49 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P4/BatchSingle-4         	 1000000	      1263 ns/op	3242.36 MB/s	       2 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P4/BatchBatch-4          	 1458164	       830.3 ns/op	4933.31 MB/s	       1 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P16/SingleSingle-4       	 1000000	      1179 ns/op	3475.06 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P16/SingleBatch-4        	 1597929	       765.7 ns/op	5349.51 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P16/BatchSingle-4        	  901810	      1923 ns/op	2130.47 MB/s	       9 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P16/BatchBatch-4         	 1394528	       870.3 ns/op	4706.66 MB/s	       6 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P64/SingleSingle-4       	 1000000	      1221 ns/op	3355.09 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P64/SingleBatch-4        	 1562989	       772.6 ns/op	5301.40 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P64/BatchSingle-4        	  832482	      1377 ns/op	2974.12 MB/s	      40 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Medium/P64/BatchBatch-4         	 1284174	       933.8 ns/op	4386.33 MB/s	      26 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P1/SingleSingle-4         	   58600	     20132 ns/op	3254.97 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P1/SingleBatch-4          	   53592	     22499 ns/op	2912.47 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P1/BatchSingle-4          	   59341	     18731 ns/op	3498.38 MB/s	      17 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P1/BatchBatch-4           	   52866	     22998 ns/op	2849.32 MB/s	      19 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P4/SingleSingle-4         	   27093	     45607 ns/op	1436.79 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P4/SingleBatch-4          	   73794	     16439 ns/op	3986.25 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P4/BatchSingle-4          	   28834	     43738 ns/op	1498.21 MB/s	     145 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P4/BatchBatch-4           	   74726	     16532 ns/op	3963.81 MB/s	      56 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P16/SingleSingle-4        	   28944	     44110 ns/op	1485.56 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P16/SingleBatch-4         	   70564	     16735 ns/op	3915.56 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P16/BatchSingle-4         	   28890	     42733 ns/op	1533.42 MB/s	     580 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P16/BatchBatch-4          	   70305	     17531 ns/op	3737.74 MB/s	     238 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P64/SingleSingle-4        	   28008	     44766 ns/op	1463.79 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P64/SingleBatch-4         	   74704	     17273 ns/op	3793.67 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P64/BatchSingle-4         	   28990	     44529 ns/op	1471.59 MB/s	    2315 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCBounded/Large/P64/BatchBatch-4          	   67495	     18516 ns/op	3538.99 MB/s	     994 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Small/P1/SingleSingle-4          	10801940	       111.6 ns/op	2293.54 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Small/P1/SingleBatch-4           	11461671	        96.65 ns/op	2648.71 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Small/P1/BatchSingle-4           	12000732	       100.4 ns/op	2548.82 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Small/P1/BatchBatch-4            	16309912	        73.69 ns/op	3473.83 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Small/P4/SingleSingle-4          	 8393761	       145.5 ns/op	1759.65 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Small/P4/SingleBatch-4           	 9654740	       123.5 ns/op	2072.72 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Small/P4/BatchSingle-4           	 7543828	       170.2 ns/op	1504.20 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Small/P4/BatchBatch-4            	22089628	        52.97 ns/op	4833.22 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Small/P16/SingleSingle-4         	 8411084	       147.5 ns/op	1735.87 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Small/P16/SingleBatch-4          	 9894890	       123.0 ns/op	2082.00 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Small/P16/BatchSingle-4          	 6577114	       185.3 ns/op	1381.41 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Small/P16/BatchBatch-4           	23167076	        54.42 ns/op	4704.02 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Small/P64/SingleSingle-4         	 8753668	       151.5 ns/op	1689.25 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Small/P64/SingleBatch-4          	 8897844	       136.1 ns/op	1880.93 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Small/P64/BatchSingle-4          	 6277172	       187.2 ns/op	1367.44 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Small/P64/BatchBatch-4           	22799667	        55.61 ns/op	4603.57 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Medium/P1/SingleSingle-4         	 1261255	       875.5 ns/op	4678.68 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Medium/P1/SingleBatch-4          	 1218891	      1056 ns/op	3878.19 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Medium/P1/BatchSingle-4          	 1000000	      1050 ns/op	3901.50 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Medium/P1/BatchBatch-4           	  952110	      1123 ns/op	3645.85 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Medium/P4/SingleSingle-4         	 1000000	      1203 ns/op	3404.74 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Medium/P4/SingleBatch-4          	 1606032	       746.3 ns/op	5488.46 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Medium/P4/BatchSingle-4          	  864218	      1252 ns/op	3270.41 MB/s	       2 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Medium/P4/BatchBatch-4           	 1463479	       806.5 ns/op	5078.73 MB/s	       1 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Medium/P16/SingleSingle-4        	 1000000	      1181 ns/op	3467.61 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Medium/P16/SingleBatch-4         	 1575502	       755.2 ns/op	5424.00 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Medium/P16/BatchSingle-4         	  899865	      1300 ns/op	3151.06 MB/s	       9 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Medium/P16/BatchBatch-4          	 1416456	       849.1 ns/op	4823.72 MB/s	       5 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Medium/P64/SingleSingle-4        	 1000000	      1212 ns/op	3380.00 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Medium/P64/SingleBatch-4         	 1578285	       761.3 ns/op	5380.30 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Medium/P64/BatchSingle-4         	  846045	      1388 ns/op	2951.88 MB/s	      39 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Medium/P64/BatchBatch-4          	 1296302	       932.8 ns/op	4391.27 MB/s	      25 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Large/P1/SingleSingle-4          	   57774	     19649 ns/op	3334.89 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Large/P1/SingleBatch-4           	   53624	     23086 ns/op	2838.48 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Large/P1/BatchSingle-4           	   62997	     19711 ns/op	3324.41 MB/s	      16 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Large/P1/BatchBatch-4            	   52984	     22773 ns/op	2877.50 MB/s	      19 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Large/P4/SingleSingle-4          	   28394	     45637 ns/op	1435.86 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Large/P4/SingleBatch-4           	   77155	     17019 ns/op	3850.18 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Large/P4/BatchSingle-4           	   29940	     43906 ns/op	1492.45 MB/s	     140 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Large/P4/BatchBatch-4            	   72552	     16637 ns/op	3938.78 MB/s	      57 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Large/P16/SingleSingle-4         	   29197	     44451 ns/op	1474.16 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Large/P16/SingleBatch-4          	   74210	     16404 ns/op	3994.60 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Large/P16/BatchSingle-4          	   29472	     42156 ns/op	1554.41 MB/s	     569 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Large/P16/BatchBatch-4           	   66175	     17822 ns/op	3676.80 MB/s	     253 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Large/P64/SingleSingle-4         	   28156	     43686 ns/op	1499.96 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Large/P64/SingleBatch-4          	   70519	     16902 ns/op	3876.89 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Large/P64/BatchSingle-4          	   30927	     43670 ns/op	1500.52 MB/s	    2170 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCPadded/Large/P64/BatchBatch-4           	   68412	     18512 ns/op	3539.82 MB/s	     981 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P1/SingleSingle-4       	 4507024	       273.5 ns/op	 935.90 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P1/SingleBatch-4        	 4334520	       305.2 ns/op	 838.86 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P1/BatchSingle-4        	 6742290	       174.2 ns/op	1469.25 MB/s	       4 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P1/BatchBatch-4         	 7358626	       181.6 ns/op	1409.51 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P4/SingleSingle-4       	 4097418	       301.8 ns/op	 848.13 MB/s	      57 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P4/SingleBatch-4        	 5505391	       251.6 ns/op	1017.29 MB/s	      34 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P4/BatchSingle-4        	 3766458	       300.2 ns/op	 852.73 MB/s	      84 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P4/BatchBatch-4         	 5026537	       278.2 ns/op	 920.18 MB/s	      73 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P16/SingleSingle-4      	 3610648	       430.0 ns/op	 595.41 MB/s	     151 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P16/SingleBatch-4       	 3946216	       393.1 ns/op	 651.27 MB/s	     160 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P16/BatchSingle-4       	 4597046	       364.3 ns/op	 702.74 MB/s	     168 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P16/BatchBatch-4        	 5083653	       297.7 ns/op	 859.99 MB/s	     154 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P64/SingleSingle-4      	 3798386	       414.2 ns/op	 618.02 MB/s	     182 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P64/SingleBatch-4       	 4874277	       451.1 ns/op	 567.55 MB/s	     221 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P64/BatchSingle-4       	 4525702	       365.3 ns/op	 700.71 MB/s	     203 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Small/P64/BatchBatch-4        	 5027296	       356.0 ns/op	 719.14 MB/s	     212 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P1/SingleSingle-4      	 1325979	       919.4 ns/op	4454.89 MB/s	       8 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P1/SingleBatch-4       	 1313518	       866.2 ns/op	4728.70 MB/s	       2 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P1/BatchSingle-4       	 1458186	       848.9 ns/op	4825.08 MB/s	       6 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P1/BatchBatch-4        	 1464582	       822.9 ns/op	4977.64 MB/s	       2 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P4/SingleSingle-4      	  879063	      1452 ns/op	2821.21 MB/s	    1169 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P4/SingleBatch-4       	  975624	      1345 ns/op	3044.45 MB/s	     949 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P4/BatchSingle-4       	  901966	      1423 ns/op	2878.95 MB/s	    1242 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P4/BatchBatch-4        	  960127	      1291 ns/op	3172.69 MB/s	    2342 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P16/SingleSingle-4     	  813280	      1969 ns/op	2080.23 MB/s	    3508 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P16/SingleBatch-4      	  988077	      1813 ns/op	2258.76 MB/s	    3338 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P16/BatchSingle-4      	  619651	      1706 ns/op	2401.50 MB/s	    3933 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P16/BatchBatch-4       	  799782	      1518 ns/op	2698.33 MB/s	    3473 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P64/SingleSingle-4     	  690973	      2048 ns/op	2000.30 MB/s	    4323 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P64/SingleBatch-4      	  966052	      1734 ns/op	2362.03 MB/s	    3405 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P64/BatchSingle-4      	  582223	      1846 ns/op	2219.42 MB/s	    4514 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Medium/P64/BatchBatch-4       	  700862	      1883 ns/op	2175.57 MB/s	    4521 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P1/SingleSingle-4       	   54837	     21860 ns/op	2997.63 MB/s	     513 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P1/SingleBatch-4        	   51148	     22849 ns/op	2867.89 MB/s	     342 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P1/BatchSingle-4        	   60330	     19757 ns/op	3316.66 MB/s	    1000 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P1/BatchBatch-4         	   50054	     24544 ns/op	2669.78 MB/s	     420 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P4/SingleSingle-4       	   44620	     25325 ns/op	2587.45 MB/s	   32787 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P4/SingleBatch-4        	   55491	     22858 ns/op	2866.75 MB/s	   31581 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P4/BatchSingle-4        	   47020	     26683 ns/op	2455.76 MB/s	   39811 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P4/BatchBatch-4         	   56156	     21268 ns/op	3081.10 MB/s	   31815 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P16/SingleSingle-4      	   46071	     32957 ns/op	1988.30 MB/s	   53348 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P16/SingleBatch-4       	   52917	     26703 ns/op	2453.99 MB/s	   50051 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P16/BatchSingle-4       	   42084	     26608 ns/op	2462.71 MB/s	   51213 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P16/BatchBatch-4        	   55270	     27112 ns/op	2416.97 MB/s	   50504 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P64/SingleSingle-4      	   46602	     26552 ns/op	2467.91 MB/s	   52955 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P64/SingleBatch-4       	   48843	     24669 ns/op	2656.25 MB/s	   51877 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P64/BatchSingle-4       	   40005	     27692 ns/op	2366.30 MB/s	   59489 B/op	       0 allocs/op
+BenchmarkMatrix/MPSCUnbounded/Large/P64/BatchBatch-4        	   50654	     27966 ns/op	2343.16 MB/s	   51973 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCBounded/Small/P1/SingleSingle-4         	14951655	        77.44 ns/op	3305.93 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCBounded/Small/P1/SingleBatch-4          	14983105	        80.96 ns/op	3162.24 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCBounded/Small/P1/BatchSingle-4          	15437648	        72.20 ns/op	3545.58 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCBounded/Small/P1/BatchBatch-4           	24401853	        50.33 ns/op	5086.72 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCBounded/Medium/P1/SingleSingle-4        	 1221880	       986.4 ns/op	4152.45 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCBounded/Medium/P1/SingleBatch-4         	 1000000	      1039 ns/op	3943.56 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCBounded/Medium/P1/BatchSingle-4         	 1464782	       818.6 ns/op	5003.57 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCBounded/Medium/P1/BatchBatch-4          	 1315863	       847.1 ns/op	4835.04 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCBounded/Large/P1/SingleSingle-4         	   61832	     21530 ns/op	3043.56 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCBounded/Large/P1/SingleBatch-4          	   55376	     20660 ns/op	3171.80 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCBounded/Large/P1/BatchSingle-4          	   56472	     20457 ns/op	3203.26 MB/s	      18 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCBounded/Large/P1/BatchBatch-4           	   60154	     19840 ns/op	3302.88 MB/s	      17 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCUnbounded/Small/P1/SingleSingle-4       	 6798746	       191.4 ns/op	1337.85 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCUnbounded/Small/P1/SingleBatch-4        	 5778880	       222.9 ns/op	1148.32 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCUnbounded/Small/P1/BatchSingle-4        	 7037917	       180.5 ns/op	1418.10 MB/s	       3 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCUnbounded/Small/P1/BatchBatch-4         	 6768964	       168.6 ns/op	1518.01 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCUnbounded/Medium/P1/SingleSingle-4      	 1491400	       829.8 ns/op	4936.15 MB/s	       6 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCUnbounded/Medium/P1/SingleBatch-4       	 1523941	       791.4 ns/op	5175.31 MB/s	       1 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCUnbounded/Medium/P1/BatchSingle-4       	 1452358	       819.7 ns/op	4996.98 MB/s	       6 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCUnbounded/Medium/P1/BatchBatch-4        	 1563706	       768.8 ns/op	5327.71 MB/s	       2 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCUnbounded/Large/P1/SingleSingle-4       	   50212	     20843 ns/op	3143.82 MB/s	     436 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCUnbounded/Large/P1/SingleBatch-4        	   50168	     22885 ns/op	2863.39 MB/s	     426 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCUnbounded/Large/P1/BatchSingle-4        	   53948	     19009 ns/op	3447.14 MB/s	     764 B/op	       0 allocs/op
+BenchmarkMatrix/SPSCUnbounded/Large/P1/BatchBatch-4         	   47498	     24526 ns/op	2671.77 MB/s	     405 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Small/P1/SingleSingle-4         	 5480950	       225.5 ns/op	1135.33 MB/s	       3 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Small/P1/SingleBatch-4          	 6663999	       177.2 ns/op	1444.87 MB/s	       1 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Small/P1/BatchSingle-4          	 6987316	       165.0 ns/op	1551.83 MB/s	       9 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Small/P1/BatchBatch-4           	15073478	        90.62 ns/op	2825.14 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Small/P4/SingleSingle-4         	 2124786	       518.1 ns/op	 494.08 MB/s	     505 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Small/P4/SingleBatch-4          	 6453709	       190.9 ns/op	1341.30 MB/s	       2 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Small/P4/BatchSingle-4          	 3210080	       662.2 ns/op	 386.57 MB/s	     668 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Small/P4/BatchBatch-4           	11284616	       100.7 ns/op	2543.32 MB/s	       5 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Small/P16/SingleSingle-4        	 2337394	       832.3 ns/op	 307.57 MB/s	     918 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Small/P16/SingleBatch-4         	 5154200	       240.3 ns/op	1065.29 MB/s	       3 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Small/P16/BatchSingle-4         	 3925208	       433.2 ns/op	 590.98 MB/s	     547 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Small/P16/BatchBatch-4          	 5208002	       230.9 ns/op	1108.71 MB/s	     412 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Small/P64/SingleSingle-4        	 2206790	       757.8 ns/op	 337.81 MB/s	     973 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Small/P64/SingleBatch-4         	 3255732	       360.9 ns/op	 709.37 MB/s	     164 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Small/P64/BatchSingle-4         	 3406400	       484.4 ns/op	 528.45 MB/s	     630 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Small/P64/BatchBatch-4          	 5215648	       439.1 ns/op	 583.00 MB/s	     823 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Medium/P1/SingleSingle-4        	  595747	      1967 ns/op	2082.08 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Medium/P1/SingleBatch-4         	  564565	      2060 ns/op	1988.22 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Medium/P1/BatchSingle-4         	  433544	      7198 ns/op	 569.08 MB/s	    9830 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Medium/P1/BatchBatch-4          	  699724	      1682 ns/op	2434.53 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Medium/P4/SingleSingle-4        	  538897	      2404 ns/op	1704.12 MB/s	     933 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Medium/P4/SingleBatch-4         	  604070	      2028 ns/op	2019.37 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Medium/P4/BatchSingle-4         	  313174	      8664 ns/op	 472.76 MB/s	   13613 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Medium/P4/BatchBatch-4          	  327894	      3285 ns/op	1247.04 MB/s	    6453 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Medium/P16/SingleSingle-4       	  375333	      6760 ns/op	 605.88 MB/s	   11353 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Medium/P16/SingleBatch-4        	  588318	      2053 ns/op	1994.69 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Medium/P16/BatchSingle-4        	  260145	      3851 ns/op	1063.50 MB/s	    8158 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Medium/P16/BatchBatch-4         	  329694	      7016 ns/op	 583.85 MB/s	   12950 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Medium/P64/SingleSingle-4       	  221458	      4728 ns/op	 866.39 MB/s	    9545 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Medium/P64/SingleBatch-4        	  472634	      2461 ns/op	1664.42 MB/s	    1064 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Medium/P64/BatchSingle-4        	  256882	      3932 ns/op	1041.75 MB/s	    8359 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Medium/P64/BatchBatch-4         	  268142	      9502 ns/op	 431.07 MB/s	   16017 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Large/P1/SingleSingle-4         	   19221	     64947 ns/op	1008.94 MB/s	  104730 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Large/P1/SingleBatch-4          	   35252	     34022 ns/op	1926.03 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Large/P1/BatchSingle-4          	   21157	     56574 ns/op	1158.27 MB/s	   95196 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Large/P1/BatchBatch-4           	   37419	     32030 ns/op	2045.84 MB/s	      28 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Large/P4/SingleSingle-4         	   19492	     77979 ns/op	 840.33 MB/s	  103274 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Large/P4/SingleBatch-4          	   34422	     34587 ns/op	1894.58 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Large/P4/BatchSingle-4          	   10000	    124429 ns/op	 526.63 MB/s	  201721 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Large/P4/BatchBatch-4           	   41103	     29126 ns/op	2249.84 MB/s	     102 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Large/P16/SingleSingle-4        	   10000	    128132 ns/op	 511.41 MB/s	  201302 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Large/P16/SingleBatch-4         	   28533	     39873 ns/op	1643.42 MB/s	    4704 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Large/P16/BatchSingle-4         	   10000	    121177 ns/op	 540.76 MB/s	  202980 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Large/P16/BatchBatch-4          	   16930	     65957 ns/op	 993.49 MB/s	  119894 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Large/P64/SingleSingle-4        	   10000	    103230 ns/op	 634.77 MB/s	  201305 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Large/P64/SingleBatch-4         	   17845	     85183 ns/op	 769.26 MB/s	  112808 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Large/P64/BatchSingle-4         	   16394	     67326 ns/op	 973.30 MB/s	  126885 B/op	       0 allocs/op
+BenchmarkMatrix/QueueResize/Large/P64/BatchBatch-4          	   16562	     66923 ns/op	 979.16 MB/s	  125598 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Small/P1/SingleSingle-4           	 7373781	       180.4 ns/op	1418.96 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Small/P1/SingleBatch-4            	 6748362	       173.4 ns/op	1476.55 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Small/P1/BatchSingle-4            	14645144	        85.70 ns/op	2987.27 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Small/P1/BatchBatch-4             	18756896	        61.86 ns/op	4138.40 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Small/P4/SingleSingle-4           	 7982988	       155.8 ns/op	1643.17 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Small/P4/SingleBatch-4            	 9105960	       132.0 ns/op	1939.73 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Small/P4/BatchSingle-4            	93927000	        12.56 ns/op	20386.02 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Small/P4/BatchBatch-4             	95651920	        13.13 ns/op	19497.32 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Small/P16/SingleSingle-4          	 7256460	       176.5 ns/op	1450.29 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Small/P16/SingleBatch-4           	 7125568	       166.8 ns/op	1534.66 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Small/P16/BatchSingle-4           	93197965	        13.46 ns/op	19022.82 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Small/P16/BatchBatch-4            	91575957	        12.85 ns/op	19915.49 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Small/P64/SingleSingle-4          	 6128036	       201.3 ns/op	1271.91 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Small/P64/SingleBatch-4           	 5365256	       223.3 ns/op	1146.40 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Small/P64/BatchSingle-4           	89400211	        12.98 ns/op	19721.70 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Small/P64/BatchBatch-4            	92494752	        12.61 ns/op	20301.20 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Medium/P1/SingleSingle-4          	  607305	      1912 ns/op	2142.51 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Medium/P1/SingleBatch-4           	  590830	      1939 ns/op	2112.85 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Medium/P1/BatchSingle-4           	 1025822	      1161 ns/op	3529.29 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Medium/P1/BatchBatch-4            	  691255	      1589 ns/op	2577.81 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Medium/P4/SingleSingle-4          	  723596	      1760 ns/op	2327.77 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Medium/P4/SingleBatch-4           	  551074	      2023 ns/op	2024.30 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Medium/P4/BatchSingle-4           	 8138368	       126.9 ns/op	32264.85 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Medium/P4/BatchBatch-4            	 6446553	       201.3 ns/op	20352.67 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Medium/P16/SingleSingle-4         	 2138696	       565.7 ns/op	7240.29 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Medium/P16/SingleBatch-4          	  553029	      2054 ns/op	1994.15 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Medium/P16/BatchSingle-4          	 8834408	       130.7 ns/op	31330.10 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Medium/P16/BatchBatch-4           	 6452424	       160.6 ns/op	25507.02 MB/s	       1 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Medium/P64/SingleSingle-4         	 2309610	       525.7 ns/op	7791.06 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Medium/P64/SingleBatch-4          	  545456	      1929 ns/op	2123.12 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Medium/P64/BatchSingle-4          	 8431957	       125.3 ns/op	32693.94 MB/s	       3 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Medium/P64/BatchBatch-4           	 8988616	       137.2 ns/op	29863.63 MB/s	       3 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Large/P1/SingleSingle-4           	   37813	     29829 ns/op	2196.80 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Large/P1/SingleBatch-4            	   36255	     32834 ns/op	1995.74 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Large/P1/BatchSingle-4            	   55641	     20350 ns/op	3219.99 MB/s	      18 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Large/P1/BatchBatch-4             	   37363	     32026 ns/op	2046.09 MB/s	      28 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Large/P4/SingleSingle-4           	   91132	     13317 ns/op	4920.75 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Large/P4/SingleBatch-4            	   35364	     33868 ns/op	1934.82 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Large/P4/BatchSingle-4            	  304945	      4053 ns/op	16169.68 MB/s	      13 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Large/P4/BatchBatch-4             	   42019	     28986 ns/op	2260.71 MB/s	      99 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Large/P16/SingleSingle-4          	  109430	     10475 ns/op	6255.62 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Large/P16/SingleBatch-4           	   31110	     33188 ns/op	1974.46 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Large/P16/BatchSingle-4           	  309842	      3611 ns/op	18148.56 MB/s	      54 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Large/P16/BatchBatch-4            	  252240	      4832 ns/op	13561.18 MB/s	      66 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Large/P64/SingleSingle-4          	   97755	     12216 ns/op	5364.19 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Large/P64/SingleBatch-4           	   78762	     14151 ns/op	4630.52 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Large/P64/BatchSingle-4           	  317010	      3529 ns/op	18570.02 MB/s	     211 B/op	       0 allocs/op
+BenchmarkMatrix/QueueDrop/Large/P64/BatchBatch-4            	  310140	      3863 ns/op	16961.45 MB/s	     216 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Small/P1/SingleBatch-4          	12003170	        98.73 ns/op	2592.94 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Small/P1/BatchBatch-4           	24276739	        49.04 ns/op	5219.94 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Small/P4/SingleBatch-4          	 9162289	       129.4 ns/op	1978.38 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Small/P4/BatchBatch-4           	30834298	        39.69 ns/op	6449.51 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Small/P16/SingleBatch-4         	 6121310	       199.1 ns/op	1285.90 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Small/P16/BatchBatch-4          	23327450	        51.87 ns/op	4935.25 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Small/P64/SingleBatch-4         	 4062392	       338.7 ns/op	 755.83 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Small/P64/BatchBatch-4          	11229786	       113.7 ns/op	2251.70 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Medium/P1/SingleBatch-4         	 1708995	       686.6 ns/op	5965.22 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Medium/P1/BatchBatch-4          	 1674050	       723.9 ns/op	5657.92 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Medium/P4/SingleBatch-4         	 1698766	       712.9 ns/op	5745.73 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Medium/P4/BatchBatch-4          	 1391882	       867.5 ns/op	4721.78 MB/s	       1 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Medium/P16/SingleBatch-4        	 1527380	       808.4 ns/op	5066.78 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Medium/P16/BatchBatch-4         	 1362066	       889.2 ns/op	4606.37 MB/s	       6 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Medium/P64/SingleBatch-4        	 1266489	       983.1 ns/op	4166.39 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Medium/P64/BatchBatch-4         	 1202092	      1028 ns/op	3985.06 MB/s	      27 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Large/P1/SingleBatch-4          	   83192	     14460 ns/op	4531.79 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Large/P1/BatchBatch-4           	   72942	     17318 ns/op	3783.72 MB/s	      14 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Large/P4/SingleBatch-4          	   80960	     13775 ns/op	4756.98 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Large/P4/BatchBatch-4           	   73068	     16828 ns/op	3894.09 MB/s	      57 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Large/P16/SingleBatch-4         	   76178	     15928 ns/op	4113.92 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Large/P16/BatchBatch-4          	   77326	     15488 ns/op	4230.90 MB/s	     217 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Large/P64/SingleBatch-4         	   69859	     17041 ns/op	3845.41 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/SmartDouble/Large/P64/BatchBatch-4          	   68810	     16621 ns/op	3942.52 MB/s	     975 B/op	       0 allocs/op
+BenchmarkMatrix/Priority/Small/P1/SingleSingle-4            	 1970116	       599.6 ns/op	 426.97 MB/s	       2 B/op	       0 allocs/op
+BenchmarkMatrix/Priority/Small/P4/SingleSingle-4            	  685576	      1723 ns/op	 148.57 MB/s	     542 B/op	       0 allocs/op
+BenchmarkMatrix/Priority/Small/P16/SingleSingle-4           	  881265	      2465 ns/op	 103.87 MB/s	    1040 B/op	       0 allocs/op
+BenchmarkMatrix/Priority/Small/P64/SingleSingle-4           	  629664	      1877 ns/op	 136.40 MB/s	    1163 B/op	       0 allocs/op
+BenchmarkMatrix/Priority/Medium/P1/SingleSingle-4           	  326091	      3429 ns/op	1194.67 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/Priority/Medium/P4/SingleSingle-4           	  170245	     20914 ns/op	 195.85 MB/s	    9840 B/op	       0 allocs/op
+BenchmarkMatrix/Priority/Medium/P16/SingleSingle-4          	  110860	     22153 ns/op	 184.89 MB/s	   19179 B/op	       0 allocs/op
+BenchmarkMatrix/Priority/Medium/P64/SingleSingle-4          	   83724	     21347 ns/op	 191.88 MB/s	   20010 B/op	       0 allocs/op
+BenchmarkMatrix/Priority/Large/P1/SingleSingle-4            	   19960	     64271 ns/op	1019.55 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/Priority/Large/P4/SingleSingle-4            	   10000	    361545 ns/op	 181.24 MB/s	  186024 B/op	       0 allocs/op
+BenchmarkMatrix/Priority/Large/P16/SingleSingle-4           	   10000	    344674 ns/op	 190.12 MB/s	  250971 B/op	       0 allocs/op
+BenchmarkMatrix/Priority/Large/P64/SingleSingle-4           	   10000	    296466 ns/op	 221.03 MB/s	  250974 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Small/P1/SingleSingle-4        	 7135990	       168.9 ns/op	1515.54 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Small/P1/SingleBatch-4         	 5887149	       194.9 ns/op	1313.68 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Small/P4/SingleSingle-4        	 5793414	       208.9 ns/op	1225.38 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Small/P4/SingleBatch-4         	 4746763	       253.1 ns/op	1011.50 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Small/P16/SingleSingle-4       	 5052928	       241.2 ns/op	1061.15 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Small/P16/SingleBatch-4        	 4099302	       285.1 ns/op	 897.85 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Small/P64/SingleSingle-4       	 3431775	       355.1 ns/op	 720.86 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Small/P64/SingleBatch-4        	 2894406	       409.1 ns/op	 625.76 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Medium/P1/SingleSingle-4       	  854761	      1575 ns/op	2600.59 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Medium/P1/SingleBatch-4        	  814470	      1293 ns/op	3166.97 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Medium/P4/SingleSingle-4       	  640722	      1943 ns/op	2108.00 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Medium/P4/SingleBatch-4        	  710473	      1728 ns/op	2369.98 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Medium/P16/SingleSingle-4      	  584431	      1989 ns/op	2059.62 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Medium/P16/SingleBatch-4       	  652506	      1765 ns/op	2320.85 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Medium/P64/SingleSingle-4      	  596652	      1961 ns/op	2088.51 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Medium/P64/SingleBatch-4       	  646720	      2008 ns/op	2039.85 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Large/P1/SingleSingle-4        	   63309	     18878 ns/op	3471.16 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Large/P1/SingleBatch-4         	   68572	     17317 ns/op	3783.97 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Large/P4/SingleSingle-4        	   52635	     22066 ns/op	2969.65 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Large/P4/SingleBatch-4         	   55058	     22175 ns/op	2955.07 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Large/P16/SingleSingle-4       	   53612	     22729 ns/op	2882.99 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Large/P16/SingleBatch-4        	   52846	     22594 ns/op	2900.20 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Large/P64/SingleSingle-4       	   52297	     22675 ns/op	2889.82 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanBuffered/Large/P64/SingleBatch-4        	   46897	     25168 ns/op	2603.62 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Small/P1/SingleSingle-4      	 3407868	       353.1 ns/op	 725.08 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Small/P1/SingleBatch-4       	 3323319	       358.3 ns/op	 714.43 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Small/P4/SingleSingle-4      	 2597752	       463.7 ns/op	 552.03 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Small/P4/SingleBatch-4       	 2619638	       463.7 ns/op	 552.06 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Small/P16/SingleSingle-4     	 2029233	       586.1 ns/op	 436.82 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Small/P16/SingleBatch-4      	 1974352	       589.3 ns/op	 434.40 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Small/P64/SingleSingle-4     	 1896640	       640.3 ns/op	 399.81 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Small/P64/SingleBatch-4      	 1884824	       635.3 ns/op	 402.93 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Medium/P1/SingleSingle-4     	 2369757	       481.0 ns/op	8515.82 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Medium/P1/SingleBatch-4      	 2452222	       486.4 ns/op	8421.43 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Medium/P4/SingleSingle-4     	 1799719	       666.4 ns/op	6146.37 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Medium/P4/SingleBatch-4      	 1767843	       796.0 ns/op	5145.76 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Medium/P16/SingleSingle-4    	 1551368	       766.0 ns/op	5347.59 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Medium/P16/SingleBatch-4     	 1561794	       777.7 ns/op	5267.02 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Medium/P64/SingleSingle-4    	 1410639	       853.3 ns/op	4800.42 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Medium/P64/SingleBatch-4     	 1391485	       879.0 ns/op	4660.04 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Large/P1/SingleSingle-4      	  200588	      6103 ns/op	10737.82 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Large/P1/SingleBatch-4       	  197460	      6086 ns/op	10767.04 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Large/P4/SingleSingle-4      	  251367	      4916 ns/op	13329.66 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Large/P4/SingleBatch-4       	  235864	      4899 ns/op	13376.65 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Large/P16/SingleSingle-4     	  285141	      4113 ns/op	15933.14 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Large/P16/SingleBatch-4      	  291061	      4161 ns/op	15748.52 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Large/P64/SingleSingle-4     	  285931	      3981 ns/op	16461.24 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMatrix/ChanUnbuffered/Large/P64/SingleBatch-4      	  286023	      4025 ns/op	16281.63 MB/s	       0 B/op	       0 allocs/op
 PASS
-ok  	github.com/aiyang-zh/zhenyi-base/zqueue	158.865s
+ok  	github.com/aiyang-zh/zhenyi-base/zqueue	578.914s
